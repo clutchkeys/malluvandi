@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import { GeistSans } from 'geist/font/sans';
+
 
 export const metadata: Metadata = {
   title: 'Mallu Vandi - AI-Powered Used Car Sales',
@@ -14,12 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" suppressHydrationWarning className={GeistSans.className}>
+      <head />
       <body className="font-body antialiased min-h-screen bg-background flex flex-col">
         <Providers>
           {children}

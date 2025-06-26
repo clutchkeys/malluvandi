@@ -6,6 +6,7 @@ export const users: User[] = [
   { id: 'user-emp-a-2', name: 'Balan', email: 'balan@malluvandi.com', role: 'employee-a', password: 'password' },
   { id: 'user-emp-b-1', name: 'Chacko', email: 'chacko@malluvandi.com', role: 'employee-b', password: 'password' },
   { id: 'user-emp-b-2', name: 'Devi', email: 'devi@malluvandi.com', role: 'employee-b', password: 'password' },
+  { id: 'user-cust-1', name: 'Rahul', email: 'rahul@customer.com', role: 'customer', password: 'password' },
 ];
 
 export const carBrands: string[] = ['Maruti Suzuki', 'Hyundai', 'Toyota', 'Honda', 'Tata'];

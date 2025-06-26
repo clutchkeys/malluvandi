@@ -1,14 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import type { User, Role } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import type { User } from '@/lib/types';
 import { users } from '@/lib/data';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, pass: string) => Promise<User | null>;
   logout: () => void;
+  register: (name: string, email: string, pass: string) => Promise<User | null>;
   loading: boolean;
 }
 
@@ -18,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     try {
@@ -44,15 +44,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return null;
   };
+  
+  const register = async (name: string, email: string, pass: string): Promise<User | null> => {
+    if (users.find(u => u.email === email)) {
+      throw new Error("User with this email already exists.");
+    }
+    const newUser: User = {
+        id: `user-cust-${Date.now()}`,
+        name,
+        email,
+        role: 'customer',
+        password: pass
+    };
+    users.push(newUser);
+    const { password, ...userToStore } = newUser;
+    setUser(userToStore);
+    localStorage.setItem('mallu-vandi-user', JSON.stringify(userToStore));
+    return userToStore;
+  }
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('mallu-vandi-user');
-    router.push('/login');
+    router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, register, loading }}>
       {children}
     </AuthContext.Provider>
   );

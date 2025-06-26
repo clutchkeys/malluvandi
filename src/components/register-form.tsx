@@ -8,21 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import type { Role } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 
-const roleRedirects: Record<Role, string> = {
-  admin: '/admin',
-  'employee-a': '/employee-a',
-  'employee-b': '/employee-b',
-  customer: '/',
-};
-
-export function LoginForm() {
+export function RegisterForm() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -30,18 +23,16 @@ export function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const user = await login(email, password);
+      const user = await register(name, email, password);
       if (user) {
-        toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-        router.push(roleRedirects[user.role] || '/');
+        toast({ title: 'Registration Successful', description: `Welcome, ${user.name}!` });
+        router.push('/');
         router.refresh(); // Force a refresh to update header state
-      } else {
-        throw new Error('Invalid credentials');
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: 'Login Failed',
-        description: 'Please check your email and password.',
+        title: 'Registration Failed',
+        description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
     } finally {
@@ -53,6 +44,10 @@ export function LoginForm() {
     <form onSubmit={handleSubmit}>
       <CardContent className="space-y-4">
         <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" type="text" placeholder="John Doe" required value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
@@ -63,8 +58,8 @@ export function LoginForm() {
       </CardContent>
       <CardFooter>
         <Button className="w-full" type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Login
+           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Create Account
         </Button>
       </CardFooter>
     </form>

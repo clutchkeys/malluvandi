@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import type { Role } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const roleRedirects: Record<Role, string> = {
+const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
   admin: '/admin',
   'employee-a': '/employee-a',
   'employee-b': '/employee-b',
@@ -17,8 +17,13 @@ export default function AppIndexPage() {
 
   useEffect(() => {
     if (!loading) {
-      if (user && user.role) {
-        router.replace(roleRedirects[user.role] || '/login');
+      if (user) {
+        // Customers should be redirected away from the app section
+        if (user.role === 'customer') {
+            router.replace('/');
+        } else {
+            router.replace(roleRedirects[user.role] || '/login');
+        }
       } else {
         router.replace('/login');
       }

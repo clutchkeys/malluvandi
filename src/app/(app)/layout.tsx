@@ -24,6 +24,7 @@ import {
   BotMessageSquare,
   LogOut,
   CarIcon,
+  Home,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -35,12 +36,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading) {
+        if(!user) {
+            router.push('/login');
+        } else if (user.role === 'customer') {
+            router.push('/');
+        }
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !user || user.role === 'customer') {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <Skeleton className="h-full w-full" />
@@ -77,7 +82,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent className="p-2">
           <SidebarMenu>
-            {(navItems[user.role] || []).map(item => (
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Home">
+                  <Link href="/">
+                    <Home />
+                    <span>Home</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            {(navItems[user.role as Exclude<typeof user.role, 'customer'>] || []).map(item => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild tooltip={item.label}>
                   <Link href={item.href}>
