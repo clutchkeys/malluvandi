@@ -73,7 +73,6 @@ export default function Home() {
           <Select onValueChange={value => handleFilterChange('brand', value)} value={filters.brand}>
             <SelectTrigger><SelectValue placeholder="All Brands" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Brands</SelectItem>
               {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -83,7 +82,6 @@ export default function Home() {
           <Select onValueChange={value => handleFilterChange('model', value)} value={filters.model} disabled={!filters.brand}>
             <SelectTrigger><SelectValue placeholder="All Models" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Models</SelectItem>
               {(filters.brand ? carModels[filters.brand] || [] : []).map(model => (
                 <SelectItem key={model} value={model}>{model}</SelectItem>
               ))}
@@ -95,7 +93,6 @@ export default function Home() {
           <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
             <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Any Year</SelectItem>
               {uniqueYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -105,7 +102,6 @@ export default function Home() {
            <Select onValueChange={value => handleFilterChange('color', value)} value={filters.color}>
             <SelectTrigger><SelectValue placeholder="Any Color" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Any Color</SelectItem>
               {uniqueColors.map(color => <SelectItem key={color} value={color}>{color}</SelectItem>)}
             </SelectContent>
           </Select>
