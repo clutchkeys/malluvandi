@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/summarize-car-details.ts';
+import '@/ai/flows/answer-car-queries.ts';
