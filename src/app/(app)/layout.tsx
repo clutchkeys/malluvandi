@@ -86,7 +86,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton asChild tooltip="Home">
                   <Link href="/">
                     <Home />
-                    <span>Home</span>
+                    <span className="group-data-[collapsible=icon]:hidden">Home</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -95,7 +95,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton asChild tooltip={item.label}>
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
