@@ -137,25 +137,38 @@ export default function Home() {
                 />
             </div>
             
-            {/* Desktop Filters */}
-            <div className="hidden md:block">
-              <FilterControls />
-            </div>
-
-            {/* Mobile Filters */}
-            <div className="md:hidden">
-              <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    <SlidersHorizontal className="mr-2 h-4 w-4" /> 
-                    {isFiltersOpen ? 'Hide Filters' : 'Show Filters'}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4">
+            {!isClient && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <div className="flex items-end lg:col-span-1">
+                    <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            )}
+            {isClient && (
+              <>
+                <div className="hidden md:block">
                   <FilterControls />
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
+                </div>
+
+                <div className="md:hidden">
+                  <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        <SlidersHorizontal className="mr-2 h-4 w-4" /> 
+                        {isFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                      <FilterControls />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </>
+            )}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
