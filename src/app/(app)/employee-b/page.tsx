@@ -66,7 +66,7 @@ export default function EmployeeBPage() {
                             <p className="font-semibold">{inquiry.customerName}</p>
                             <p className="text-sm text-muted-foreground">{car?.brand} {car?.model}</p>
                             <div className="flex justify-between items-center mt-2">
-                                <p className="text-xs text-muted-foreground">{inquiry.submittedAt.toLocaleDateString()}</p>
+                                <p className="text-xs text-muted-foreground">{inquiry.submittedAt.toISOString().split('T')[0]}</p>
                                 <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
                             </div>
                         </button>
