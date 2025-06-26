@@ -90,12 +90,12 @@ import { cars as mockCars, users as mockUsers, inquiries as mockInquiries, carBr
 import type { User, Role, Car as CarType, Inquiry, CarBadge } from '@/lib/types';
 
 
-const employeeSchema = z.object({
+const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().optional(),
-  role: z.enum(['employee-a', 'employee-b'], { required_error: 'Role is required' }),
+  role: z.enum(['admin', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
 });
 
 export default function AdminPage() {
@@ -107,7 +107,7 @@ export default function AdminPage() {
   
   // Data states
   const [carsState, setCarsState] = useState<CarType[]>(mockCars);
-  const [usersState, setUsersState] = useState<User[]>(mockUsers.filter(u => u.role !== 'admin'));
+  const [usersState, setUsersState] = useState<User[]>(mockUsers.filter(u => u.role !== 'customer'));
   const [inquiriesState, setInquiriesState] = useState<Inquiry[]>(mockInquiries);
   const [brandsState, setBrandsState] = useState<string[]>(mockCarBrands);
   const [modelsState, setModelsState] = useState<{[key: string]: string[]}>(mockCarModels);
@@ -129,8 +129,8 @@ export default function AdminPage() {
   // Misc states
   const [selectedBrandForModel, setSelectedBrandForModel] = useState('');
 
-  const form = useForm<z.infer<typeof employeeSchema>>({
-    resolver: zodResolver(employeeSchema),
+  const form = useForm<z.infer<typeof userSchema>>({
+    resolver: zodResolver(userSchema),
     defaultValues: { name: '', email: '', password: '', role: 'employee-a' },
   });
 
@@ -158,22 +158,23 @@ export default function AdminPage() {
     setIsUserFormOpen(true);
   }
   
-  const onUserSubmit = (values: z.infer<typeof employeeSchema>) => {
+  const onUserSubmit = (values: z.infer<typeof userSchema>) => {
     if (userToEdit) { // Editing
         setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, name: values.name, email: values.email, role: values.role } : u
+            u.id === userToEdit.id ? { ...u, name: values.name, email: values.email, role: values.role as Role } : u
         ));
-        toast({ title: 'Employee Updated' });
+        toast({ title: 'User Updated' });
     } else { // Adding
+        const rolePrefix = values.role === 'admin' ? 'admin' : 'emp';
         const newUser: User = {
-            id: `user-emp-${Date.now()}`,
+            id: `user-${rolePrefix}-${Date.now()}`,
             name: values.name,
             email: values.email,
             password: values.password || 'password',
-            role: values.role,
+            role: values.role as Role,
         };
         setUsersState(currentUsers => [...currentUsers, newUser]);
-        toast({ title: 'Employee Added' });
+        toast({ title: 'User Added' });
     }
     setIsUserFormOpen(false);
   };
@@ -300,11 +301,11 @@ export default function AdminPage() {
     setItemToDelete(null);
   }
 
-  const badgeIcons: Record<CarBadge, React.ReactNode> = {
-    price_drop: <TrendingDown size={14} />,
-    new: <Sparkles size={14} />,
-    featured: <Star size={14} />,
-  }
+  const roleDisplay: Record<Exclude<Role, 'customer'>, { name: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined }> = {
+    admin: { name: 'Admin', variant: 'destructive' },
+    'employee-a': { name: 'Content Manager', variant: 'secondary' },
+    'employee-b': { name: 'Sales', variant: 'outline' },
+  };
 
   return (
     <div className="space-y-8">
@@ -373,7 +374,7 @@ export default function AdminPage() {
                       <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
                       <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
                       <TableCell><Badge variant={car.status === 'approved' ? 'default' : car.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{car.status}</Badge></TableCell>
-                      <TableCell><div className="flex gap-1">{car.badges?.map(b => <Badge key={b} variant="outline" className="text-xs">{b.replace('_', ' ')}</Badge>)}</div></TableCell>
+                      <TableCell><div className="flex gap-1">{car.badges?.map(b => <Badge key={b} variant="outline" className="text-xs capitalize">{b.replace('_', ' ')}</Badge>)}</div></TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenCarForm(car)}><Edit size={16}/></Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'car', value: car, description: `This will permanently delete the listing for ${car.brand} ${car.model}.`})}><Trash2 size={16}/></Button>
@@ -418,8 +419,8 @@ export default function AdminPage() {
         <TabsContent value="users">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                <div><CardTitle>Employee Management</CardTitle><CardDescription>Add, edit, or remove employee accounts.</CardDescription></div>
-                <Button onClick={() => handleOpenUserForm(null)}><UserPlus className="mr-2 h-4 w-4" /> Add Employee</Button>
+                <div><CardTitle>User Management</CardTitle><CardDescription>Add, edit, or remove user accounts.</CardDescription></div>
+                <Button onClick={() => handleOpenUserForm(null)}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -429,10 +430,10 @@ export default function AdminPage() {
                             <TableRow key={u.id}>
                             <TableCell className="font-medium">{u.name}</TableCell>
                             <TableCell>{u.email}</TableCell>
-                            <TableCell><Badge variant={u.role === 'employee-a' ? 'secondary' : 'outline'}>{u.role.replace('employee-a', 'Content Manager').replace('employee-b', 'Sales')}</Badge></TableCell>
+                            <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>].variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>].name}</Badge></TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)}><Edit size={16}/></Button>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', value: u, description: `This will permanently delete the account for ${u.name}.`})}><Trash2 size={16}/></Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', value: u, description: `This will permanently delete the account for ${u.name}.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
                             </TableCell>
                             </TableRow>
                         ))}
@@ -476,7 +477,7 @@ export default function AdminPage() {
 
         <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
             <DialogContent>
-                <DialogHeader><DialogTitle>{userToEdit ? 'Edit Employee' : 'Add New Employee'}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{userToEdit ? 'Edit User' : 'Add New User'}</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onUserSubmit)} className="space-y-4">
                         <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -487,6 +488,7 @@ export default function AdminPage() {
                                 <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
+                                        <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="employee-a">Content Manager (Employee A)</SelectItem>
                                         <SelectItem value="employee-b">Sales & Support (Employee B)</SelectItem>
                                     </SelectContent>
@@ -506,7 +508,7 @@ export default function AdminPage() {
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
                     <FormFieldItem label="Brand" name="brand" defaultValue={carToEdit?.brand} as="select" options={brandsState} onChange={e => setSelectedBrandForModel(e.target.value)} />
-                    <FormFieldItem label="Model" name="model" defaultValue={carToEdit?.model} as="select" options={modelsState[selectedBrandForModel] || []} disabled={!selectedBrandForModel && !carToEdit} />
+                    <FormFieldItem label="Model" name="model" defaultValue={carToEdit?.model} as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} />
                     <FormFieldItem label="Year" name="year" type="number" defaultValue={carToEdit?.year} />
                     <FormFieldItem label="Price (₹)" name="price" type="number" defaultValue={carToEdit?.price} />
                     <FormFieldItem label="KM Run" name="kmRun" type="number" defaultValue={carToEdit?.kmRun} />
@@ -585,7 +587,7 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
     const renderField = () => {
         if (as === 'textarea') return <Textarea {...commonProps} />;
         if (as === 'select') return (
-            <Select name={name} defaultValue={props.defaultValue as string} onValueChange={(props as any).onValueChange}>
+            <Select name={name} defaultValue={props.defaultValue as string} onValueChange={(props as any).onValueChange} disabled={props.disabled}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>{options?.map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
             </Select>
@@ -599,3 +601,5 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
         </div>
     )
 }
+
+    
