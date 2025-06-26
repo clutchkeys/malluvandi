@@ -54,7 +54,14 @@ export default function Home() {
   }, [filters]);
 
   const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => {
+      const newFilters = { ...prev, [name]: value };
+      // When brand is cleared, also clear model.
+      if (name === 'brand' && value === '') {
+        newFilters.model = '';
+      }
+      return newFilters;
+    });
   };
   
   const uniqueYears = [...new Set(approvedCars.map(car => car.year))].sort((a,b) => b-a);
@@ -73,32 +80,32 @@ export default function Home() {
             <h3 className="text-lg font-semibold lg:col-span-1 hidden lg:flex items-center gap-2"><SlidersHorizontal size={20} /> Filters</h3>
             {isClient ? (
               <>
-                <Select onValueChange={value => handleFilterChange('brand', value)} value={filters.brand}>
+                <Select onValueChange={value => handleFilterChange('brand', value === 'all-brands' ? '' : value)} value={filters.brand}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Brand" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Brands</SelectItem>
+                    <SelectItem value="all-brands">All Brands</SelectItem>
                     {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Select onValueChange={value => handleFilterChange('model', value)} value={filters.model}>
+                <Select onValueChange={value => handleFilterChange('model', value === 'all-models' ? '' : value)} value={filters.model} disabled={!filters.brand}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Models</SelectItem>
-                    {(filters.brand ? carModels[filters.brand] || [] : Object.values(carModels).flat()).map(model => (
+                    <SelectItem value="all-models">All Models</SelectItem>
+                    {(filters.brand ? carModels[filters.brand] || [] : []).map(model => (
                       <SelectItem key={model} value={model}>{model}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
+                <Select onValueChange={value => handleFilterChange('year', value === 'all-years' ? '' : value)} value={filters.year}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any Year</SelectItem>
+                    <SelectItem value="all-years">Any Year</SelectItem>
                     {uniqueYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                   </SelectContent>
                 </Select>
