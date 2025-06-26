@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
@@ -14,8 +14,10 @@ import { FullScreenAd } from '@/components/full-screen-ad';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { SlidersHorizontal } from 'lucide-react';
 import { Card } from "@/components/ui/card";
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
+  const [isClient, setIsClient] = useState(false);
   const [filters, setFilters] = useState({
     brand: '',
     model: '',
@@ -25,6 +27,10 @@ export default function Home() {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleContactClick = (car: Car) => {
     setSelectedCar(car);
@@ -65,40 +71,51 @@ export default function Home() {
         <Card className="mb-8 p-4 md:p-6 shadow-lg bg-card">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
             <h3 className="text-lg font-semibold lg:col-span-1 hidden lg:flex items-center gap-2"><SlidersHorizontal size={20} /> Filters</h3>
-            <Select onValueChange={value => handleFilterChange('brand', value)} value={filters.brand}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Brand" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Brands</SelectItem>
-                {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={value => handleFilterChange('model', value)} value={filters.model}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Models</SelectItem>
-                {(filters.brand ? carModels[filters.brand] || [] : Object.values(carModels).flat()).map(model => (
-                  <SelectItem key={model} value={model}>{model}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Any Year</SelectItem>
-                {uniqueYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Color"
-              value={filters.color}
-              onChange={e => handleFilterChange('color', e.target.value)}
-            />
+            {isClient ? (
+              <>
+                <Select onValueChange={value => handleFilterChange('brand', value)} value={filters.brand}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Brands</SelectItem>
+                    {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={value => handleFilterChange('model', value)} value={filters.model}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Models</SelectItem>
+                    {(filters.brand ? carModels[filters.brand] || [] : Object.values(carModels).flat()).map(model => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Any Year</SelectItem>
+                    {uniqueYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Color"
+                  value={filters.color}
+                  onChange={e => handleFilterChange('color', e.target.value)}
+                />
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </>
+            )}
           </div>
         </Card>
 
