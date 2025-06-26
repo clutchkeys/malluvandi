@@ -13,6 +13,7 @@ import { AdPlaceholder } from '@/components/ad-placeholder';
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { SlidersHorizontal } from 'lucide-react';
+import { Card } from "@/components/ui/card";
 
 export default function Home() {
   const [filters, setFilters] = useState({
@@ -141,8 +142,3 @@ export default function Home() {
     </div>
   );
 }
-
-// Sub-component from ShadCN UI to be co-located.
-import {
-  Card
-} from "@/components/ui/card"

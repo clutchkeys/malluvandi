@@ -189,10 +189,3 @@ function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
         </div>
     );
 }
-
-// Sub-component for Resizable Panel
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
