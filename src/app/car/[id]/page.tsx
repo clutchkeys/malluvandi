@@ -26,6 +26,7 @@ const badgeIcons: Record<CarBadge, React.ReactNode> = {
 
 
 export default function CarDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const [car, setCar] = useState<Car | null | undefined>(undefined);
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
@@ -34,7 +35,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const { user } = useAuth();
 
   useEffect(() => {
-    const foundCar = cars.find(c => c.id === params.id);
+    const foundCar = cars.find(c => c.id === id);
     setCar(foundCar);
 
     if (foundCar) {
@@ -47,7 +48,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         })
         .finally(() => setIsSummaryLoading(false));
     }
-  }, [params.id]);
+  }, [id]);
   
   const handleInquireClick = () => {
     const isGuestOrCustomer = !user || user.role === 'customer';
