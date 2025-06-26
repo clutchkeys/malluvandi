@@ -18,28 +18,32 @@ export function FullScreenAd({ isOpen, onClose }: FullScreenAdProps) {
     let timer: NodeJS.Timeout;
     if (isOpen) {
       setCountdown(5);
-      timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      if (countdown > 0) {
+        timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     }
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, [isOpen, countdown]);
+
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 border-0 max-w-4xl w-full h-[80vh] bg-transparent shadow-none flex items-center justify-center">
+      <DialogContent className="p-0 border-0 max-w-4xl w-full h-[80vh] bg-transparent shadow-none flex items-center justify-center data-[state=open]:animate-in data-[state=open]:fade-in-0">
         <div className="relative w-full h-full bg-card rounded-lg overflow-hidden flex flex-col items-center justify-center text-center">
             <Image 
                 src="https://placehold.co/800x600.png" 
                 alt="Advertisement" 
-                layout="fill" 
-                objectFit="cover"
+                fill={true}
+                className="object-cover"
                 data-ai-hint="advertisement product"
             />
           <Button
@@ -47,7 +51,7 @@ export function FullScreenAd({ isOpen, onClose }: FullScreenAdProps) {
             size="icon"
             onClick={onClose}
             disabled={countdown > 0}
-            className="absolute top-4 right-4 bg-black/50 hover:bg-black/75 text-white rounded-full z-10"
+            className="absolute top-4 right-4 bg-black/50 hover:bg-black/75 text-white rounded-full z-10 disabled:cursor-not-allowed"
           >
             {countdown > 0 ? countdown : <X className="h-6 w-6" />}
           </Button>

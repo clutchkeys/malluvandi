@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { cars, users } from '@/lib/data';
 import type { Car } from '@/lib/types';
@@ -14,12 +14,16 @@ import { InquiryModal } from '@/components/inquiry-modal';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone } from 'lucide-react';
+import { FullScreenAd } from '@/components/full-screen-ad';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const [car, setCar] = useState<Car | null | undefined>(undefined);
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdOpen, setIsAdOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const foundCar = cars.find(c => c.id === params.id);
@@ -36,6 +40,21 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         .finally(() => setIsSummaryLoading(false));
     }
   }, [params.id]);
+  
+  const handleInquireClick = () => {
+    const isGuestOrCustomer = !user || user.role === 'customer';
+    if (isGuestOrCustomer) {
+      setIsAdOpen(true);
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleAdClose = () => {
+    setIsAdOpen(false);
+    setIsModalOpen(true);
+  };
+
 
   if (car === undefined) {
     return <LoadingSkeleton />;
@@ -104,11 +123,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           <div className="md:col-span-1 space-y-6">
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle className="font-headline text-2xl">{car.brand} {car.model}</CardTitle>
+                <h1 className="font-headline text-2xl">{car.brand} {car.model}</h1>
                 <p className="text-3xl font-bold text-primary pt-1">₹{car.price.toLocaleString('en-IN')}</p>
               </CardHeader>
               <CardContent>
-                 <Button className="w-full" size="lg" onClick={() => setIsModalOpen(true)}>
+                 <Button className="w-full" size="lg" onClick={handleInquireClick}>
                     <Phone className="mr-2"/> Inquire Now
                  </Button>
                  {seller && <p className="text-xs text-center text-muted-foreground mt-2">Seller: {seller.name}</p>}
@@ -139,6 +158,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         onClose={() => setIsModalOpen(false)}
         car={car}
       />
+      <FullScreenAd isOpen={isAdOpen} onClose={handleAdClose} />
     </div>
   );
 }

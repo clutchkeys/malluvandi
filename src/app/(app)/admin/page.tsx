@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import {
@@ -27,6 +27,18 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import {
   CheckCircle2,
   XCircle,
   Users,
@@ -38,24 +50,42 @@ import {
 import { cars, users as mockUsers } from '@/lib/data';
 import Image from 'next/image';
 
-const pendingCars = cars.filter(car => car.status === 'pending');
+const initialPendingCars = cars.filter(car => car.status === 'pending');
 const allUsers = mockUsers.filter(u => u.role !== 'admin');
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const [pendingCars, setPendingCars] = useState(initialPendingCars);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
   if (!loading && user?.role !== 'admin') {
     router.push('/');
     return null;
   }
+
+  const handleApproval = (carId: string, status: 'approved' | 'rejected') => {
+    setPendingCars(prev => prev.filter(car => car.id !== carId));
+    toast({
+      title: `Listing ${status}`,
+      description: `The car listing has been successfully ${status}.`,
+    });
+  };
+
+  const handleAddEmployee = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // In a real app, you'd handle form data and API calls here.
+    toast({
+      title: 'Employee Added',
+      description: 'The new employee account has been created.',
+    });
+    setIsAddUserOpen(false);
+  };
   
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -136,15 +166,20 @@ export default function AdminPage() {
                       <TableCell>{mockUsers.find(u => u.id === car.submittedBy)?.name || 'Unknown'}</TableCell>
                       <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600">
+                        <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleApproval(car.id, 'approved')}>
                           <CheckCircle2 size={20} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleApproval(car.id, 'rejected')}>
                           <XCircle size={20} />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {pendingCars.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">No pending approvals.</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -158,7 +193,37 @@ export default function AdminPage() {
                 <CardTitle>Employee Management</CardTitle>
                 <CardDescription>Add, edit, or remove employee accounts.</CardDescription>
               </div>
-              <Button><UserPlus className="mr-2 h-4 w-4" /> Add Employee</Button>
+               <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                  <DialogTrigger asChild>
+                    <Button><UserPlus className="mr-2 h-4 w-4" /> Add Employee</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Employee</DialogTitle>
+                      <DialogDescription>Fill out the form to create a new employee account.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleAddEmployee}>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Name</Label>
+                          <Input id="name" placeholder="John Doe" required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" type="email" placeholder="john@malluvandi.com" required />
+                        </div>
+                         <div className="space-y-2">
+                          <Label htmlFor="password">Password</Label>
+                          <Input id="password" type="password" required />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
+                        <Button type="submit">Create Account</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
             </CardHeader>
             <CardContent>
               <Table>
@@ -177,7 +242,7 @@ export default function AdminPage() {
                       <TableCell>{u.email}</TableCell>
                       <TableCell><Badge variant={u.role === 'employee-a' ? 'secondary' : 'outline'}>{u.role.replace('-', ' ')}</Badge></TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm">Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Edit clicked', description: 'This feature is not yet implemented.'})}>Edit</Button>
                       </TableCell>
                     </TableRow>
                   ))}

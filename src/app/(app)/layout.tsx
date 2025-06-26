@@ -3,20 +3,8 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarInset,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
-import {
   LayoutDashboard,
   Users,
-  BarChart3,
   Car,
   PlusCircle,
   List,
@@ -25,11 +13,21 @@ import {
   LogOut,
   CarIcon,
   Home,
+  Menu,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -55,80 +53,86 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = {
     admin: [
-      { href: '/admin', icon: LayoutDashboard, label: 'Approvals' },
-      { href: '/admin/users', icon: Users, label: 'Users' },
-      { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+      { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     ],
     'employee-a': [
-      { href: '/employee-a', icon: PlusCircle, label: 'Add Car' },
-      { href: '/employee-a/listings', icon: List, label: 'My Listings' },
+      { href: '/employee-a', icon: List, label: 'My Listings' },
     ],
     'employee-b': [
       { href: '/employee-b', icon: Mail, label: 'Inquiries' },
-      { href: '/employee-b/ai-assistant', icon: BotMessageSquare, label: 'AI Assistant' },
     ],
   };
 
+  const currentNavItems = navItems[user.role as Exclude<typeof user.role, 'customer'>] || [];
+
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="p-4 border-b">
-          <div className="flex items-center gap-2">
-            <CarIcon className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold font-headline text-primary group-data-[collapsible=icon]:hidden">
-              Mallu Vandi
-            </h1>
-          </div>
-        </SidebarHeader>
-        <SidebarContent className="p-2">
-          <SidebarMenu>
-             <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Home">
-                  <Link href="/">
-                    <Home />
-                    <span className="group-data-[collapsible=icon]:hidden">Home</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            {(navItems[user.role as Exclude<typeof user.role, 'customer'>] || []).map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild tooltip={item.label}>
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <div className="mt-auto p-4 border-t">
-          <div className="flex items-center gap-3">
-             <Avatar>
-                <AvatarImage src={`https://i.pravatar.cc/40?u=${user.id}`} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-semibold">{user.name}</span>
-                <span className="text-xs text-muted-foreground capitalize">{user.role.replace('-', ' ')}</span>
-            </div>
-            <Button variant="ghost" size="icon" onClick={logout} className="ml-auto group-data-[collapsible=icon]:w-full">
-                <LogOut />
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-50">
+        <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold md:text-base text-primary font-headline">
+            <CarIcon className="h-7 w-7" />
+            <span>Mallu Vandi</span>
+          </Link>
+          {currentNavItems.map(item => (
+            <Link key={item.href} href={item.href} className="text-foreground transition-colors hover:text-foreground/80">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
             </Button>
-          </div>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <nav className="grid gap-6 text-lg font-medium">
+              <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary font-headline">
+                <CarIcon className="h-6 w-6" />
+                <span>Mallu Vandi</span>
+              </Link>
+              {currentNavItems.map(item => (
+                <Link key={item.href} href={item.href} className="hover:text-foreground">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+        
+        <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+          <div className="ml-auto flex-1 sm:flex-initial" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={`https://i.pravatar.cc/40?u=${user.id}`} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="sr-only">Toggle user menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/">Public Website</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-6">
-            <SidebarTrigger className="md:hidden"/>
-            <div className="flex-1">
-                {/* Header content can go here if needed */}
-            </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+      </header>
+      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+        {children}
+      </main>
+    </div>
   );
 }
