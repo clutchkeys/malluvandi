@@ -1,4 +1,4 @@
-import type { User, Car, Inquiry, Role } from './types';
+import type { User, Car, Inquiry, Role, CarBadge } from './types';
 
 export const users: User[] = [
   { id: 'user-admin-1', name: 'Admin', email: 'dukaanflow@gmail.com', role: 'admin', password: 'password' },
@@ -10,6 +10,7 @@ export const users: User[] = [
 ];
 
 export const carBrands: string[] = ['Maruti Suzuki', 'Hyundai', 'Toyota', 'Honda', 'Tata'];
+
 export const carModels: { [key: string]: string[] } = {
   'Maruti Suzuki': ['Swift', 'Baleno', 'Dzire', 'Alto'],
   'Hyundai': ['i20', 'Creta', 'Venue', 'Verna'],
@@ -18,8 +19,11 @@ export const carModels: { [key: string]: string[] } = {
   'Tata': ['Nexon', 'Altroz', 'Harrier']
 };
 
+export const carYears: number[] = [2023, 2022, 2021, 2020, 2019, 2018];
 
-export const cars: Car[] = [
+export const carBadges: CarBadge[] = ['price_drop', 'new', 'featured'];
+
+export let cars: Car[] = [
   {
     id: 'car-1',
     brand: 'Maruti Suzuki',
@@ -35,6 +39,7 @@ export const cars: Car[] = [
     status: 'approved',
     submittedBy: 'user-emp-a-1',
     price: 650000,
+    badges: ['price_drop', 'featured'],
   },
   {
     id: 'car-2',
@@ -83,6 +88,7 @@ export const cars: Car[] = [
     status: 'approved',
     submittedBy: 'user-emp-a-2',
     price: 900000,
+    badges: ['new'],
   },
   {
     id: 'car-5',
@@ -104,7 +110,7 @@ export const cars: Car[] = [
 
 export const approvedCars = cars.filter(c => c.status === 'approved');
 
-export const inquiries: Inquiry[] = [
+export let inquiries: Inquiry[] = [
     {
         id: 'inq-1',
         carId: 'car-1',
@@ -127,4 +133,4 @@ export const inquiries: Inquiry[] = [
         remarks: '',
         privateNotes: ''
     }
-]
+];

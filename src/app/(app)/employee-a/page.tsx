@@ -40,14 +40,18 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle } from 'lucide-react';
-import { cars, carBrands, carModels } from '@/lib/data';
+import { PlusCircle, Edit } from 'lucide-react';
+import { cars as initialCars, carBrands, carModels } from '@/lib/data';
+import type { Car } from '@/lib/types';
 
 export default function EmployeeAPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [isAddCarOpen, setIsAddCarOpen] = useState(false);
+  
+  const [cars, setCars] = useState<Car[]>(initialCars);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [carToEdit, setCarToEdit] = useState<Car | null>(null);
   const [selectedBrand, setSelectedBrand] = useState('');
 
   if (!loading && user?.role !== 'employee-a') {
@@ -66,36 +70,84 @@ export default function EmployeeAPage() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleEditClick = (car: Car) => {
+    setCarToEdit(car);
+    setSelectedBrand(car.brand);
+    setIsFormOpen(true);
+  };
+  
+  const handleAddNewClick = () => {
+    setCarToEdit(null);
+    setSelectedBrand('');
+    setIsFormOpen(true);
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // In a real app, you would collect form data and submit to an API
-    setIsAddCarOpen(false);
-    toast({
-      title: "Listing Submitted",
-      description: "Your car listing has been sent for admin approval.",
-    });
+    const formData = new FormData(event.currentTarget);
+    const formValues = Object.fromEntries(formData.entries()) as any;
+
+    const carData = {
+        brand: selectedBrand,
+        model: formValues.model,
+        year: parseInt(formValues.year),
+        price: parseInt(formValues.price),
+        kmRun: parseInt(formValues.kmRun),
+        color: formValues.color,
+        ownership: parseInt(formValues.ownership),
+        insurance: formValues.insurance,
+        challans: formValues.challans,
+        additionalDetails: formValues.details,
+    };
+    
+    if (carToEdit) {
+      // Update logic
+      const updatedCar = { ...carToEdit, ...carData };
+      setCars(cars.map(c => c.id === carToEdit.id ? updatedCar : c));
+      toast({
+        title: 'Listing Updated',
+        description: 'Your car listing has been successfully updated and is pending re-approval.',
+      });
+    } else {
+      // Add logic
+      const newCar: Car = {
+        id: `car-${Date.now()}`,
+        ...carData,
+        images: ['https://placehold.co/600x400.png'],
+        status: 'pending',
+        submittedBy: user!.id,
+      };
+      setCars([...cars, newCar]);
+      toast({
+        title: 'Listing Submitted',
+        description: 'Your car listing has been sent for admin approval.',
+      });
+    }
+    
+    setIsFormOpen(false);
+    setCarToEdit(null);
   };
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">My Car Listings</h1>
-        <Dialog open={isAddCarOpen} onOpenChange={setIsAddCarOpen}>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Car</Button>
+            <Button onClick={handleAddNewClick}><PlusCircle className="mr-2 h-4 w-4" /> Add New Car</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[625px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Add New Car</DialogTitle>
+                <DialogTitle>{carToEdit ? 'Edit Car' : 'Add New Car'}</DialogTitle>
                 <DialogDescription>
-                  Fill in the details of the car to create a new listing. It will be sent for admin approval.
+                  Fill in the details of the car. It will be sent for admin approval.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="brand" className="text-right">Brand</Label>
-                  <Select onValueChange={setSelectedBrand}>
+                  <Select name="brand" onValueChange={setSelectedBrand} defaultValue={carToEdit?.brand}>
                       <SelectTrigger className="col-span-3">
                           <SelectValue placeholder="Select a brand" />
                       </SelectTrigger>
@@ -106,7 +158,7 @@ export default function EmployeeAPage() {
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="model" className="text-right">Model</Label>
-                  <Select disabled={!selectedBrand}>
+                  <Select name="model" disabled={!selectedBrand} defaultValue={carToEdit?.model}>
                       <SelectTrigger className="col-span-3">
                           <SelectValue placeholder="Select a model" />
                       </SelectTrigger>
@@ -117,35 +169,35 @@ export default function EmployeeAPage() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="year" className="text-right">Year</Label>
-                  <Input id="year" type="number" className="col-span-3" />
+                  <Input id="year" name="year" type="number" className="col-span-3" defaultValue={carToEdit?.year} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="price" className="text-right">Price (₹)</Label>
-                  <Input id="price" type="number" className="col-span-3" />
+                  <Input id="price" name="price" type="number" className="col-span-3" defaultValue={carToEdit?.price} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="kmRun" className="text-right">KM Run</Label>
-                  <Input id="kmRun" type="number" className="col-span-3" />
+                  <Input id="kmRun" name="kmRun" type="number" className="col-span-3" defaultValue={carToEdit?.kmRun} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="color" className="text-right">Color</Label>
-                  <Input id="color" className="col-span-3" />
+                  <Input id="color" name="color" className="col-span-3" defaultValue={carToEdit?.color} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="ownership" className="text-right">Ownership</Label>
-                  <Input id="ownership" type="number" className="col-span-3" />
+                  <Input id="ownership" name="ownership" type="number" className="col-span-3" defaultValue={carToEdit?.ownership} />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="insurance" className="text-right">Insurance</Label>
-                  <Input id="insurance" className="col-span-3" />
+                  <Input id="insurance" name="insurance" className="col-span-3" defaultValue={carToEdit?.insurance} />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="challans" className="text-right">Challans</Label>
-                  <Input id="challans" className="col-span-3" />
+                  <Input id="challans" name="challans" className="col-span-3" defaultValue={carToEdit?.challans} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="details" className="text-right">Details</Label>
-                  <Textarea id="details" className="col-span-3" />
+                  <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="images" className="text-right">Images</Label>
@@ -153,8 +205,8 @@ export default function EmployeeAPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setIsAddCarOpen(false)}>Cancel</Button>
-                <Button type="submit">Submit for Approval</Button>
+                <Button type="button" variant="ghost" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+                <Button type="submit">{carToEdit ? 'Save Changes' : 'Submit for Approval'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -185,7 +237,9 @@ export default function EmployeeAPage() {
                     <Badge variant={getStatusVariant(car.status)} className="capitalize">{car.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" disabled={car.status !== 'pending'} onClick={() => toast({ title: 'Edit clicked', description: 'This feature is not yet implemented.'})}>Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleEditClick(car)}>
+                      <Edit className="mr-2 h-3 w-3" /> Edit
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

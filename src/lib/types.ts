@@ -1,5 +1,7 @@
 export type Role = 'admin' | 'employee-a' | 'employee-b' | 'customer';
 
+export type CarBadge = 'price_drop' | 'new' | 'featured';
+
 export interface User {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface Car {
   status: 'pending' | 'approved' | 'rejected';
   submittedBy: string; // EmployeeA ID
   price: number;
+  badges?: CarBadge[];
 }
 
 export interface Inquiry {

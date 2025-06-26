@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { approvedCars, carBrands, carModels } from '@/lib/data';
+import { approvedCars, carBrands, carModels, carYears } from '@/lib/data';
 import type { Car } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,7 +62,6 @@ export default function Home() {
     setSearchQuery('');
   }
 
-  const uniqueYears = [...new Set(approvedCars.map(car => car.year))].sort((a,b) => b-a);
   const uniqueColors = [...new Set(approvedCars.map(car => car.color))];
 
 
@@ -93,7 +92,7 @@ export default function Home() {
           <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
             <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
             <SelectContent>
-              {uniqueYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+              {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
             </SelectContent>
           </Select>
       </div>
@@ -122,7 +121,7 @@ export default function Home() {
           <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Quality, trust, and the best deals on pre-owned cars in Kerala. Your next ride is just a click away.</p>
         </div>
 
-        <Card className="mb-8 p-4 md:p-6 shadow-lg bg-card sticky top-[65px] z-30">
+        <Card className="mb-8 p-4 md:p-6 shadow-lg bg-card z-30">
             <div className="relative w-full mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -175,11 +174,16 @@ export default function Home() {
                  <h2 className="text-2xl font-bold mb-6">Featured Listings ({filteredCars.length})</h2>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {filteredCars.slice(0, 3).map(car => (
+                    {filteredCars.slice(0, 2).map(car => (
+                      <CarCard key={car.id} car={car} />
+                    ))}
+                     <AdPlaceholder shape="post" className="md:col-span-1 xl:col-span-1"/>
+                     <AdPlaceholder shape="post" className="md:col-span-1 xl:col-span-1"/>
+                    {filteredCars.slice(2, 4).map(car => (
                       <CarCard key={car.id} car={car} />
                     ))}
                     <AdPlaceholder shape="post" className="xl:col-span-1 md:col-span-2" />
-                    {filteredCars.slice(3, 8).map(car => (
+                    {filteredCars.slice(4, 7).map(car => (
                       <CarCard key={car.id} car={car} />
                     ))}
                  </div>
@@ -188,7 +192,7 @@ export default function Home() {
                     <>
                         <AdPlaceholder shape="banner" className="my-8"/>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                            {filteredCars.slice(8, 12).map(car => (
+                            {filteredCars.slice(7, 11).map(car => (
                                 <CarCard key={car.id} car={car} />
                             ))}
                         </div>

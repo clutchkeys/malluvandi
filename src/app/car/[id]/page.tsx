@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { cars, users } from '@/lib/data';
-import type { Car } from '@/lib/types';
+import type { Car, CarBadge } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone } from 'lucide-react';
+import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star } from 'lucide-react';
 import { FullScreenAd } from '@/components/full-screen-ad';
+import { AdPlaceholder } from '@/components/ad-placeholder';
 import { useAuth } from '@/hooks/use-auth';
+
+const badgeIcons: Record<CarBadge, React.ReactNode> = {
+  price_drop: <TrendingDown size={14} className="mr-1"/>,
+  new: <Sparkles size={14} className="mr-1"/>,
+  featured: <Star size={14} className="mr-1"/>,
+}
+
 
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const [car, setCar] = useState<Car | null | undefined>(undefined);
@@ -123,6 +131,14 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           <div className="md:col-span-1 space-y-6">
             <Card className="sticky top-24">
               <CardHeader>
+                <div className="flex gap-2 mb-2">
+                 {car.badges && car.badges.map(badge => (
+                    <Badge key={badge} variant="secondary" className="capitalize text-xs flex items-center">
+                      {badgeIcons[badge]}
+                      {badge.replace('_', ' ')}
+                    </Badge>
+                  ))}
+                </div>
                 <h1 className="font-headline text-2xl">{car.brand} {car.model}</h1>
                 <p className="text-3xl font-bold text-primary pt-1">₹{car.price.toLocaleString('en-IN')}</p>
               </CardHeader>
@@ -149,6 +165,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     )}
                 </CardContent>
             </Card>
+            <AdPlaceholder shape="square" />
           </div>
         </div>
       </main>

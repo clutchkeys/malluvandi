@@ -4,16 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import {
   LayoutDashboard,
-  Users,
-  Car,
-  PlusCircle,
   List,
   Mail,
-  BotMessageSquare,
   LogOut,
   CarIcon,
-  Home,
   Menu,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -120,7 +116,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuItem asChild>
                 <Link href="/">Public Website</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />

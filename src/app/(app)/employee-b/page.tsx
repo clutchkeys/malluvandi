@@ -28,24 +28,33 @@ import { cars, inquiries as mockInquiries } from '@/lib/data';
 import type { Inquiry, Car } from '@/lib/types';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { answerCarQueries } from '@/ai/flows/answer-car-queries';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EmployeeBPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
-  
-  const userInquiries = useMemo(() => mockInquiries.filter(inq => inq.assignedTo === user?.id), [user]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries);
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
+
+  const userInquiries = useMemo(() => inquiries.filter(inq => inq.assignedTo === user?.id), [inquiries, user]);
 
   React.useEffect(() => {
-    if(userInquiries.length > 0) {
-      setSelectedInquiry(userInquiries[0]);
+    if(userInquiries.length > 0 && !selectedInquiryId) {
+      setSelectedInquiryId(userInquiries[0].id);
     }
-  }, [userInquiries]);
+  }, [userInquiries, selectedInquiryId]);
 
   if (!loading && user?.role !== 'employee-b') {
     router.push('/');
     return null;
   }
+  
+  const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
+  
+  const updateInquiry = (inquiryId: string, updates: Partial<Inquiry>) => {
+    setInquiries(prev => prev.map(inq => inq.id === inquiryId ? {...inq, ...updates} : inq));
+  };
+
 
   return (
     <div className="h-[calc(100vh-theme(spacing.24))]">
@@ -62,11 +71,11 @@ export default function EmployeeBPage() {
                 {userInquiries.map(inquiry => {
                     const car = cars.find(c => c.id === inquiry.carId);
                     return(
-                        <button key={inquiry.id} onClick={() => setSelectedInquiry(inquiry)} className={`w-full text-left p-4 border-b hover:bg-muted/50 ${selectedInquiry?.id === inquiry.id ? 'bg-muted' : ''}`}>
+                        <button key={inquiry.id} onClick={() => setSelectedInquiryId(inquiry.id)} className={`w-full text-left p-4 border-b hover:bg-muted/50 ${selectedInquiryId === inquiry.id ? 'bg-muted' : ''}`}>
                             <p className="font-semibold">{inquiry.customerName}</p>
                             <p className="text-sm text-muted-foreground">{car?.brand} {car?.model}</p>
                             <div className="flex justify-between items-center mt-2">
-                                <p className="text-xs text-muted-foreground">{inquiry.submittedAt.toISOString().split('T')[0]}</p>
+                                <p className="text-xs text-muted-foreground">{inquiry.submittedAt.toLocaleDateString()}</p>
                                 <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
                             </div>
                         </button>
@@ -78,7 +87,7 @@ export default function EmployeeBPage() {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
           <ScrollArea className="h-full">
-            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} /> : <div className="p-8 text-center text-muted-foreground">Select an inquiry to view details</div>}
+            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiry} /> : <div className="p-8 text-center text-muted-foreground">Select an inquiry to view details</div>}
           </ScrollArea>
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -86,7 +95,7 @@ export default function EmployeeBPage() {
   );
 }
 
-function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
+function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (inquiryId: string, updates: Partial<Inquiry>) => void }) {
     const car = cars.find(c => c.id === inquiry.carId);
     const [summary, setSummary] = useState('');
     const [isSummaryLoading, setIsSummaryLoading] = useState(false);
@@ -94,9 +103,16 @@ function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
     const [query, setQuery] = useState('');
     const [isAiAnswering, setIsAiAnswering] = useState(false);
     const [chatHistory, setChatHistory] = useState<{user:string, ai:string}[]>([]);
+    
+    const [remarks, setRemarks] = useState(inquiry.remarks);
+    const [privateNotes, setPrivateNotes] = useState(inquiry.privateNotes);
 
+    const { toast } = useToast();
 
     React.useEffect(() => {
+        setRemarks(inquiry.remarks);
+        setPrivateNotes(inquiry.privateNotes);
+
         if (!car) return;
         setIsSummaryLoading(true);
         setSummary('');
@@ -109,7 +125,7 @@ function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
             setSummary("Failed to generate summary.");
             setIsSummaryLoading(false);
         });
-    }, [car]);
+    }, [car, inquiry]);
 
     const handleQuerySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -128,6 +144,16 @@ function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
             setIsAiAnswering(false);
         }
     };
+    
+    const handleSaveRemarks = () => {
+        onUpdate(inquiry.id, { remarks });
+        toast({ title: 'Remarks Saved' });
+    }
+    
+    const handleSaveNotes = () => {
+        onUpdate(inquiry.id, { privateNotes });
+        toast({ title: 'Notes Saved' });
+    }
 
     if (!car) return <div>Car not found for this inquiry.</div>;
 
@@ -153,13 +179,13 @@ function InquiryDetails({ inquiry }: { inquiry: Inquiry }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <Card>
                     <CardHeader><CardTitle>Call Remarks</CardTitle><CardDescription>Visible to admins.</CardDescription></CardHeader>
-                    <CardContent><Textarea defaultValue={inquiry.remarks} placeholder="Log call outcomes, customer feedback..." /></CardContent>
-                    <CardFooter><Button size="sm">Save Remarks</Button></CardFooter>
+                    <CardContent><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Log call outcomes, customer feedback..." /></CardContent>
+                    <CardFooter><Button size="sm" onClick={handleSaveRemarks}>Save Remarks</Button></CardFooter>
                 </Card>
                  <Card>
                     <CardHeader><CardTitle>Private Notes</CardTitle><CardDescription>Only visible to you.</CardDescription></CardHeader>
-                    <CardContent><Textarea defaultValue={inquiry.privateNotes} placeholder="Personal reminders, follow-up actions..." /></CardContent>
-                     <CardFooter><Button size="sm">Save Notes</Button></CardFooter>
+                    <CardContent><Textarea value={privateNotes} onChange={e => setPrivateNotes(e.target.value)} placeholder="Personal reminders, follow-up actions..." /></CardContent>
+                     <CardFooter><Button size="sm" onClick={handleSaveNotes}>Save Notes</Button></CardFooter>
                 </Card>
             </div>
            

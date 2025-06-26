@@ -15,6 +15,7 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { inquiries, users } from '@/lib/data';
 
 interface InquiryModalProps {
   isOpen: boolean;
@@ -60,7 +61,26 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
     setIsSubmitting(true);
     
     setTimeout(() => {
-      console.log('Inquiry submitted:', { carId: car.id, name, phone, callPreference, scheduledDate, scheduledTime });
+      const salesPeople = users.filter(u => u.role === 'employee-b');
+      const assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)]?.id || 'unassigned';
+      
+      const newInquiry = {
+        id: `inq-${Date.now()}`,
+        carId: car.id,
+        customerName: name,
+        customerPhone: phone,
+        submittedAt: new Date(),
+        assignedTo: assignedTo,
+        status: 'new' as const,
+        remarks: `Call scheduled for: ${callPreference === 'now' ? 'ASAP' : `${format(scheduledDate!, 'PPP')} at ${scheduledTime}`}`,
+        privateNotes: ''
+      }
+      
+      // In a real app, this would be an API call.
+      // Here, we're pushing to the in-memory array.
+      inquiries.push(newInquiry);
+
+      console.log('Inquiry submitted:', newInquiry);
       toast({
         title: 'Inquiry Sent!',
         description: "Our team will contact you shortly.",
@@ -124,7 +144,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
                       mode="single"
                       selected={scheduledDate}
                       onSelect={setScheduledDate}
-                      disabled={(date) => date < new Date() || date < new Date('1900-01-01')}
+                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                       initialFocus
                     />
                   </PopoverContent>

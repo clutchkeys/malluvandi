@@ -3,7 +3,8 @@ import Image from 'next/image';
 import type { Car } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Gauge, PaintBucket, Users, ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Gauge, PaintBucket, Users, ArrowRight, TrendingDown, Sparkles, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
@@ -11,6 +12,12 @@ import { FullScreenAd } from './full-screen-ad';
 
 interface CarCardProps {
   car: Car;
+}
+
+const badgeIcons = {
+  price_drop: <TrendingDown size={14} className="mr-1"/>,
+  new: <Sparkles size={14} className="mr-1"/>,
+  featured: <Star size={14} className="mr-1"/>,
 }
 
 export function CarCard({ car }: CarCardProps) {
@@ -45,6 +52,16 @@ export function CarCard({ car }: CarCardProps) {
                   className="object-cover"
                   data-ai-hint="car exterior"
               />
+              {car.badges && car.badges.length > 0 && (
+                <div className="absolute top-2 left-2 flex flex-col gap-2">
+                  {car.badges.map(badge => (
+                    <Badge key={badge} variant="default" className="capitalize text-xs flex items-center bg-black/70 backdrop-blur-sm border-white/20">
+                      {badgeIcons[badge]}
+                      {badge.replace('_', ' ')}
+                    </Badge>
+                  ))}
+                </div>
+              )}
               </div>
           </CardHeader>
           <CardContent className="flex-grow p-4 grid gap-1">
