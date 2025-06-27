@@ -18,7 +18,6 @@ export function Footer() {
                 alt="Mallu Vandi Logo"
                 width={160}
                 height={40}
-                className="brightness-0 invert"
               />
             </Link>
             <p className="text-sm text-footer-muted-foreground max-w-sm">
