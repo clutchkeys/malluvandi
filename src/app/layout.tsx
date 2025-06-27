@@ -4,6 +4,7 @@ import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { GeistSans } from 'geist/font/sans';
 import { CookieConsent } from '@/components/cookie-consent';
+import { SplashScreen } from '@/components/splash-screen';
 
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
       <head />
       <body className="font-body antialiased min-h-screen bg-background flex flex-col">
         <Providers>
+          <SplashScreen />
           {children}
           <Toaster />
           <CookieConsent />
