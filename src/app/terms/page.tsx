@@ -6,7 +6,7 @@ import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function TermsOfServicePage() {
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState('...');
 
   useEffect(() => {
     setDate(new Date().toLocaleDateString());
