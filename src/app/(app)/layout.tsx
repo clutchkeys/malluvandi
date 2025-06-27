@@ -7,11 +7,11 @@ import {
   List,
   Mail,
   LogOut,
-  CarIcon,
   Menu,
   Settings,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,9 +68,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-50">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold md:text-base text-primary font-headline">
-            <CarIcon className="h-7 w-7" />
-            <span>Mallu Vandi</span>
+          <Link href="/" className="flex items-center gap-4">
+            <Image
+              src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+              alt="Mallu Vandi Logo"
+              width={140}
+              height={35}
+            />
           </Link>
           {currentNavItems.map(item => (
             <Link key={item.href} href={item.href} className="text-foreground transition-colors hover:text-foreground/80">
@@ -88,9 +92,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SheetTrigger>
           <SheetContent side="left">
             <nav className="grid gap-6 text-lg font-medium">
-              <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary font-headline">
-                <CarIcon className="h-6 w-6" />
-                <span>Mallu Vandi</span>
+              <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+                  alt="Mallu Vandi Logo"
+                  width={140}
+                  height={35}
+                />
               </Link>
               {currentNavItems.map(item => (
                 <Link key={item.href} href={item.href} className="hover:text-foreground">

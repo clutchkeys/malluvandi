@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Car, Facebook, Twitter, Instagram, Linkedin, Phone, MapPin } from 'lucide-react';
+import Image from 'next/image';
+import { Facebook, Twitter, Instagram, Linkedin, Phone, MapPin } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Button } from './ui/button';
 
@@ -11,9 +12,14 @@ export function Footer() {
 
           {/* Logo and Tagline */}
           <div className="md:col-span-4 lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Car className="h-8 w-8 text-footer-primary" />
-              <span className="text-2xl font-bold text-footer-primary">Mallu Vandi</span>
+            <Link href="/">
+              <Image
+                src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+                alt="Mallu Vandi Logo"
+                width={160}
+                height={40}
+                className="brightness-0 invert"
+              />
             </Link>
             <p className="text-sm text-footer-muted-foreground max-w-sm">
               Your trusted marketplace for quality pre-owned cars in Kerala. We provide a seamless and transparent car buying and selling experience.
@@ -61,8 +67,13 @@ export function Footer() {
           <div className="text-center text-sm text-footer-muted-foreground">
             &copy; {new Date().getFullYear()} Mallu Vandi. All rights reserved.
           </div>
-           <div className="text-sm text-footer-muted-foreground space-x-4">
-              <span>Powered by <a href="#" className="font-semibold hover:text-footer-primary transition-colors">Advalix</a></span>
+           <div className="flex items-center gap-4 text-sm text-footer-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Powered by</span>
+                <a href="#" className="hover:opacity-80 transition-opacity">
+                    <Image src="https://ik.imagekit.io/qctc8ch4l/advalix.png?updatedAt=1751041755492" alt="Advalix Logo" width={80} height={20} className="brightness-0 invert" />
+                </a>
+              </div>
               <span>Made by <a href="#" className="font-semibold hover:text-footer-primary transition-colors">@alxvgh</a></span>
           </div>
         </div>

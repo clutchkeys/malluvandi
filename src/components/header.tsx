@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Car, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import {
   DropdownMenu,
@@ -29,9 +30,14 @@ export function Header() {
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-2">
-          <Car className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-primary font-headline">Mallu Vandi</span>
+        <Link href="/">
+          <Image
+            src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+            alt="Mallu Vandi Logo"
+            width={160}
+            height={40}
+            priority
+          />
         </Link>
         <nav>
           {loading ? (

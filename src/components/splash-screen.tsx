@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Car } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export function SplashScreen() {
@@ -22,9 +22,14 @@ export function SplashScreen() {
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
     >
-      <div className="flex items-center gap-4 animate-pulse">
-        <Car className="h-16 w-16 text-primary" />
-        <span className="text-5xl font-bold text-primary font-headline">Mallu Vandi</span>
+      <div className="animate-pulse">
+        <Image
+          src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+          alt="Mallu Vandi Logo"
+          width={240}
+          height={60}
+          priority
+        />
       </div>
       <p className="mt-4 text-muted-foreground">Loading your next ride...</p>
     </div>
