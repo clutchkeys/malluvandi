@@ -15,23 +15,23 @@ export function FullScreenAd({ isOpen, onClose }: FullScreenAdProps) {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isOpen) {
-      setCountdown(5);
-      if (countdown > 0) {
-        timer = setInterval(() => {
-          setCountdown(prev => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
+    if (!isOpen) {
+      return;
     }
+
+    setCountdown(5);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
-  }, [isOpen, countdown]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

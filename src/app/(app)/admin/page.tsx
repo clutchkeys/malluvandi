@@ -140,7 +140,7 @@ export default function AdminPage() {
   
   useEffect(() => {
     if (viewingInquiry) {
-      setFormattedInquiryDate(new Date(viewingInquiry.submittedAt).toLocaleString());
+      setFormattedInquiryDate(new Date(viewingInquiry.submittedAt).toLocaleString('en-US'));
     }
   }, [viewingInquiry]);
 

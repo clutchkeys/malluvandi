@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, onSelect: (id: string) => void, isSelected: boolean }) => {
     const [date, setDate] = useState('');
     useEffect(() => {
-        setDate(inquiry.submittedAt.toLocaleDateString());
+        setDate(new Date(inquiry.submittedAt).toLocaleDateString('en-CA'));
     }, [inquiry.submittedAt]);
 
     const car = cars.find(c => c.id === inquiry.carId);
