@@ -3,11 +3,10 @@ export type Role = 'admin' | 'manager' | 'employee-a' | 'employee-b' | 'customer
 export type CarBadge = 'price_drop' | 'new' | 'featured';
 
 export interface User {
-  id: string;
+  id: string; // Firebase Auth UID
   name: string;
   email: string;
   role: Role;
-  password?: string; // Should not be sent to client
 }
 
 export interface Car {
@@ -33,9 +32,10 @@ export interface Inquiry {
   carId: string;
   customerName: string;
   customerPhone: string;
-  submittedAt: Date;
+  submittedAt: string; // ISO 8601 date string
   assignedTo: string; // EmployeeB ID
   status: 'new' | 'contacted' | 'closed';
   remarks: string; // Visible to admin
   privateNotes: string; // Visible only to EmployeeB
+  carSummary?: string; // e.g. "Maruti Suzuki Swift"
 }

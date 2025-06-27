@@ -21,14 +21,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bot, Loader2, Send, Sparkles } from 'lucide-react';
-import { cars, inquiries as mockInquiries } from '@/lib/data';
 import type { Inquiry, Car } from '@/lib/types';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { answerCarQueries } from '@/ai/flows/answer-car-queries';
 import { useToast } from '@/hooks/use-toast';
+import { db, rtdb } from '@/lib/firebase';
+import { ref, onValue, off, update } from 'firebase/database';
+import { doc, getDoc } from 'firebase/firestore';
+
 
 const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, onSelect: (id: string) => void, isSelected: boolean }) => {
     const [date, setDate] = useState('');
@@ -36,11 +38,10 @@ const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, 
         setDate(new Date(inquiry.submittedAt).toLocaleDateString('en-CA'));
     }, [inquiry.submittedAt]);
 
-    const car = cars.find(c => c.id === inquiry.carId);
     return (
         <button onClick={() => onSelect(inquiry.id)} className={`w-full text-left p-4 border-b hover:bg-muted/50 ${isSelected ? 'bg-muted' : ''}`}>
             <p className="font-semibold">{inquiry.customerName}</p>
-            <p className="text-sm text-muted-foreground">{car?.brand} {car?.model}</p>
+            <p className="text-sm text-muted-foreground">{inquiry.carSummary}</p>
             <div className="flex justify-between items-center mt-2">
                 <p className="text-xs text-muted-foreground">{date || ''}</p>
                 <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
@@ -52,28 +53,53 @@ const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, 
 export default function EmployeeBPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const userInquiries = useMemo(() => inquiries.filter(inq => inq.assignedTo === user?.id), [inquiries, user]);
+  const userInquiries = useMemo(() => {
+    if (!user) return [];
+    return inquiries.filter(inq => inq.assignedTo === user.id);
+  }, [inquiries, user]);
 
-  React.useEffect(() => {
-    if(userInquiries.length > 0 && !selectedInquiryId) {
+  useEffect(() => {
+    if (!loading && user?.role !== 'employee-b') {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const inquiriesRef = ref(rtdb, 'inquiries/');
+    onValue(inquiriesRef, (snapshot) => {
+      const data = snapshot.val();
+      const inquiriesList: Inquiry[] = data ? Object.keys(data).map(key => ({
+        id: key,
+        ...data[key]
+      })) : [];
+      setInquiries(inquiriesList.sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
+      setIsLoading(false);
+    });
+
+    return () => {
+      off(inquiriesRef);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userInquiries.length > 0 && !selectedInquiryId) {
       setSelectedInquiryId(userInquiries[0].id);
+    } else if (userInquiries.length === 0) {
+      setSelectedInquiryId(null);
     }
   }, [userInquiries, selectedInquiryId]);
-
-  if (!loading && user?.role !== 'employee-b') {
-    router.push('/');
-    return null;
-  }
   
   const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
   
   const updateInquiry = (inquiryId: string, updates: Partial<Inquiry>) => {
-    setInquiries(prev => prev.map(inq => inq.id === inquiryId ? {...inq, ...updates} : inq));
+    const inquiryRef = ref(rtdb, `inquiries/${inquiryId}`);
+    update(inquiryRef, updates);
   };
-
 
   return (
     <div className="h-[calc(100vh-theme(spacing.24))]">
@@ -87,7 +113,13 @@ export default function EmployeeBPage() {
               <h2 className="text-lg font-semibold">My Inquiries ({userInquiries.length})</h2>
             </div>
             <ScrollArea className="flex-1">
-                {userInquiries.map(inquiry => (
+                {isLoading ? (
+                  <div className="p-4 space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : userInquiries.map(inquiry => (
                   <InquiryListItem 
                     key={inquiry.id}
                     inquiry={inquiry}
@@ -110,7 +142,7 @@ export default function EmployeeBPage() {
 }
 
 function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (inquiryId: string, updates: Partial<Inquiry>) => void }) {
-    const car = cars.find(c => c.id === inquiry.carId);
+    const [car, setCar] = useState<Car | null>(null);
     const [summary, setSummary] = useState('');
     const [isSummaryLoading, setIsSummaryLoading] = useState(false);
     
@@ -123,23 +155,36 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
 
     const { toast } = useToast();
 
-    React.useEffect(() => {
+    useEffect(() => {
         setRemarks(inquiry.remarks);
         setPrivateNotes(inquiry.privateNotes);
-
-        if (!car) return;
-        setIsSummaryLoading(true);
         setSummary('');
         setChatHistory([]);
-        summarizeCarDetails(car).then(result => {
-            setSummary(result.summary);
-            setIsSummaryLoading(false);
-        }).catch(err => {
-            console.error(err);
-            setSummary("Failed to generate summary.");
-            setIsSummaryLoading(false);
-        });
-    }, [car, inquiry]);
+
+        const fetchCarDetails = async () => {
+            if (!inquiry.carId) return;
+            setIsSummaryLoading(true);
+            const carDocRef = doc(db, 'cars', inquiry.carId);
+            const carDocSnap = await getDoc(carDocRef);
+            if (carDocSnap.exists()) {
+                const carData = { id: carDocSnap.id, ...carDocSnap.data() } as Car;
+                setCar(carData);
+                summarizeCarDetails(carData).then(result => {
+                    setSummary(result.summary);
+                }).catch(err => {
+                    console.error(err);
+                    setSummary("Failed to generate summary.");
+                }).finally(() => {
+                    setIsSummaryLoading(false);
+                });
+            } else {
+                setCar(null);
+                setIsSummaryLoading(false);
+            }
+        };
+
+        fetchCarDetails();
+    }, [inquiry]);
 
     const handleQuerySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -169,7 +214,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         toast({ title: 'Notes Saved' });
     }
 
-    if (!car) return <div>Car not found for this inquiry.</div>;
+    if (!car) return <div className="p-6">Loading car details or car not found...</div>;
 
     return (
         <div className="p-6 space-y-6">

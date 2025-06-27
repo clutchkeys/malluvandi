@@ -3,14 +3,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { users } from '@/lib/data';
+import { auth, db } from '@/lib/firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => Promise<User | null>;
-  logout: () => void;
-  register: (name: string, email: string, pass: string) => Promise<User | null>;
   loading: boolean;
+  login: (email: string, pass: string) => Promise<User | null>;
+  logout: () => Promise<void>;
+  register: (name: string, email: string, pass: string) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,56 +29,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('mallu-vandi-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setUser({ 
+            id: firebaseUser.uid, 
+            name: firebaseUser.displayName || userData.name,
+            email: firebaseUser.email || userData.email,
+            role: userData.role
+          });
+        } else {
+            await signOut(auth);
+            setUser(null);
+        }
+      } else {
+        setUser(null);
       }
-    } catch (error) {
-      console.error('Failed to parse user from localStorage', error);
-      localStorage.removeItem('mallu-vandi-user');
-    } finally {
       setLoading(false);
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, pass: string): Promise<User | null> => {
-    const foundUser = users.find(u => u.email === email && u.password === pass);
-    if (foundUser) {
-      const { password, ...userToStore } = foundUser;
-      setUser(userToStore);
-      localStorage.setItem('mallu-vandi-user', JSON.stringify(userToStore));
-      return userToStore;
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const firebaseUser = userCredential.user;
+    
+    const userDocRef = doc(db, "users", firebaseUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if(userDocSnap.exists()){
+        const userData = userDocSnap.data();
+        const appUser: User = { 
+          id: firebaseUser.uid, 
+          name: firebaseUser.displayName || userData.name,
+          email: firebaseUser.email || userData.email,
+          role: userData.role
+        };
+        setUser(appUser);
+        return appUser;
     }
+    // This case should ideally not happen if registration is done correctly
+    await signOut(auth);
     return null;
   };
   
   const register = async (name: string, email: string, pass: string): Promise<User | null> => {
-    if (users.find(u => u.email === email)) {
-      throw new Error("User with this email already exists.");
-    }
-    const newUser: User = {
-        id: `user-cust-${Date.now()}`,
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const firebaseUser = userCredential.user;
+
+    await updateProfile(firebaseUser, { displayName: name });
+    
+    const newUserFirestoreData = {
         name,
         email,
         role: 'customer',
-        password: pass
     };
-    users.push(newUser);
-    const { password, ...userToStore } = newUser;
-    setUser(userToStore);
-    localStorage.setItem('mallu-vandi-user', JSON.stringify(userToStore));
-    return userToStore;
+    
+    await setDoc(doc(db, "users", firebaseUser.uid), newUserFirestoreData);
+    
+    const appUser: User = { ...newUserFirestoreData, id: firebaseUser.uid };
+    setUser(appUser);
+    return appUser;
   }
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('mallu-vandi-user');
     router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, loading }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

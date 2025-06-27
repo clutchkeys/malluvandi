@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { approvedCars, carBrands, carModels, carYears } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +15,9 @@ import { AdPlaceholder } from '@/components/ad-placeholder';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Car } from '@/lib/types';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const BrandCard = ({ logo, name }: { logo: React.ReactNode; name: string }) => (
   <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-md transition-shadow cursor-pointer">
@@ -32,6 +34,10 @@ const HondaLogo = () => <svg width="80" height="40" viewBox="0 0 100 60"><rect x
 
 
 export default function Home() {
+  const [allCars, setAllCars] = useState<Car[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
@@ -39,6 +45,39 @@ export default function Home() {
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
   const [selectedOwnership, setSelectedOwnership] = useState('');
+
+  // Filter options state
+  const [carBrands, setCarBrands] = useState<string[]>([]);
+  const [carModels, setCarModels] = useState<{[key: string]: string[]}>({});
+  const [carYears, setCarYears] = useState<number[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch approved cars
+        const carsCollectionRef = collection(db, 'cars');
+        const q = query(carsCollectionRef, where('status', '==', 'approved'));
+        const carsSnapshot = await getDocs(q);
+        const carsList = carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
+        setAllCars(carsList);
+
+        // Fetch filter config
+        const filtersDocRef = doc(db, 'config', 'filters');
+        const filtersDocSnap = await getDoc(filtersDocRef);
+        if (filtersDocSnap.exists()) {
+            const filtersData = filtersDocSnap.data();
+            setCarBrands(filtersData.brands || []);
+            setCarModels(filtersData.models || {});
+            setCarYears(filtersData.years || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data: ", error);
+      }
+      setIsLoading(false);
+    };
+    fetchData();
+  }, []);
 
 
   const handleBrandChange = (brand: string) => {
@@ -57,7 +96,7 @@ export default function Home() {
   };
 
   const filteredCars = useMemo(() => {
-    return approvedCars.filter(car => {
+    return allCars.filter(car => {
       const searchMatch = searchQuery
         ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
@@ -75,7 +114,7 @@ export default function Home() {
 
       return searchMatch && brandMatch && modelMatch && yearMatch && priceMatch && kmMatch && ownershipMatch;
     });
-  }, [searchQuery, selectedBrand, selectedModel, selectedYear, priceRange, kmRange, selectedOwnership]);
+  }, [searchQuery, selectedBrand, selectedModel, selectedYear, priceRange, kmRange, selectedOwnership, allCars]);
 
 
   return (
@@ -202,7 +241,11 @@ export default function Home() {
           <section>
             <h2 className="text-3xl font-bold mb-6">Featured Listings</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredCars.length > 0 ? (
+                {isLoading ? (
+                  <div className="col-span-full flex justify-center py-12">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  </div>
+                ) : filteredCars.length > 0 ? (
                     <>
                         {filteredCars.slice(0, 3).map(car => <CarCard key={car.id} car={car} />)}
                         <AdPlaceholder shape="post" />

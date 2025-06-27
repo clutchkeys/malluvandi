@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { users } from '@/lib/data';
 import type { Car, CarBadge } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
@@ -15,6 +14,8 @@ import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sp
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import { useAuth } from '@/hooks/use-auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const badgeIcons: Record<CarBadge, React.ReactNode> = {
   price_drop: <TrendingDown size={14} className="mr-1"/>,
@@ -28,6 +29,7 @@ export function CarDetailView({ car }: { car: Car }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const { user } = useAuth();
+  const [sellerName, setSellerName] = useState('');
 
   useEffect(() => {
     if (car) {
@@ -41,6 +43,23 @@ export function CarDetailView({ car }: { car: Car }) {
         .finally(() => setIsSummaryLoading(false));
     }
   }, [car]);
+
+  useEffect(() => {
+    if (car.submittedBy) {
+      const fetchSellerName = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', car.submittedBy));
+          if (userDoc.exists()) {
+            setSellerName(userDoc.data().name);
+          }
+        } catch (error) {
+          console.error("Error fetching seller name:", error);
+          setSellerName("Unknown Seller");
+        }
+      };
+      fetchSellerName();
+    }
+  }, [car.submittedBy]);
   
   const handleInquireClick = () => {
     const isGuestOrCustomer = !user || user.role === 'customer';
@@ -55,8 +74,6 @@ export function CarDetailView({ car }: { car: Car }) {
     setIsAdOpen(false);
     setIsModalOpen(true);
   };
-  
-  const seller = users.find(u => u.id === car.submittedBy);
 
   return (
     <>
@@ -128,7 +145,7 @@ export function CarDetailView({ car }: { car: Car }) {
                <Button className="w-full" size="lg" onClick={handleInquireClick}>
                   <Phone className="mr-2"/> Inquire Now
                </Button>
-               {seller && <p className="text-xs text-center text-muted-foreground mt-2">Seller: {seller.name}</p>}
+               {sellerName && <p className="text-xs text-center text-muted-foreground mt-2">Seller: {sellerName}</p>}
             </CardContent>
           </Card>
           <Card>

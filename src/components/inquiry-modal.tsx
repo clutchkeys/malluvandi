@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Car } from '@/lib/types';
+import type { Car, Inquiry } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -15,7 +15,9 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { inquiries, users } from '@/lib/data';
+import { rtdb, db } from '@/lib/firebase';
+import { ref, set, push } from 'firebase/database';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface InquiryModalProps {
   isOpen: boolean;
@@ -39,7 +41,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
     }
   }, [user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) {
         toast({
@@ -60,34 +62,51 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
 
     setIsSubmitting(true);
     
-    setTimeout(() => {
-      const salesPeople = users.filter(u => u.role === 'employee-b');
-      const assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)]?.id || 'unassigned';
+    try {
+      // Find an available sales person (Employee B)
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("role", "==", "employee-b"));
+      const querySnapshot = await getDocs(q);
+      const salesPeople = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      let assignedTo = 'unassigned';
+      if (salesPeople.length > 0) {
+        // Simple random assignment
+        assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)].id;
+      }
       
-      const newInquiry = {
-        id: `inq-${Date.now()}`,
+      const inquiriesRef = ref(rtdb, 'inquiries');
+      const newInquiryRef = push(inquiriesRef);
+
+      const newInquiry: Omit<Inquiry, 'id'> = {
         carId: car.id,
+        carSummary: `${car.brand} ${car.model}`,
         customerName: name,
         customerPhone: phone,
-        submittedAt: new Date(),
+        submittedAt: new Date().toISOString(),
         assignedTo: assignedTo,
         status: 'new' as const,
-        remarks: `Call scheduled for: ${callPreference === 'now' ? 'ASAP' : `${format(scheduledDate!, 'PPP')} at ${scheduledTime}`}`,
+        remarks: `Call preference: ${callPreference === 'now' ? 'ASAP' : `Scheduled for ${format(scheduledDate!, 'PPP')} at ${scheduledTime}`}`,
         privateNotes: ''
       }
       
-      // In a real app, this would be an API call.
-      // Here, we're pushing to the in-memory array.
-      inquiries.push(newInquiry);
+      await set(newInquiryRef, newInquiry);
 
-      console.log('Inquiry submitted:', newInquiry);
       toast({
         title: 'Inquiry Sent!',
         description: "Our team will contact you shortly.",
       });
-      setIsSubmitting(false);
       onClose();
-    }, 1000);
+    } catch (error) {
+       console.error("Error submitting inquiry:", error);
+       toast({
+           title: "Submission Failed",
+           description: "Could not submit your inquiry. Please try again.",
+           variant: "destructive"
+       });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const timeSlots = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];

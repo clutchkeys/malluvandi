@@ -38,7 +38,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -77,26 +76,23 @@ import {
   Car,
   FileText,
   MessageSquare,
-  UserPlus,
   Edit,
   Trash2,
   PlusCircle,
-  TrendingDown,
-  Sparkles,
-  Star,
-  Settings2,
   Eye,
+  Loader2,
 } from 'lucide-react';
-import { cars as mockCars, users as mockUsers, inquiries as mockInquiries, carBrands as mockCarBrands, carModels as mockCarModels, carYears as mockCarYears, carBadges } from '@/lib/data';
 import type { User, Role, Car as CarType, Inquiry, CarBadge } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { db, rtdb } from '@/lib/firebase';
+import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, addDoc, getDoc } from 'firebase/firestore';
+import { ref, onValue, off, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 
 
 const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  password: z.string().optional(),
   role: z.enum(['admin', 'manager', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
 });
 
@@ -106,21 +102,28 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState('approvals');
+  const [isLoading, setIsLoading] = useState({
+      cars: true, users: true, inquiries: true, filters: true
+  });
   
   // Data states
-  const [carsState, setCarsState] = useState<CarType[]>(mockCars);
-  const [usersState, setUsersState] = useState<User[]>(mockUsers.filter(u => u.role !== 'customer'));
-  const [inquiriesState, setInquiriesState] = useState<Inquiry[]>(mockInquiries);
-  const [brandsState, setBrandsState] = useState<string[]>(mockCarBrands);
-  const [modelsState, setModelsState] = useState<{[key: string]: string[]}>(mockCarModels);
-  const [yearsState, setYearsState] = useState<number[]>(mockCarYears);
+  const [carsState, setCarsState] = useState<CarType[]>([]);
+  const [usersState, setUsersState] = useState<User[]>([]);
+  const [inquiriesState, setInquiriesState] = useState<Inquiry[]>([]);
+
+  // Filter options state
+  const [brandsState, setBrandsState] = useState<string[]>([]);
+  const [modelsState, setModelsState] = useState<{[key: string]: string[]}>({});
+  const [yearsState, setYearsState] = useState<number[]>([]);
+  const carBadges: CarBadge[] = ['price_drop', 'new', 'featured'];
+
   
-  // Generic Dialog/Alert states
+  // Dialog/Alert states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isCarFormOpen, setIsCarFormOpen] = useState(false);
   const [isFilterFormOpen, setIsFilterFormOpen] = useState<{type: 'brand' | 'model' | 'year', isOpen: boolean}>({type: 'brand', isOpen: false});
   const [isReassignInquiryOpen, setIsReassignInquiryOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ type: string, value: any, description: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string, description: string } | null>(null);
 
   // States for editing specific items
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -135,26 +138,79 @@ export default function AdminPage() {
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', password: '', role: 'employee-a' },
+    defaultValues: { name: '', email: '', role: 'employee-a' },
   });
   
+  useEffect(() => {
+    if (!loading && user?.role !== 'admin' && user?.role !== 'manager') {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  // Fetch all data
+  useEffect(() => {
+    // Fetch Cars
+    const fetchCars = async () => {
+        setIsLoading(prev => ({...prev, cars: true}));
+        const carsCollectionRef = collection(db, 'cars');
+        const carsSnapshot = await getDocs(carsCollectionRef);
+        setCarsState(carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CarType)));
+        setIsLoading(prev => ({...prev, cars: false}));
+    }
+    // Fetch Users
+    const fetchUsers = async () => {
+        setIsLoading(prev => ({...prev, users: true}));
+        const usersCollectionRef = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersCollectionRef);
+        setUsersState(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)).filter(u => u.role !== 'customer'));
+        setIsLoading(prev => ({...prev, users: false}));
+    }
+    // Fetch Filters
+    const fetchFilters = async () => {
+        setIsLoading(prev => ({...prev, filters: true}));
+        const filtersDocRef = doc(db, 'config', 'filters');
+        const docSnap = await getDoc(filtersDocRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setBrandsState(data.brands || []);
+            setModelsState(data.models || {});
+            setYearsState(data.years || []);
+        }
+        setIsLoading(prev => ({...prev, filters: false}));
+    }
+
+    // Fetch Inquiries (from RTDB)
+    const inquiriesRef = ref(rtdb, 'inquiries/');
+    onValue(inquiriesRef, (snapshot) => {
+      setIsLoading(prev => ({...prev, inquiries: true}));
+      const data = snapshot.val();
+      const inquiriesList: Inquiry[] = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+      setInquiriesState(inquiriesList);
+      setIsLoading(prev => ({...prev, inquiries: false}));
+    });
+
+    fetchCars();
+    fetchUsers();
+    fetchFilters();
+
+    return () => {
+      off(inquiriesRef);
+    };
+  }, []);
+
   useEffect(() => {
     if (viewingInquiry) {
       setFormattedInquiryDate(new Date(viewingInquiry.submittedAt).toLocaleString('en-US'));
     }
   }, [viewingInquiry]);
 
-
-  if (!loading && user?.role !== 'admin' && user?.role !== 'manager') {
-    router.push('/');
-    return null;
-  }
-  
   const pendingCars = useMemo(() => carsState.filter(car => car.status === 'pending'), [carsState]);
   const salesEmployees = useMemo(() => usersState.filter(u => u.role === 'employee-b'), [usersState]);
 
   // Approval Handlers
-  const handleApproval = (carId: string, status: 'approved' | 'rejected') => {
+  const handleApproval = async (carId: string, status: 'approved' | 'rejected') => {
+    const carDocRef = doc(db, 'cars', carId);
+    await updateDoc(carDocRef, { status });
     setCarsState(prev => prev.map(car => car.id === carId ? {...car, status} : car));
     toast({
       title: `Listing ${status}`,
@@ -165,27 +221,18 @@ export default function AdminPage() {
   // --- User Management ---
   const handleOpenUserForm = (user: User | null) => {
     setUserToEdit(user);
-    form.reset(user ? { ...user, password: '' } : { name: '', email: '', password: '', role: 'employee-a' });
+    form.reset(user ? user : { name: '', email: '', role: 'employee-a' });
     setIsUserFormOpen(true);
   }
   
-  const onUserSubmit = (values: z.infer<typeof userSchema>) => {
-    if (userToEdit) { // Editing
+  const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
+    if (userToEdit) {
+        const userDocRef = doc(db, 'users', userToEdit.id);
+        await updateDoc(userDocRef, { role: values.role });
         setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, name: values.name, email: values.email, role: values.role as Role } : u
+            u.id === userToEdit.id ? { ...u, role: values.role as Role } : u
         ));
-        toast({ title: 'User Updated' });
-    } else { // Adding
-        const rolePrefix = values.role === 'admin' ? 'admin' : (values.role === 'manager' ? 'mgr' : 'emp');
-        const newUser: User = {
-            id: `user-${rolePrefix}-${Date.now()}`,
-            name: values.name,
-            email: values.email,
-            password: values.password || 'password',
-            role: values.role as Role,
-        };
-        setUsersState(currentUsers => [...currentUsers, newUser]);
-        toast({ title: 'User Added' });
+        toast({ title: 'User Role Updated' });
     }
     setIsUserFormOpen(false);
   };
@@ -193,10 +240,11 @@ export default function AdminPage() {
   // --- Car Management ---
   const handleOpenCarForm = (car: CarType | null) => {
     setCarToEdit(car);
+    setSelectedBrandForModel(car?.brand || '');
     setIsCarFormOpen(true);
   }
 
-  const onCarSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onCarSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
@@ -216,19 +264,20 @@ export default function AdminPage() {
         additionalDetails: formValues.details,
         status: formValues.status,
         badges: selectedBadges,
-        submittedBy: carToEdit?.submittedBy || user!.id,
     };
     
     if (carToEdit) {
+      await updateDoc(doc(db, 'cars', carToEdit.id), carData);
       setCarsState(carsState.map(c => c.id === carToEdit.id ? { ...c, ...carData } : c));
       toast({ title: 'Car Updated' });
     } else {
-      const newCar: CarType = {
-        id: `car-${Date.now()}`,
+      const newCarData = {
         ...carData,
-        images: ['https://placehold.co/600x400.png'],
+        submittedBy: user!.id,
+        images: ['https://placehold.co/600x400.png'], // Placeholder, real images should be uploaded
       };
-      setCarsState([...carsState, newCar]);
+      const newDocRef = await addDoc(collection(db, 'cars'), newCarData);
+      setCarsState([...carsState, {id: newDocRef.id, ...newCarData}]);
       toast({ title: 'Car Added' });
     }
     setIsCarFormOpen(false);
@@ -239,10 +288,9 @@ export default function AdminPage() {
     e.preventDefault();
     const newAssigneeId = new FormData(e.currentTarget).get('assignee') as string;
     if (inquiryToReassign && newAssigneeId) {
-      setInquiriesState(inquiriesState.map(inq => 
-        inq.id === inquiryToReassign.id ? { ...inq, assignedTo: newAssigneeId } : inq
-      ));
-      toast({ title: "Inquiry Reassigned" });
+        const inquiryRef = ref(rtdb, `inquiries/${inquiryToReassign.id}`);
+        updateRtdb(inquiryRef, { assignedTo: newAssigneeId });
+        toast({ title: "Inquiry Reassigned" });
     }
     setIsReassignInquiryOpen(false);
   }
@@ -251,64 +299,82 @@ export default function AdminPage() {
   const handleOpenFilterForm = (type: 'brand' | 'model' | 'year', value: any | null) => {
     setFilterToEdit(value ? { type, value } : null);
     if(type === 'model' && value) setSelectedBrandForModel(value.brand);
+    else if(type === 'model' && !value) setSelectedBrandForModel('');
     setIsFilterFormOpen({ type, isOpen: true });
   }
 
-  const onFilterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onFilterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const type = isFilterFormOpen.type;
 
+    let newBrands = [...brandsState];
+    let newModels = {...modelsState};
+    let newYears = [...yearsState];
+
     if (type === 'brand') {
       const brandName = formData.get('name') as string;
       if (filterToEdit) {
-        setBrandsState(brandsState.map(b => b === filterToEdit.value ? brandName : b));
-        const oldModels = modelsState[filterToEdit.value] || [];
-        const newModels = { ...modelsState };
-        delete newModels[filterToEdit.value];
+        const oldBrandName = filterToEdit.value;
+        newBrands = brandsState.map(b => b === oldBrandName ? brandName : b);
+        const oldModels = newModels[oldBrandName] || [];
+        delete newModels[oldBrandName];
         newModels[brandName] = oldModels;
-        setModelsState(newModels);
       } else {
-        setBrandsState([...brandsState, brandName]);
+        newBrands = [...brandsState, brandName];
       }
     } else if (type === 'model') {
       const modelName = formData.get('name') as string;
       const brand = formData.get('brand') as string;
       if (filterToEdit) {
-        setModelsState({ ...modelsState, [brand]: modelsState[brand].map(m => m === (filterToEdit.value as any).model ? modelName : m) });
+        newModels = { ...newModels, [brand]: newModels[brand].map(m => m === (filterToEdit.value as any).model ? modelName : m) };
       } else {
-        setModelsState({ ...modelsState, [brand]: [...(modelsState[brand] || []), modelName] });
+        newModels = { ...newModels, [brand]: [...(newModels[brand] || []), modelName] };
       }
     } else if (type === 'year') {
       const year = parseInt(formData.get('name') as string);
       if (filterToEdit) {
-        setYearsState(yearsState.map(y => y === filterToEdit.value ? year : y));
+        newYears = yearsState.map(y => y === filterToEdit.value ? year : y);
       } else {
-        setYearsState([...yearsState, year].sort((a,b) => b-a));
+        newYears = [...yearsState, year];
       }
+      newYears.sort((a,b) => b-a);
     }
+    
+    await setDoc(doc(db, 'config', 'filters'), {
+        brands: newBrands,
+        models: newModels,
+        years: newYears
+    });
+
+    setBrandsState(newBrands);
+    setModelsState(newModels);
+    setYearsState(newYears);
     
     toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Saved`});
     setIsFilterFormOpen({ type: 'brand', isOpen: false });
   }
 
   // --- Generic Delete Handler ---
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!itemToDelete) return;
-    const { type, value } = itemToDelete;
+    const { type, id } = itemToDelete;
     
-    if (type === 'user') setUsersState(usersState.filter(u => u.id !== value.id));
-    if (type === 'car') setCarsState(carsState.filter(c => c.id !== value.id));
-    if (type === 'brand') {
-      setBrandsState(brandsState.filter(b => b !== value));
-      const newModels = { ...modelsState };
-      delete newModels[value];
-      setModelsState(newModels);
+    try {
+        if (type === 'user') {
+            await deleteDoc(doc(db, "users", id));
+            setUsersState(prev => prev.filter(u => u.id !== id));
+            toast({ title: `User Deleted`, description: "User's record has been removed from Firestore." });
+        }
+        if (type === 'car') {
+            await deleteDoc(doc(db, "cars", id));
+            setCarsState(prev => prev.filter(c => c.id !== id));
+            toast({ title: `Car Deleted` });
+        }
+    } catch(err) {
+        toast({ title: 'Error', description: 'Could not delete item.', variant: 'destructive' });
     }
-    if (type === 'model') setModelsState({ ...modelsState, [value.brand]: modelsState[value.brand].filter(m => m !== value.model) });
-    if (type === 'year') setYearsState(yearsState.filter(y => y !== value));
-
-    toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Deleted` });
+    
     setItemToDelete(null);
   }
 
@@ -325,19 +391,19 @@ export default function AdminPage() {
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card onClick={() => setActiveTab('listings')} className="cursor-pointer">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Listings</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader>
           <CardContent><div className="text-2xl font-bold">{carsState.length}</div></CardContent>
         </Card>
-        <Card onClick={() => setActiveTab('approvals')} className="cursor-pointer">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pending Approvals</CardTitle><Car className="h-4 w-4 text-muted-foreground" /></CardHeader>
           <CardContent><div className="text-2xl font-bold">{pendingCars.length}</div></CardContent>
         </Card>
-        <Card onClick={() => setActiveTab('inquiries')} className="cursor-pointer">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Inquiries</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
           <CardContent><div className="text-2xl font-bold">{inquiriesState.length}</div></CardContent>
         </Card>
-        <Card onClick={() => setActiveTab('users')} className="cursor-pointer">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
           <CardContent><div className="text-2xl font-bold">{usersState.length}</div></CardContent>
         </Card>
@@ -359,18 +425,18 @@ export default function AdminPage() {
               <Table>
                 <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Submitted By</TableHead><TableHead>Price</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {pendingCars.map(car => (
+                  {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                  pendingCars.length > 0 ? pendingCars.map(car => (
                     <TableRow key={car.id}>
                       <TableCell className="font-medium"><div className="flex items-center gap-4"><Image src={car.images[0]} alt={car.model} width={64} height={48} className="rounded-md object-cover" data-ai-hint="car exterior"/><div>{car.brand} {car.model} ({car.year})<div className="text-xs text-muted-foreground">{car.color}</div></div></div></TableCell>
-                      <TableCell>{mockUsers.find(u => u.id === car.submittedBy)?.name || 'Unknown'}</TableCell>
+                      <TableCell>{usersState.find(u => u.id === car.submittedBy)?.name || car.submittedBy.substring(0,5)}</TableCell>
                       <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleApproval(car.id, 'approved')}><CheckCircle2 size={20} /></Button>
                         <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleApproval(car.id, 'rejected')}><XCircle size={20} /></Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {pendingCars.length === 0 && <TableRow><TableCell colSpan={4} className="h-24 text-center">No pending approvals.</TableCell></TableRow>}
+                  )) : <TableRow><TableCell colSpan={4} className="h-24 text-center">No pending approvals.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent>
@@ -384,7 +450,8 @@ export default function AdminPage() {
               <Table>
                 <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Status</TableHead><TableHead>Badges</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {carsState.map(car => (
+                  {isLoading.cars ? <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                  carsState.map(car => (
                     <TableRow key={car.id}>
                       <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
                       <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
@@ -392,7 +459,7 @@ export default function AdminPage() {
                       <TableCell><div className="flex gap-1">{car.badges?.map(b => <Badge key={b} variant="outline" className="text-xs capitalize">{b.replace('_', ' ')}</Badge>)}</div></TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenCarForm(car)}><Edit size={16}/></Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'car', value: car, description: `This will permanently delete the listing for ${car.brand} ${car.model}.`})}><Trash2 size={16}/></Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'car', id: car.id, description: `This will permanently delete the listing for ${car.brand} ${car.model}.`})}><Trash2 size={16}/></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -409,18 +476,18 @@ export default function AdminPage() {
               <Table>
                 <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Car</TableHead><TableHead>Assigned To</TableHead><TableHead>Status</TableHead><TableHead>Remarks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {inquiriesState.map(inq => {
-                    const car = carsState.find(c => c.id === inq.carId);
+                  {isLoading.inquiries ? <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                  inquiriesState.map(inq => {
                     const assignee = usersState.find(u => u.id === inq.assignedTo);
                     return (
                       <TableRow key={inq.id} className="cursor-pointer" onClick={() => setViewingInquiry(inq)}>
                         <TableCell>{inq.customerName}</TableCell>
-                        <TableCell>{car ? `${car.brand} ${car.model}` : 'N/A'}</TableCell>
+                        <TableCell>{inq.carSummary || 'N/A'}</TableCell>
                         <TableCell>{assignee?.name || 'Unassigned'}</TableCell>
                         <TableCell><Badge variant={inq.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inq.status}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{inq.remarks || "No remarks yet."}</TableCell>
                         <TableCell className="text-right flex items-center justify-end">
-                          <Button variant="ghost" size="sm"><Eye className="mr-2 h-4 w-4"/> View</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setViewingInquiry(inq)}><Eye className="mr-2 h-4 w-4"/> View</Button>
                           <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setInquiryToReassign(inq); setIsReassignInquiryOpen(true);}}>Re-assign</Button>
                         </TableCell>
                       </TableRow>
@@ -436,21 +503,21 @@ export default function AdminPage() {
           <TabsContent value="users">
               <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
-                  <div><CardTitle>User Management</CardTitle><CardDescription>Add, edit, or remove user accounts.</CardDescription></div>
-                  <Button onClick={() => handleOpenUserForm(null)}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>
+                  <div><CardTitle>User Management</CardTitle><CardDescription>Edit user roles.</CardDescription></div>
                   </CardHeader>
                   <CardContent>
                       <Table>
                           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                           <TableBody>
-                          {usersState.map(u => (
+                          {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                          usersState.map(u => (
                               <TableRow key={u.id}>
                               <TableCell className="font-medium">{u.name}</TableCell>
                               <TableCell>{u.email}</TableCell>
-                              <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>].variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>].name}</Badge></TableCell>
+                              <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
                               <TableCell className="text-right">
                                   <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
-                                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', value: u, description: `This will permanently delete the account for ${u.name}.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
+                                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name} from Firestore, but will not delete their login account.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
                               </TableCell>
                               </TableRow>
                           ))}
@@ -467,7 +534,7 @@ export default function AdminPage() {
                     <CardHeader className="flex-row items-center justify-between"><CardTitle>Brands</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('brand', null)}>Add</Button></CardHeader>
                     <CardContent>
                         <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>{brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'brand', value: brand, description: `This will delete the brand ${brand} and all its models.`})}><Trash2 size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                            <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
                         </Table>
                     </CardContent>
                 </Card>
@@ -475,7 +542,7 @@ export default function AdminPage() {
                     <CardHeader className="flex-row items-center justify-between"><CardTitle>Models</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('model', null)}>Add</Button></CardHeader>
                     <CardContent>
                         <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Brand</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                             <TableBody>{brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'model', value: { brand, model }, description: `This will delete the model ${model}.`})}><Trash2 size={16}/></Button></TableCell></TableRow>)))}</TableBody>
+                             <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button></TableCell></TableRow>)))}</TableBody>
                         </Table>
                     </CardContent>
                 </Card>
@@ -483,7 +550,7 @@ export default function AdminPage() {
                     <CardHeader className="flex-row items-center justify-between"><CardTitle>Years</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>Add</Button></CardHeader>
                     <CardContent>
                         <Table><TableHeader><TableRow><TableHead>Year</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>{yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'year', value: year, description: `This will delete the year ${year}.`})}><Trash2 size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                            <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
                         </Table>
                     </CardContent>
                 </Card>
@@ -495,12 +562,11 @@ export default function AdminPage() {
 
         <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
             <DialogContent>
-                <DialogHeader><DialogTitle>{userToEdit ? 'Edit User' : 'Add New User'}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{userToEdit ? 'Edit User Role' : 'Add New User'}</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onUserSubmit)} className="space-y-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder={userToEdit ? 'Leave blank to keep unchanged' : ''} {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={form.control} name="role" render={({ field }) => (
                             <FormItem><FormLabel>Role</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
@@ -562,7 +628,7 @@ export default function AdminPage() {
                     {isFilterFormOpen.type === 'model' && (
                         <div>
                           <Label>Brand</Label>
-                          <Select name="brand" onValueChange={setSelectedBrandForModel} value={selectedBrandForModel} defaultValue={(filterToEdit?.value as any)?.brand} required disabled={!!filterToEdit}>
+                          <Select name="brand" onValueChange={setSelectedBrandForModel} value={selectedBrandForModel} defaultValue={(filterToEdit?.value as any)?.brand} required>
                             <SelectTrigger><SelectValue placeholder="Select a brand..." /></SelectTrigger>
                             <SelectContent>{brandsState.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                           </Select>
@@ -625,7 +691,6 @@ export default function AdminPage() {
           </DialogContent>
         </Dialog>
 
-
         <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>{itemToDelete?.description}</AlertDialogDescription></AlertDialogHeader>
@@ -643,7 +708,7 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
         if (as === 'select') return (
             <Select name={name} defaultValue={props.defaultValue as string} onValueChange={(props as any).onValueChange} disabled={props.disabled}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>{options?.map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(options || []).map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
             </Select>
         );
         return <Input {...commonProps} />;
