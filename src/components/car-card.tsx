@@ -77,8 +77,8 @@ export function CarCard({ car }: CarCardProps) {
               </div>
           </CardContent>
           <CardFooter className="p-3 bg-secondary/30">
-              <Button asChild className="w-full" size="sm">
-                  <div>View Details <ArrowRight className="ml-2" size={16} /></div>
+              <Button className="w-full" size="sm">
+                  View Details <ArrowRight className="ml-2" size={16} />
               </Button>
           </CardFooter>
           </Card>

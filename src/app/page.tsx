@@ -2,18 +2,20 @@
 
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
 import { approvedCars, carBrands, carModels, carYears } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdPlaceholder } from '@/components/ad-placeholder';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 const BrandCard = ({ logo, name }: { logo: React.ReactNode; name: string }) => (
   <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-md transition-shadow cursor-pointer">
@@ -34,6 +36,10 @@ export default function Home() {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [priceRange, setPriceRange] = useState([0, 5000000]);
+  const [kmRange, setKmRange] = useState([0, 200000]);
+  const [selectedOwnership, setSelectedOwnership] = useState('');
+
 
   const handleBrandChange = (brand: string) => {
     setSelectedBrand(brand);
@@ -45,6 +51,9 @@ export default function Home() {
     setSelectedBrand('');
     setSelectedModel('');
     setSelectedYear('');
+    setPriceRange([0, 5000000]);
+    setKmRange([0, 200000]);
+    setSelectedOwnership('');
   };
 
   const filteredCars = useMemo(() => {
@@ -55,10 +64,18 @@ export default function Home() {
       const brandMatch = selectedBrand ? car.brand === selectedBrand : true;
       const modelMatch = selectedModel ? car.model === selectedModel : true;
       const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
+      const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
+      const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
+      const ownershipMatch = selectedOwnership
+        ? (
+            selectedOwnership === '3'
+                ? car.ownership >= 3
+                : car.ownership.toString() === selectedOwnership
+        ) : true;
 
-      return searchMatch && brandMatch && modelMatch && yearMatch;
+      return searchMatch && brandMatch && modelMatch && yearMatch && priceMatch && kmMatch && ownershipMatch;
     });
-  }, [searchQuery, selectedBrand, selectedModel, selectedYear]);
+  }, [searchQuery, selectedBrand, selectedModel, selectedYear, priceRange, kmRange, selectedOwnership]);
 
 
   return (
@@ -90,32 +107,89 @@ export default function Home() {
                   <TabsTrigger value="used">Used Cars</TabsTrigger>
                 </TabsList>
                 <TabsContent value="used" className="mt-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <Input
-                      placeholder="Search by keyword..."
-                      className="w-full text-base sm:col-span-2 lg:col-span-5"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                    <Select value={selectedBrand} onValueChange={handleBrandChange}>
-                      <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
-                      <SelectContent>
-                        {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
-                      <SelectTrigger><SelectValue placeholder="Model" /></SelectTrigger>
-                      <SelectContent>
-                        {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                      <SelectContent>
-                        {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button onClick={handleResetFilters} variant="outline" className="lg:col-span-2">Reset Filters</Button>
+                   <div className="space-y-6">
+                      <Input
+                          placeholder="Search by keyword..."
+                          className="w-full text-base"
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <Select value={selectedBrand} onValueChange={handleBrandChange}>
+                              <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
+                              <SelectContent>
+                                  {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
+                              <SelectTrigger><SelectValue placeholder="Model" /></SelectTrigger>
+                              <SelectContent>
+                                  {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <Select value={selectedYear} onValueChange={setSelectedYear}>
+                              <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                              <SelectContent>
+                                  {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      
+                      <Collapsible>
+                          <CollapsibleTrigger asChild>
+                              <Button variant="link" className="p-0 text-sm text-muted-foreground hover:text-primary hover:no-underline -mt-2">
+                                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                                  Advanced Filters
+                              </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-4 border-t">
+                                  <div className="space-y-3">
+                                      <Label htmlFor="price-range">Price Range</Label>
+                                      <Slider
+                                          id="price-range"
+                                          value={priceRange}
+                                          max={5000000}
+                                          step={50000}
+                                          onValueChange={setPriceRange}
+                                      />
+                                      <div className="flex justify-between text-xs text-muted-foreground">
+                                          <span>₹{priceRange[0].toLocaleString()}</span>
+                                          <span>₹{priceRange[1].toLocaleString()}</span>
+                                      </div>
+                                  </div>
+                                  <div className="space-y-3">
+                                      <Label htmlFor="km-range">Kilometers</Label>
+                                      <Slider
+                                          id="km-range"
+                                          value={kmRange}
+                                          max={200000}
+                                          step={5000}
+                                          onValueChange={setKmRange}
+                                      />
+                                      <div className="flex justify-between text-xs text-muted-foreground">
+                                          <span>{kmRange[0].toLocaleString()} km</span>
+                                          <span>{kmRange[1].toLocaleString()} km</span>
+                                      </div>
+                                  </div>
+                                  <div className="space-y-3">
+                                      <Label>Ownership</Label>
+                                      <Select value={selectedOwnership} onValueChange={setSelectedOwnership}>
+                                          <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
+                                          <SelectContent>
+                                              <SelectItem value="1">First Owner</SelectItem>
+                                              <SelectItem value="2">Second Owner</SelectItem>
+                                              <SelectItem value="3">Third or more</SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                              </div>
+                          </CollapsibleContent>
+                      </Collapsible>
+
+                      <div className="flex justify-end pt-4 border-t">
+                          <Button onClick={handleResetFilters} variant="outline">Reset All Filters</Button>
+                      </div>
                   </div>
                 </TabsContent>
               </Tabs>
