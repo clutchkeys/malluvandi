@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,6 +29,25 @@ import type { Inquiry, Car } from '@/lib/types';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { answerCarQueries } from '@/ai/flows/answer-car-queries';
 import { useToast } from '@/hooks/use-toast';
+
+const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, onSelect: (id: string) => void, isSelected: boolean }) => {
+    const [date, setDate] = useState('');
+    useEffect(() => {
+        setDate(inquiry.submittedAt.toLocaleDateString());
+    }, [inquiry.submittedAt]);
+
+    const car = cars.find(c => c.id === inquiry.carId);
+    return (
+        <button onClick={() => onSelect(inquiry.id)} className={`w-full text-left p-4 border-b hover:bg-muted/50 ${isSelected ? 'bg-muted' : ''}`}>
+            <p className="font-semibold">{inquiry.customerName}</p>
+            <p className="text-sm text-muted-foreground">{car?.brand} {car?.model}</p>
+            <div className="flex justify-between items-center mt-2">
+                <p className="text-xs text-muted-foreground">{date || ''}</p>
+                <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
+            </div>
+        </button>
+    );
+}
 
 export default function EmployeeBPage() {
   const { user, loading } = useAuth();
@@ -68,19 +87,14 @@ export default function EmployeeBPage() {
               <h2 className="text-lg font-semibold">My Inquiries ({userInquiries.length})</h2>
             </div>
             <ScrollArea className="flex-1">
-                {userInquiries.map(inquiry => {
-                    const car = cars.find(c => c.id === inquiry.carId);
-                    return(
-                        <button key={inquiry.id} onClick={() => setSelectedInquiryId(inquiry.id)} className={`w-full text-left p-4 border-b hover:bg-muted/50 ${selectedInquiryId === inquiry.id ? 'bg-muted' : ''}`}>
-                            <p className="font-semibold">{inquiry.customerName}</p>
-                            <p className="text-sm text-muted-foreground">{car?.brand} {car?.model}</p>
-                            <div className="flex justify-between items-center mt-2">
-                                <p className="text-xs text-muted-foreground">{inquiry.submittedAt.toLocaleDateString()}</p>
-                                <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
-                            </div>
-                        </button>
-                    )
-                })}
+                {userInquiries.map(inquiry => (
+                  <InquiryListItem 
+                    key={inquiry.id}
+                    inquiry={inquiry}
+                    onSelect={setSelectedInquiryId}
+                    isSelected={selectedInquiryId === inquiry.id}
+                  />
+                ))}
             </ScrollArea>
           </div>
         </ResizablePanel>

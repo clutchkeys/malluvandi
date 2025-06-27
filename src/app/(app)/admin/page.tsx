@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -131,11 +131,19 @@ export default function AdminPage() {
   
   // Misc states
   const [selectedBrandForModel, setSelectedBrandForModel] = useState('');
+  const [formattedInquiryDate, setFormattedInquiryDate] = useState('');
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
     defaultValues: { name: '', email: '', password: '', role: 'employee-a' },
   });
+  
+  useEffect(() => {
+    if (viewingInquiry) {
+      setFormattedInquiryDate(new Date(viewingInquiry.submittedAt).toLocaleString());
+    }
+  }, [viewingInquiry]);
+
 
   if (!loading && user?.role !== 'admin' && user?.role !== 'manager') {
     router.push('/');
@@ -597,7 +605,7 @@ export default function AdminPage() {
                   <h4 className="font-semibold text-lg">Customer Information</h4>
                   <p><span className="font-medium">Name:</span> {viewingInquiry.customerName}</p>
                   <p><span className="font-medium">Phone:</span> {viewingInquiry.customerPhone}</p>
-                  <p><span className="font-medium">Submitted:</span> {new Date(viewingInquiry.submittedAt).toLocaleString()}</p>
+                  <p><span className="font-medium">Submitted:</span> {formattedInquiryDate}</p>
                   
                   <h4 className="font-semibold text-lg pt-2">Sales Information</h4>
                   <p><span className="font-medium">Assigned To:</span> {viewingInquiryAssignee?.name || 'Unassigned'}</p>
@@ -647,5 +655,3 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
         </div>
     )
 }
-
-    
