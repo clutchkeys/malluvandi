@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { cars, users } from '@/lib/data';
 import type { Car, CarBadge } from '@/lib/types';
@@ -25,8 +25,9 @@ const badgeIcons: Record<CarBadge, React.ReactNode> = {
 }
 
 
-export default function CarDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function CarDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [car, setCar] = useState<Car | null | undefined>(undefined);
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
