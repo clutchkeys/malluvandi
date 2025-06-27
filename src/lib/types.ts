@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'employee-a' | 'employee-b' | 'customer';
+export type Role = 'admin' | 'manager' | 'employee-a' | 'employee-b' | 'customer';
 
 export type CarBadge = 'price_drop' | 'new' | 'featured';
 

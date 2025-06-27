@@ -51,6 +51,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     admin: [
       { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     ],
+    manager: [
+       { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    ],
     'employee-a': [
       { href: '/employee-a', icon: List, label: 'My Listings' },
     ],

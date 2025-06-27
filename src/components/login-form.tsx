@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 
 const roleRedirects: Record<Role, string> = {
   admin: '/admin',
+  manager: '/admin',
   'employee-a': '/employee-a',
   'employee-b': '/employee-b',
   customer: '/',

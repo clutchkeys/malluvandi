@@ -85,9 +85,11 @@ import {
   Sparkles,
   Star,
   Settings2,
+  Eye,
 } from 'lucide-react';
 import { cars as mockCars, users as mockUsers, inquiries as mockInquiries, carBrands as mockCarBrands, carModels as mockCarModels, carYears as mockCarYears, carBadges } from '@/lib/data';
 import type { User, Role, Car as CarType, Inquiry, CarBadge } from '@/lib/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const userSchema = z.object({
@@ -95,7 +97,7 @@ const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().optional(),
-  role: z.enum(['admin', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
+  role: z.enum(['admin', 'manager', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
 });
 
 export default function AdminPage() {
@@ -125,6 +127,7 @@ export default function AdminPage() {
   const [carToEdit, setCarToEdit] = useState<CarType | null>(null);
   const [filterToEdit, setFilterToEdit] = useState<{type: string, value: any} | null>(null);
   const [inquiryToReassign, setInquiryToReassign] = useState<Inquiry | null>(null);
+  const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
   
   // Misc states
   const [selectedBrandForModel, setSelectedBrandForModel] = useState('');
@@ -134,7 +137,7 @@ export default function AdminPage() {
     defaultValues: { name: '', email: '', password: '', role: 'employee-a' },
   });
 
-  if (!loading && user?.role !== 'admin') {
+  if (!loading && user?.role !== 'admin' && user?.role !== 'manager') {
     router.push('/');
     return null;
   }
@@ -165,7 +168,7 @@ export default function AdminPage() {
         ));
         toast({ title: 'User Updated' });
     } else { // Adding
-        const rolePrefix = values.role === 'admin' ? 'admin' : 'emp';
+        const rolePrefix = values.role === 'admin' ? 'admin' : (values.role === 'manager' ? 'mgr' : 'emp');
         const newUser: User = {
             id: `user-${rolePrefix}-${Date.now()}`,
             name: values.name,
@@ -303,9 +306,13 @@ export default function AdminPage() {
 
   const roleDisplay: Record<Exclude<Role, 'customer'>, { name: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined }> = {
     admin: { name: 'Admin', variant: 'destructive' },
+    manager: { name: 'Manager', variant: 'default' },
     'employee-a': { name: 'Content Manager', variant: 'secondary' },
     'employee-b': { name: 'Sales', variant: 'outline' },
   };
+
+  const viewingInquiryCar = carsState.find(c => c.id === viewingInquiry?.carId);
+  const viewingInquiryAssignee = usersState.find(u => u.id === viewingInquiry?.assignedTo);
 
   return (
     <div className="space-y-8">
@@ -329,11 +336,11 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
           <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
           <TabsTrigger value="listings">Car Listings</TabsTrigger>
           <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
-          <TabsTrigger value="users">User Management</TabsTrigger>
+          {user?.role === 'admin' && <TabsTrigger value="users">User Management</TabsTrigger>}
           <TabsTrigger value="filters">Filter Management</TabsTrigger>
         </TabsList>
 
@@ -398,14 +405,15 @@ export default function AdminPage() {
                     const car = carsState.find(c => c.id === inq.carId);
                     const assignee = usersState.find(u => u.id === inq.assignedTo);
                     return (
-                      <TableRow key={inq.id}>
+                      <TableRow key={inq.id} className="cursor-pointer" onClick={() => setViewingInquiry(inq)}>
                         <TableCell>{inq.customerName}</TableCell>
                         <TableCell>{car ? `${car.brand} ${car.model}` : 'N/A'}</TableCell>
                         <TableCell>{assignee?.name || 'Unassigned'}</TableCell>
                         <TableCell><Badge variant={inq.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inq.status}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{inq.remarks}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => { setInquiryToReassign(inq); setIsReassignInquiryOpen(true);}}>Re-assign</Button>
+                        <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{inq.remarks || "No remarks yet."}</TableCell>
+                        <TableCell className="text-right flex items-center justify-end">
+                          <Button variant="ghost" size="sm"><Eye className="mr-2 h-4 w-4"/> View</Button>
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setInquiryToReassign(inq); setIsReassignInquiryOpen(true);}}>Re-assign</Button>
                         </TableCell>
                       </TableRow>
                     )
@@ -415,33 +423,35 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="users">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                <div><CardTitle>User Management</CardTitle><CardDescription>Add, edit, or remove user accounts.</CardDescription></div>
-                <Button onClick={() => handleOpenUserForm(null)}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                        {usersState.map(u => (
-                            <TableRow key={u.id}>
-                            <TableCell className="font-medium">{u.name}</TableCell>
-                            <TableCell>{u.email}</TableCell>
-                            <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>].variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>].name}</Badge></TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', value: u, description: `This will permanently delete the account for ${u.name}.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
-                            </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </TabsContent>
+        
+        {user?.role === 'admin' && (
+          <TabsContent value="users">
+              <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle>User Management</CardTitle><CardDescription>Add, edit, or remove user accounts.</CardDescription></div>
+                  <Button onClick={() => handleOpenUserForm(null)}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>
+                  </CardHeader>
+                  <CardContent>
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                          {usersState.map(u => (
+                              <TableRow key={u.id}>
+                              <TableCell className="font-medium">{u.name}</TableCell>
+                              <TableCell>{u.email}</TableCell>
+                              <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>].variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>].name}</Badge></TableCell>
+                              <TableCell className="text-right">
+                                  <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
+                                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', value: u, description: `This will permanently delete the account for ${u.name}.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
+                              </TableCell>
+                              </TableRow>
+                          ))}
+                          </TableBody>
+                      </Table>
+                  </CardContent>
+              </Card>
+          </TabsContent>
+        )}
         
         <TabsContent value="filters">
             <div className="grid gap-6 md:grid-cols-3">
@@ -489,6 +499,7 @@ export default function AdminPage() {
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="manager">Manager</SelectItem>
                                         <SelectItem value="employee-a">Content Manager (Employee A)</SelectItem>
                                         <SelectItem value="employee-b">Sales & Support (Employee B)</SelectItem>
                                     </SelectContent>
@@ -571,6 +582,41 @@ export default function AdminPage() {
                 </form>
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={!!viewingInquiry} onOpenChange={() => setViewingInquiry(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Inquiry Details</DialogTitle>
+              <DialogDescription>
+                For {viewingInquiryCar ? `${viewingInquiryCar.brand} ${viewingInquiryCar.model}` : 'a car'}.
+              </DialogDescription>
+            </DialogHeader>
+            {viewingInquiry && (
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-4 p-1 pr-6">
+                  <h4 className="font-semibold text-lg">Customer Information</h4>
+                  <p><span className="font-medium">Name:</span> {viewingInquiry.customerName}</p>
+                  <p><span className="font-medium">Phone:</span> {viewingInquiry.customerPhone}</p>
+                  <p><span className="font-medium">Submitted:</span> {new Date(viewingInquiry.submittedAt).toLocaleString()}</p>
+                  
+                  <h4 className="font-semibold text-lg pt-2">Sales Information</h4>
+                  <p><span className="font-medium">Assigned To:</span> {viewingInquiryAssignee?.name || 'Unassigned'}</p>
+                  <p><span className="font-medium">Status:</span> <Badge variant={viewingInquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{viewingInquiry.status}</Badge></p>
+
+                  <h4 className="font-semibold text-lg pt-2">Call Remarks</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{viewingInquiry.remarks || "No remarks provided."}</p>
+                  
+                  <h4 className="font-semibold text-lg pt-2">Private Notes</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{viewingInquiry.privateNotes || "No private notes."}</p>
+                </div>
+              </ScrollArea>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewingInquiry(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
         <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
             <AlertDialogContent>

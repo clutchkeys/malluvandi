@@ -2,6 +2,7 @@ import type { User, Car, Inquiry, Role, CarBadge } from './types';
 
 export const users: User[] = [
   { id: 'user-admin-1', name: 'Admin', email: 'dukaanflow@gmail.com', role: 'admin', password: 'password' },
+  { id: 'user-manager-1', name: 'Manager', email: 'manager@malluvandi.com', role: 'manager', password: 'password' },
   { id: 'user-emp-a-1', name: 'Aisha', email: 'aisha@malluvandi.com', role: 'employee-a', password: 'password' },
   { id: 'user-emp-a-2', name: 'Balan', email: 'balan@malluvandi.com', role: 'employee-a', password: 'password' },
   { id: 'user-emp-b-1', name: 'Chacko', email: 'chacko@malluvandi.com', role: 'employee-b', password: 'password' },
@@ -119,7 +120,7 @@ export let inquiries: Inquiry[] = [
         submittedAt: new Date('2024-05-20T10:00:00Z'),
         assignedTo: 'user-emp-b-1',
         status: 'contacted',
-        remarks: 'Customer is interested, planning a test drive on Saturday.',
+        remarks: 'Customer is interested, planning a test drive on Saturday. They are looking for a car under 7 lakhs and this fits their budget. They have a few questions about the service history which I have addressed. Seems promising.',
         privateNotes: 'Seems like a serious buyer, follow up on Friday.'
     },
     {
