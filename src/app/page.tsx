@@ -6,22 +6,14 @@ import Link from 'next/link';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { approvedCars } from '@/lib/data';
+import { approvedCars, carBrands, carModels, carYears } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Car as CarIcon, Truck, Building, Sparkles, HandCoins } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-
-const BodyTypeCard = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div className="flex flex-col items-center gap-2 text-center cursor-pointer group">
-    <div className="flex items-center justify-center h-20 w-20 bg-secondary rounded-lg group-hover:bg-primary/10 transition-colors duration-300">
-      {icon}
-    </div>
-    <p className="text-sm font-medium">{label}</p>
-  </div>
-);
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdPlaceholder } from '@/components/ad-placeholder';
 
 const BrandCard = ({ logo, name }: { logo: React.ReactNode; name: string }) => (
   <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-md transition-shadow cursor-pointer">
@@ -39,14 +31,34 @@ const HondaLogo = () => <svg width="80" height="40" viewBox="0 0 100 60"><rect x
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+
+  const handleBrandChange = (brand: string) => {
+    setSelectedBrand(brand);
+    setSelectedModel(''); // Reset model when brand changes
+  };
+  
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedBrand('');
+    setSelectedModel('');
+    setSelectedYear('');
+  };
 
   const filteredCars = useMemo(() => {
     return approvedCars.filter(car => {
-      return searchQuery
+      const searchMatch = searchQuery
         ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
+      const brandMatch = selectedBrand ? car.brand === selectedBrand : true;
+      const modelMatch = selectedModel ? car.model === selectedModel : true;
+      const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
+
+      return searchMatch && brandMatch && modelMatch && yearMatch;
     });
-  }, [searchQuery]);
+  }, [searchQuery, selectedBrand, selectedModel, selectedYear]);
 
 
   return (
@@ -74,27 +86,39 @@ export default function Home() {
           <Card className="shadow-2xl">
             <CardContent className="p-4 md:p-6">
               <Tabs defaultValue="used">
-                <TabsList className="grid w-full grid-cols-2 md:w-1/3">
+                <TabsList className="grid w-full grid-cols-1" style={{width: 'fit-content'}}>
                   <TabsTrigger value="used">Used Cars</TabsTrigger>
-                  <TabsTrigger value="new" disabled>New Cars</TabsTrigger>
                 </TabsList>
                 <TabsContent value="used" className="mt-6">
-                  <div className="relative w-full mb-6">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     <Input
-                      placeholder="Search by car name, model..."
-                      className="pl-10 w-full text-base"
+                      placeholder="Search by keyword..."
+                      className="w-full text-base sm:col-span-2 lg:col-span-5"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                     />
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
-                    <BodyTypeCard icon={<CarIcon size={32} className="text-primary"/>} label="Sedan" />
-                    <BodyTypeCard icon={<Truck size={32} className="text-primary"/>} label="SUV" />
-                    <BodyTypeCard icon={<CarIcon size={32} className="text-primary"/>} label="Hatchback" />
-                    <BodyTypeCard icon={<Sparkles size={32} className="text-primary"/>} label="Luxury" />
-                    <BodyTypeCard icon={<HandCoins size={32} className="text-primary"/>} label="Budget" />
-                    <BodyTypeCard icon={<Building size={32} className="text-primary"/>} label="By City" />
+                    <Select value={selectedBrand} onValueChange={handleBrandChange}>
+                      <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Brands</SelectItem>
+                        {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
+                      <SelectTrigger><SelectValue placeholder="Model" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Models</SelectItem>
+                        {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Years</SelectItem>
+                        {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleResetFilters} variant="outline" className="lg:col-span-2">Reset Filters</Button>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -106,17 +130,22 @@ export default function Home() {
           {/* Featured Listings */}
           <section>
             <h2 className="text-3xl font-bold mb-6">Featured Listings</h2>
-            <Carousel opts={{ align: "start", loop: true }} className="w-full">
-              <CarouselContent className="-ml-4">
-                {filteredCars.map(car => (
-                  <CarouselItem key={car.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                    <CarCard car={car} />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="ml-16" />
-              <CarouselNext className="mr-16" />
-            </Carousel>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredCars.length > 0 ? (
+                    <>
+                        {filteredCars.slice(0, 3).map(car => <CarCard key={car.id} car={car} />)}
+                        <AdPlaceholder shape="post" />
+                        {filteredCars.slice(3, 7).map(car => <CarCard key={car.id} car={car} />)}
+                        <AdPlaceholder shape="post" />
+                        {filteredCars.slice(7).map(car => <CarCard key={car.id} car={car} />)}
+                    </>
+                ) : (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                        <p className="text-lg">No cars match your current filters.</p>
+                        <p className="text-sm">Try adjusting your search criteria.</p>
+                    </div>
+                )}
+             </div>
           </section>
 
           {/* Browse by Brand */}
