@@ -100,21 +100,18 @@ export default function Home() {
                     <Select value={selectedBrand} onValueChange={handleBrandChange}>
                       <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Brands</SelectItem>
                         {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
                       <SelectTrigger><SelectValue placeholder="Model" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Models</SelectItem>
                         {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={selectedYear} onValueChange={setSelectedYear}>
                       <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Years</SelectItem>
                         {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                       </SelectContent>
                     </Select>
