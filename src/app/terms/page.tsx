@@ -1,8 +1,17 @@
+'use client';
+
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function TermsOfServicePage() {
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
+    setDate(new Date().toLocaleDateString());
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -12,7 +21,7 @@ export default function TermsOfServicePage() {
             <CardTitle className="text-3xl font-bold text-center">Terms of Service</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
-            <p><strong>Last Updated:</strong> {new Date().toLocaleDateString()}</p>
+            <p><strong>Last Updated:</strong> {date}</p>
 
             <h2 className="text-xl font-semibold text-foreground pt-4">1. Agreement to Terms</h2>
             <p>By using the Mallu Vandi website ("Site"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Site.</p>

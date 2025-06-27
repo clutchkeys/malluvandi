@@ -1,8 +1,17 @@
+'use client';
+
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PrivacyPolicyPage() {
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
+    setDate(new Date().toLocaleDateString());
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -12,7 +21,7 @@ export default function PrivacyPolicyPage() {
             <CardTitle className="text-3xl font-bold text-center">Privacy Policy</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
-            <p><strong>Last Updated:</strong> {new Date().toLocaleDateString()}</p>
+            <p><strong>Last Updated:</strong> {date}</p>
             
             <h2 className="text-xl font-semibold text-foreground pt-4">1. Introduction</h2>
             <p>Mallu Vandi ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website.</p>
