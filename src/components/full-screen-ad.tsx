@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import Image from 'next/image';
@@ -38,6 +38,7 @@ export function FullScreenAd({ isOpen, onClose }: FullScreenAdProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="p-0 border-0 max-w-4xl w-full h-[80vh] bg-transparent shadow-none flex items-center justify-center data-[state=open]:animate-in data-[state=open]:fade-in-0">
+        <DialogTitle className="sr-only">Advertisement</DialogTitle>
         <div className="relative w-full h-full bg-card rounded-lg overflow-hidden flex flex-col items-center justify-center text-center">
             <Image 
                 src="https://placehold.co/800x600.png" 
