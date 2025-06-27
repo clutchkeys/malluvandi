@@ -14,7 +14,7 @@ export function Footer() {
           <div className="md:col-span-4 lg:col-span-2 space-y-4">
             <Link href="/">
               <Image
-                src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+                src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
                 alt="Mallu Vandi Logo"
                 width={160}
                 height={40}
@@ -71,7 +71,7 @@ export function Footer() {
               <div className="flex items-center gap-2">
                 <span>Powered by</span>
                 <a href="#" className="hover:opacity-80 transition-opacity">
-                    <Image src="https://ik.imagekit.io/qctc8ch4l/advalix.png?updatedAt=1751041755492" alt="Advalix Logo" width={80} height={20} className="brightness-0 invert" />
+                    <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={80} height={20} className="brightness-0 invert" />
                 </a>
               </div>
               <span>Made by <a href="#" className="font-semibold hover:text-footer-primary transition-colors">@alxvgh</a></span>

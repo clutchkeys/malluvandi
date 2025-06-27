@@ -70,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link href="/" className="flex items-center gap-4">
             <Image
-              src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+              src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
               alt="Mallu Vandi Logo"
               width={140}
               height={35}
@@ -94,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <nav className="grid gap-6 text-lg font-medium">
               <Link href="/" className="flex items-center gap-2">
                 <Image
-                  src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+                  src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
                   alt="Mallu Vandi Logo"
                   width={140}
                   height={35}

@@ -24,7 +24,7 @@ export function SplashScreen() {
     >
       <div className="animate-pulse">
         <Image
-          src="https://ik.imagekit.io/qctc8ch4l/malluvandi.png?updatedAt=1751041703463"
+          src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
           alt="Mallu Vandi Logo"
           width={240}
           height={60}
