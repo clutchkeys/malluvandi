@@ -12,10 +12,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { Role } from '@/lib/types';
 
 
 export function Header() {
   const { user, logout, loading } = useAuth();
+
+  const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
+    admin: '/admin',
+    manager: '/admin',
+    'employee-a': '/employee-a',
+    'employee-b': '/employee-b',
+  };
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
@@ -49,7 +57,7 @@ export function Header() {
                     <DropdownMenuSeparator />
                      {user.role !== 'customer' && (
                         <DropdownMenuItem asChild>
-                           <Link href="/admin">Dashboard</Link>
+                           <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}>Dashboard</Link>
                         </DropdownMenuItem>
                      )}
                      <DropdownMenuItem onClick={logout}>

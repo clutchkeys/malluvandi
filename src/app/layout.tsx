@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { GeistSans } from 'geist/font/sans';
+import { CookieConsent } from '@/components/cookie-consent';
 
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <Toaster />
+          <CookieConsent />
         </Providers>
       </body>
     </html>
