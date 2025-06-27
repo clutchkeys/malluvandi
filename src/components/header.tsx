@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Role } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
 
 
 export function Header() {
@@ -33,7 +34,12 @@ export function Header() {
           <span className="text-2xl font-bold text-primary font-headline">Mallu Vandi</span>
         </Link>
         <nav>
-          {!loading && (
+          {loading ? (
+             <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-24" />
+            </div>
+          ) : (
             <>
               {user ? (
                 <DropdownMenu>
