@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { cars, users } from '@/lib/data';
+import { cars, users, approvedCars } from '@/lib/data';
 import type { Car, CarBadge } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -24,6 +24,11 @@ const badgeIcons: Record<CarBadge, React.ReactNode> = {
   featured: <Star size={14} className="mr-1"/>,
 }
 
+export async function generateStaticParams() {
+  return approvedCars.map((car) => ({
+    id: car.id,
+  }));
+}
 
 export default function CarDetailPage() {
   const params = useParams();
