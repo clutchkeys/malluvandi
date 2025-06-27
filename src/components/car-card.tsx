@@ -64,20 +64,20 @@ export function CarCard({ car }: CarCardProps) {
               )}
               </div>
           </CardHeader>
-          <CardContent className="flex-grow p-4 grid gap-1">
-              <h3 className="text-lg font-bold font-headline">{car.brand} {car.model}</h3>
-              <p className="text-xl font-semibold text-primary">
+          <CardContent className="flex-grow p-3 grid gap-1">
+              <h3 className="text-md font-bold">{car.brand} {car.model}</h3>
+              <p className="text-lg font-semibold text-primary">
                   ₹{car.price.toLocaleString('en-IN')}
               </p>
-               <div className="pt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2 truncate"><Calendar size={14} /> <span>{car.year}</span></div>
-                  <div className="flex items-center gap-2 truncate"><Gauge size={14} /> <span>{car.kmRun.toLocaleString('en-IN')} km</span></div>
-                  <div className="flex items-center gap-2 truncate"><PaintBucket size={14} /> <span>{car.color}</span></div>
-                  <div className="flex items-center gap-2 truncate"><Users size={14} /> <span>{car.ownership} {car.ownership > 1 ? 'Owners' : 'Owner'}</span></div>
+               <div className="pt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 truncate"><Calendar size={12} /> <span>{car.year}</span></div>
+                  <div className="flex items-center gap-1.5 truncate"><Gauge size={12} /> <span>{car.kmRun.toLocaleString('en-IN')} km</span></div>
+                  <div className="flex items-center gap-1.5 truncate"><PaintBucket size={12} /> <span>{car.color}</span></div>
+                  <div className="flex items-center gap-1.5 truncate"><Users size={12} /> <span>{car.ownership} {car.ownership > 1 ? 'Owners' : 'Owner'}</span></div>
               </div>
           </CardContent>
-          <CardFooter className="p-4 bg-secondary/30">
-              <Button asChild className="w-full" variant="secondary">
+          <CardFooter className="p-3 bg-secondary/30">
+              <Button asChild className="w-full" size="sm">
                   <div>View Details <ArrowRight className="ml-2" size={16} /></div>
               </Button>
           </CardFooter>

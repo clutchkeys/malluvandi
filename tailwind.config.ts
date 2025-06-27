@@ -67,6 +67,12 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        footer: {
+          DEFAULT: 'hsl(var(--footer-background))',
+          foreground: 'hsl(var(--footer-foreground))',
+          primary: 'hsl(var(--footer-primary))',
+          'muted-foreground': 'hsl(var(--footer-muted-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

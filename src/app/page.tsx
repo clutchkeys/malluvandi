@@ -1,216 +1,138 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { approvedCars, carBrands, carModels, carYears } from '@/lib/data';
-import type { Car } from '@/lib/types';
+import { approvedCars } from '@/lib/data';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { AdPlaceholder } from '@/components/ad-placeholder';
-import { SlidersHorizontal, Search, XIcon } from 'lucide-react';
+import { Search, Car as CarIcon, Truck, Building, Sparkles, HandCoins } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
+const BodyTypeCard = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  <div className="flex flex-col items-center gap-2 text-center cursor-pointer group">
+    <div className="flex items-center justify-center h-20 w-20 bg-secondary rounded-lg group-hover:bg-primary/10 transition-colors duration-300">
+      {icon}
+    </div>
+    <p className="text-sm font-medium">{label}</p>
+  </div>
+);
+
+const BrandCard = ({ logo, name }: { logo: React.ReactNode; name: string }) => (
+  <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-md transition-shadow cursor-pointer">
+    {logo}
+    <p className="mt-4 text-sm font-medium text-muted-foreground">{name}</p>
+  </Card>
+);
+
+const TataLogo = () => <svg width="80" height="40" viewBox="0 0 200 100"><path d="M50 20 H150 V30 H120 V80 H80 V30 H50z" fill="hsl(var(--primary))" /></svg>;
+const MarutiLogo = () => <svg width="80" height="40" viewBox="0 0 200 100"><path d="M20 80 l30-60 h20 l-30 60z M80 20 l30 60 h20 l-30-60z M140 20 l-10 20 h20z" fill="hsl(var(--primary))" /></svg>;
+const HyundaiLogo = () => <svg width="80" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="hsl(var(--primary))" strokeWidth="10" fill="none" /><path d="M30 40 Q50 50 70 40 M30 60 Q50 50 70 60" stroke="hsl(var(--primary))" strokeWidth="8" fill="none" /></svg>;
+const ToyotaLogo = () => <svg width="80" height="40" viewBox="0 0 120 80"><ellipse cx="60" cy="40" rx="55" ry="35" stroke="hsl(var(--primary))" strokeWidth="8" fill="none" /><ellipse cx="60" cy="40" rx="25" ry="15" stroke="hsl(var(--primary))" strokeWidth="8" fill="none" /></svg>;
+const HondaLogo = () => <svg width="80" height="40" viewBox="0 0 100 60"><rect x="20" y="10" width="60" height="40" rx="5" stroke="hsl(var(--primary))" strokeWidth="6" fill="none" /><path d="M30 20 H70 M30 30 H70 M30 40 H70" stroke="hsl(var(--primary))" strokeWidth="4" /></svg>;
 
 
 export default function Home() {
-  const [isClient, setIsClient] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({
-    brand: '',
-    model: '',
-    year: '',
-    color: '',
-  });
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const filteredCars = useMemo(() => {
     return approvedCars.filter(car => {
-      const searchTermMatch = searchQuery
+      return searchQuery
         ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
-
-      return (
-        searchTermMatch &&
-        (filters.brand ? car.brand === filters.brand : true) &&
-        (filters.model ? car.model === filters.model : true) &&
-        (filters.year ? car.year.toString() === filters.year : true) &&
-        (filters.color ? car.color.toLowerCase().includes(filters.color.toLowerCase()) : true)
-      );
     });
-  }, [filters, searchQuery]);
-
-  const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [name]: value };
-      if (name === 'brand') { // Reset model if brand changes
-        newFilters.model = '';
-      }
-      return newFilters;
-    });
-  };
-  
-  const clearFilters = () => {
-    setFilters({ brand: '', model: '', year: '', color: '' });
-    setSearchQuery('');
-  }
-
-  const uniqueColors = [...new Set(approvedCars.map(car => car.color))];
-
-
-  const FilterControls = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      <div className="space-y-1.5 lg:col-span-1">
-          <label className="text-sm font-medium text-muted-foreground">Brand</label>
-          <Select onValueChange={value => handleFilterChange('brand', value)} value={filters.brand}>
-            <SelectTrigger><SelectValue placeholder="All Brands" /></SelectTrigger>
-            <SelectContent>
-              {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-            </SelectContent>
-          </Select>
-      </div>
-      <div className="space-y-1.5 lg:col-span-1">
-          <label className="text-sm font-medium text-muted-foreground">Model</label>
-          <Select onValueChange={value => handleFilterChange('model', value)} value={filters.model} disabled={!filters.brand}>
-            <SelectTrigger><SelectValue placeholder="All Models" /></SelectTrigger>
-            <SelectContent>
-              {(filters.brand ? carModels[filters.brand] || [] : []).map(model => (
-                <SelectItem key={model} value={model}>{model}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-      </div>
-      <div className="space-y-1.5 lg:col-span-1">
-          <label className="text-sm font-medium text-muted-foreground">Year</label>
-          <Select onValueChange={value => handleFilterChange('year', value)} value={filters.year}>
-            <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
-            <SelectContent>
-              {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-            </SelectContent>
-          </Select>
-      </div>
-      <div className="space-y-1.5 lg:col-span-1">
-          <label className="text-sm font-medium text-muted-foreground">Color</label>
-           <Select onValueChange={value => handleFilterChange('color', value)} value={filters.color}>
-            <SelectTrigger><SelectValue placeholder="Any Color" /></SelectTrigger>
-            <SelectContent>
-              {uniqueColors.map(color => <SelectItem key={color} value={color}>{color}</SelectItem>)}
-            </SelectContent>
-          </Select>
-      </div>
-      <div className="flex items-end lg:col-span-1">
-        <Button variant="ghost" onClick={clearFilters} className="w-full">Clear Filters</Button>
-      </div>
-    </div>
-  );
+  }, [searchQuery]);
 
 
   return (
     <div className="flex flex-col min-h-screen bg-secondary/30">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">Find Your Perfect Used Car</h1>
-          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Quality, trust, and the best deals on pre-owned cars in Kerala. Your next ride is just a click away.</p>
+      <main className="flex-grow">
+        {/* Hero Section */}
+        <div className="relative bg-card h-80 flex items-center justify-center">
+          <Image
+            src="https://placehold.co/1600x400.png"
+            alt="Hero Banner"
+            layout="fill"
+            objectFit="cover"
+            className="opacity-20"
+            data-ai-hint="dealership showroom"
+          />
+          <div className="relative text-center px-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-primary">Find Your Perfect Used Car</h1>
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Quality, trust, and the best deals on pre-owned cars in Kerala.</p>
+          </div>
         </div>
 
-        <Card className="mb-8 p-4 md:p-6 shadow-lg bg-card z-30">
-            <div className="relative w-full mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    placeholder="Search by car name, model, year, or color..."
-                    className="pl-10 w-full text-base"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
+        {/* Find Your Car Section */}
+        <div className="container mx-auto px-4 -mt-20 relative z-10">
+          <Card className="shadow-2xl">
+            <CardContent className="p-4 md:p-6">
+              <Tabs defaultValue="used">
+                <TabsList className="grid w-full grid-cols-2 md:w-1/3">
+                  <TabsTrigger value="used">Used Cars</TabsTrigger>
+                  <TabsTrigger value="new" disabled>New Cars</TabsTrigger>
+                </TabsList>
+                <TabsContent value="used" className="mt-6">
+                  <div className="relative w-full mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by car name, model..."
+                      className="pl-10 w-full text-base"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
+                    <BodyTypeCard icon={<CarIcon size={32} className="text-primary"/>} label="Sedan" />
+                    <BodyTypeCard icon={<Truck size={32} className="text-primary"/>} label="SUV" />
+                    <BodyTypeCard icon={<CarIcon size={32} className="text-primary"/>} label="Hatchback" />
+                    <BodyTypeCard icon={<Sparkles size={32} className="text-primary"/>} label="Luxury" />
+                    <BodyTypeCard icon={<HandCoins size={32} className="text-primary"/>} label="Budget" />
+                    <BodyTypeCard icon={<Building size={32} className="text-primary"/>} label="By City" />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="container mx-auto px-4 py-16 space-y-16">
+          {/* Featured Listings */}
+          <section>
+            <h2 className="text-3xl font-bold mb-6">Featured Listings</h2>
+            <Carousel opts={{ align: "start", loop: true }} className="w-full">
+              <CarouselContent className="-ml-4">
+                {filteredCars.map(car => (
+                  <CarouselItem key={car.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                    <CarCard car={car} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="ml-16" />
+              <CarouselNext className="mr-16" />
+            </Carousel>
+          </section>
+
+          {/* Browse by Brand */}
+          <section>
+            <h2 className="text-3xl font-bold mb-6">Browse by Brand</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <BrandCard logo={<MarutiLogo />} name="Maruti Suzuki" />
+              <BrandCard logo={<HyundaiLogo />} name="Hyundai" />
+              <BrandCard logo={<ToyotaLogo />} name="Toyota" />
+              <BrandCard logo={<HondaLogo />} name="Honda" />
+              <BrandCard logo={<TataLogo />} name="Tata" />
             </div>
-            
-            {!isClient && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <div className="flex items-end lg:col-span-1">
-                    <Skeleton className="h-10 w-full" />
-                </div>
-              </div>
-            )}
-            {isClient && (
-              <>
-                <div className="hidden md:block">
-                  <FilterControls />
-                </div>
-
-                <div className="md:hidden">
-                  <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" className="w-full">
-                        <SlidersHorizontal className="mr-2 h-4 w-4" /> 
-                        {isFiltersOpen ? 'Hide Filters' : 'Show Filters'}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4">
-                      <FilterControls />
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-              </>
-            )}
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-4">
-                 <div className="mb-8">
-                    <AdPlaceholder shape="banner" />
-                 </div>
-                 <h2 className="text-2xl font-bold mb-6">Featured Listings ({filteredCars.length})</h2>
-                 
-                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {filteredCars.slice(0, 2).map(car => (
-                      <CarCard key={car.id} car={car} />
-                    ))}
-                     <AdPlaceholder shape="post" className="md:col-span-1 xl:col-span-1"/>
-                     <AdPlaceholder shape="post" className="md:col-span-1 xl:col-span-1"/>
-                    {filteredCars.slice(2, 4).map(car => (
-                      <CarCard key={car.id} car={car} />
-                    ))}
-                    <AdPlaceholder shape="post" className="xl:col-span-1 md:col-span-2" />
-                    {filteredCars.slice(4, 7).map(car => (
-                      <CarCard key={car.id} car={car} />
-                    ))}
-                 </div>
-
-                 {filteredCars.length > 8 && (
-                    <>
-                        <AdPlaceholder shape="banner" className="my-8"/>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                            {filteredCars.slice(7, 11).map(car => (
-                                <CarCard key={car.id} car={car} />
-                            ))}
-                        </div>
-                    </>
-                 )}
-
-                 {filteredCars.length === 0 && (
-                    <div className="col-span-full text-center py-16 bg-card rounded-lg">
-                        <p className="text-muted-foreground text-lg">No cars match the current filters.</p>
-                        <p className="text-sm text-muted-foreground">Try adjusting your search criteria.</p>
-                    </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
-                  <AdPlaceholder shape="square"/>
-                  <AdPlaceholder shape="square"/>
-                </div>
+            <div className="text-center mt-6">
+              <Button variant="outline">View All Brands</Button>
             </div>
+          </section>
         </div>
       </main>
       <Footer />
