@@ -5,26 +5,13 @@ import type { Car } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarDetailView } from '@/components/car-detail-view';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { MOCK_CARS } from '@/lib/mock-data';
 
 async function getCar(id: string): Promise<Car | null> {
-    try {
-        const carDocRef = doc(db, 'cars', id);
-        const carDocSnap = await getDoc(carDocRef);
-
-        if (carDocSnap.exists()) {
-            // Only return approved cars to the public
-            const carData = carDocSnap.data();
-            if (carData.status === 'approved') {
-                 return { id: carDocSnap.id, ...carData } as Car;
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching car:", error);
-        return null;
-    }
+    const car = MOCK_CARS.find(c => c.id === id) || null;
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return car;
 }
 
 
@@ -45,10 +32,3 @@ export default async function CarDetailPage({ params }: { params: { id: string }
     </div>
   );
 }
-
-// This function can be used by Next.js to generate static pages at build time
-// for better performance, but it's not strictly necessary for dynamic pages.
-// export async function generateStaticParams() {
-//   // For now, we won't pre-render any car pages. They will be server-rendered on-demand.
-//   return [];
-// }

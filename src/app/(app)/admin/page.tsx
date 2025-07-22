@@ -84,9 +84,7 @@ import {
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, CarBadge } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { db, rtdb } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, addDoc, getDoc } from 'firebase/firestore';
-import { ref, onValue, off, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
+import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
 
 
 const userSchema = z.object({
@@ -149,53 +147,15 @@ export default function AdminPage() {
 
   // Fetch all data
   useEffect(() => {
-    // Fetch Cars
-    const fetchCars = async () => {
-        setIsLoading(prev => ({...prev, cars: true}));
-        const carsCollectionRef = collection(db, 'cars');
-        const carsSnapshot = await getDocs(carsCollectionRef);
-        setCarsState(carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CarType)));
-        setIsLoading(prev => ({...prev, cars: false}));
-    }
-    // Fetch Users
-    const fetchUsers = async () => {
-        setIsLoading(prev => ({...prev, users: true}));
-        const usersCollectionRef = collection(db, 'users');
-        const usersSnapshot = await getDocs(usersCollectionRef);
-        setUsersState(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)).filter(u => u.role !== 'customer'));
-        setIsLoading(prev => ({...prev, users: false}));
-    }
-    // Fetch Filters
-    const fetchFilters = async () => {
-        setIsLoading(prev => ({...prev, filters: true}));
-        const filtersDocRef = doc(db, 'config', 'filters');
-        const docSnap = await getDoc(filtersDocRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            setBrandsState(data.brands || []);
-            setModelsState(data.models || {});
-            setYearsState(data.years || []);
-        }
-        setIsLoading(prev => ({...prev, filters: false}));
-    }
-
-    // Fetch Inquiries (from RTDB)
-    const inquiriesRef = ref(rtdb, 'inquiries/');
-    onValue(inquiriesRef, (snapshot) => {
-      setIsLoading(prev => ({...prev, inquiries: true}));
-      const data = snapshot.val();
-      const inquiriesList: Inquiry[] = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-      setInquiriesState(inquiriesList);
-      setIsLoading(prev => ({...prev, inquiries: false}));
-    });
-
-    fetchCars();
-    fetchUsers();
-    fetchFilters();
-
-    return () => {
-      off(inquiriesRef);
-    };
+    setIsLoading({ cars: true, users: true, inquiries: true, filters: true });
+    // Using mock data
+    setCarsState(MOCK_CARS);
+    setUsersState(MOCK_USERS.filter(u => u.role !== 'customer'));
+    setInquiriesState(MOCK_INQUIRIES);
+    setBrandsState(MOCK_BRANDS);
+    setModelsState(MOCK_MODELS);
+    setYearsState(MOCK_YEARS);
+    setIsLoading({ cars: false, users: false, inquiries: false, filters: false });
   }, []);
 
   useEffect(() => {
@@ -209,8 +169,7 @@ export default function AdminPage() {
 
   // Approval Handlers
   const handleApproval = async (carId: string, status: 'approved' | 'rejected') => {
-    const carDocRef = doc(db, 'cars', carId);
-    await updateDoc(carDocRef, { status });
+    // Mock logic
     setCarsState(prev => prev.map(car => car.id === carId ? {...car, status} : car));
     toast({
       title: `Listing ${status}`,
@@ -227,8 +186,6 @@ export default function AdminPage() {
   
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
     if (userToEdit) {
-        const userDocRef = doc(db, 'users', userToEdit.id);
-        await updateDoc(userDocRef, { role: values.role });
         setUsersState(currentUsers => currentUsers.map(u => 
             u.id === userToEdit.id ? { ...u, role: values.role as Role } : u
         ));
@@ -267,17 +224,16 @@ export default function AdminPage() {
     };
     
     if (carToEdit) {
-      await updateDoc(doc(db, 'cars', carToEdit.id), carData);
       setCarsState(carsState.map(c => c.id === carToEdit.id ? { ...c, ...carData } : c));
       toast({ title: 'Car Updated' });
     } else {
       const newCarData = {
+        id: `car-${Date.now()}`,
         ...carData,
         submittedBy: user!.id,
-        images: ['https://placehold.co/600x400.png'], // Placeholder, real images should be uploaded
+        images: ['https://placehold.co/600x400.png'],
       };
-      const newDocRef = await addDoc(collection(db, 'cars'), newCarData);
-      setCarsState([...carsState, {id: newDocRef.id, ...newCarData}]);
+      setCarsState([...carsState, newCarData as CarType]);
       toast({ title: 'Car Added' });
     }
     setIsCarFormOpen(false);
@@ -288,8 +244,7 @@ export default function AdminPage() {
     e.preventDefault();
     const newAssigneeId = new FormData(e.currentTarget).get('assignee') as string;
     if (inquiryToReassign && newAssigneeId) {
-        const inquiryRef = ref(rtdb, `inquiries/${inquiryToReassign.id}`);
-        updateRtdb(inquiryRef, { assignedTo: newAssigneeId });
+        setInquiriesState(inquiriesState.map(i => i.id === inquiryToReassign.id ? {...i, assignedTo: newAssigneeId} : i))
         toast({ title: "Inquiry Reassigned" });
     }
     setIsReassignInquiryOpen(false);
@@ -341,12 +296,6 @@ export default function AdminPage() {
       newYears.sort((a,b) => b-a);
     }
     
-    await setDoc(doc(db, 'config', 'filters'), {
-        brands: newBrands,
-        models: newModels,
-        years: newYears
-    });
-
     setBrandsState(newBrands);
     setModelsState(newModels);
     setYearsState(newYears);
@@ -360,19 +309,13 @@ export default function AdminPage() {
     if (!itemToDelete) return;
     const { type, id } = itemToDelete;
     
-    try {
-        if (type === 'user') {
-            await deleteDoc(doc(db, "users", id));
-            setUsersState(prev => prev.filter(u => u.id !== id));
-            toast({ title: `User Deleted`, description: "User's record has been removed from Firestore." });
-        }
-        if (type === 'car') {
-            await deleteDoc(doc(db, "cars", id));
-            setCarsState(prev => prev.filter(c => c.id !== id));
-            toast({ title: `Car Deleted` });
-        }
-    } catch(err) {
-        toast({ title: 'Error', description: 'Could not delete item.', variant: 'destructive' });
+    if (type === 'user') {
+        setUsersState(prev => prev.filter(u => u.id !== id));
+        toast({ title: `User Deleted`, description: "User's record has been removed." });
+    }
+    if (type === 'car') {
+        setCarsState(prev => prev.filter(c => c.id !== id));
+        toast({ title: `Car Deleted` });
     }
     
     setItemToDelete(null);

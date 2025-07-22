@@ -15,9 +15,8 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { rtdb, db } from '@/lib/firebase';
-import { ref, set, push } from 'firebase/database';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { MOCK_USERS } from '@/lib/mock-data';
+
 
 interface InquiryModalProps {
   isOpen: boolean;
@@ -64,10 +63,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
     
     try {
       // Find an available sales person (Employee B)
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("role", "==", "employee-b"));
-      const querySnapshot = await getDocs(q);
-      const salesPeople = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const salesPeople = MOCK_USERS.filter(u => u.role === 'employee-b');
 
       let assignedTo = 'unassigned';
       if (salesPeople.length > 0) {
@@ -75,9 +71,6 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)].id;
       }
       
-      const inquiriesRef = ref(rtdb, 'inquiries');
-      const newInquiryRef = push(inquiriesRef);
-
       const newInquiry: Omit<Inquiry, 'id'> = {
         carId: car.id,
         carSummary: `${car.brand} ${car.model}`,
@@ -90,7 +83,8 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         privateNotes: ''
       }
       
-      await set(newInquiryRef, newInquiry);
+      console.log("New Inquiry (Mock):", newInquiry);
+      await new Promise(res => setTimeout(res, 1000)); // Simulate API call
 
       toast({
         title: 'Inquiry Sent!',

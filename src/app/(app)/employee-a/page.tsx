@@ -42,10 +42,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Loader2 } from 'lucide-react';
 import type { Car } from '@/lib/types';
-import { db, storage } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, addDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
+import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS } from '@/lib/mock-data';
 
 export default function EmployeeAPage() {
   const { user, loading } = useAuth();
@@ -63,7 +61,7 @@ export default function EmployeeAPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filter options from Firestore
+  // Filter options from mock
   const [carBrands, setCarBrands] = useState<string[]>([]);
   const [carModels, setCarModels] = useState<{[key: string]: string[]}>({});
 
@@ -74,30 +72,16 @@ export default function EmployeeAPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    const fetchFilters = async () => {
-      const filtersDocRef = doc(db, 'config', 'filters');
-      const filtersDocSnap = await getDoc(filtersDocRef);
-      if (filtersDocSnap.exists()) {
-        const filtersData = filtersDocSnap.data();
-        setCarBrands(filtersData.brands || []);
-        setCarModels(filtersData.models || {});
-      }
-    };
-    fetchFilters();
+    setCarBrands(MOCK_BRANDS);
+    setCarModels(MOCK_MODELS);
   }, []);
 
   useEffect(() => {
     if (user) {
-      const fetchCars = async () => {
         setIsLoading(true);
-        const carsCollectionRef = collection(db, 'cars');
-        const q = query(carsCollectionRef, where('submittedBy', '==', user.id));
-        const carsSnapshot = await getDocs(q);
-        const carsList = carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
-        setCars(carsList);
+        const userCars = MOCK_CARS.filter(c => c.submittedBy === user.id);
+        setCars(userCars);
         setIsLoading(false);
-      };
-      fetchCars();
     }
   }, [user]);
 
@@ -154,55 +138,24 @@ export default function EmployeeAPage() {
     };
 
     try {
+      // Mock logic
+      setUploadProgress(0);
+      await new Promise(res => setTimeout(res, 500));
+      setUploadProgress(50);
+      await new Promise(res => setTimeout(res, 500));
+      setUploadProgress(100);
+      await new Promise(res => setTimeout(res, 300));
+      
       if (carToEdit) {
-        // Update logic
-        const carDocRef = doc(db, 'cars', carToEdit.id);
-        await updateDoc(carDocRef, carData);
         setCars(cars.map(c => c.id === carToEdit.id ? { ...c, ...carData, status: 'pending' } : c));
         toast({ title: 'Listing Updated', description: 'Your car listing has been sent for re-approval.' });
       } else {
-        // Add new car logic
-        if (!imagesToUpload || imagesToUpload.length === 0) {
-          toast({ title: 'Error', description: 'Please select at least one image.', variant: 'destructive' });
-          setIsSubmitting(false);
-          return;
-        }
-
-        const newCarRef = await addDoc(collection(db, 'cars'), { ...carData, images: [] });
-        const carId = newCarRef.id;
-
-        const imageUrls: string[] = [];
-        setUploadProgress(0);
-
-        for (let i = 0; i < imagesToUpload.length; i++) {
-          const file = imagesToUpload[i];
-          const storageRef = ref(storage, `cars/${carId}/${file.name}`);
-          const uploadTask = uploadBytesResumable(storageRef, file);
-
-          await new Promise<void>((resolve, reject) => {
-            uploadTask.on('state_changed',
-              (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-              },
-              (error) => {
-                console.error("Upload failed", error);
-                reject(error);
-              },
-              async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                imageUrls.push(downloadURL);
-                resolve();
-              }
-            );
-          });
-        }
-        
-        await updateDoc(doc(db, 'cars', carId), { images: imageUrls });
-
-        const newCar: Car = { id: carId, ...carData, images: imageUrls };
+        const newCar: Car = { 
+            id: `car-${Date.now()}`,
+            ...carData,
+            images: ["https://placehold.co/600x400.png"]
+        };
         setCars(prevCars => [...prevCars, newCar]);
-
         toast({ title: 'Listing Submitted', description: 'Your car listing has been sent for admin approval.' });
       }
       handleCloseDialog();
@@ -293,7 +246,7 @@ export default function EmployeeAPage() {
                 {uploadProgress !== null && (
                   <div className="col-span-4">
                     <Progress value={uploadProgress} />
-                    <p className="text-sm text-center mt-1">Uploading images...</p>
+                    <p className="text-sm text-center mt-1">Uploading...</p>
                   </div>
                 )}
               </div>

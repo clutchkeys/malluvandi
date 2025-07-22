@@ -7,16 +7,16 @@ import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2, Search, MapPin, Edit2 } from 'lucide-react';
+import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X } from 'lucide-react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import type { Car } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -26,6 +26,8 @@ export default function Home() {
   const [nearbyCars, setNearbyCars] = useState<Car[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [tempLocation, setTempLocation] = useState(userLocation);
 
   // Filter options state
   const [brands, setBrands] = useState<string[]>([]);
@@ -42,27 +44,15 @@ export default function Home() {
   const [kmRange, setKmRange] = useState([0, 200000]);
 
    useEffect(() => {
-    const fetchInitialData = async () => {
-        setIsLoading(true);
-        try {
-            // Fetch cars
-            const carsQuery = query(collection(db, 'cars'), where('status', '==', 'approved'));
-            const carsSnapshot = await getDocs(carsQuery);
-            const carsList = carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
-            setAllCars(carsList);
-
-            // Separate featured and nearby cars from the main list for display
-            // This logic can be more sophisticated, e.g., fetching specifically featured cars
-            setFeaturedCars(carsList.filter(c => c.badges?.includes('featured')).slice(0, 8));
-            setNearbyCars(carsList.slice(0, 4)); // Placeholder for actual location-based filtering
-
-        } catch (error) {
-            console.error("Failed to fetch cars:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchInitialData();
+    setIsLoading(true);
+    // Using mock data
+    setAllCars(MOCK_CARS);
+    setFeaturedCars(MOCK_CARS.filter(c => c.badges?.includes('featured')).slice(0, 8));
+    setNearbyCars(MOCK_CARS.slice(0, 4));
+    setBrands(MOCK_BRANDS);
+    setModels(MOCK_MODELS);
+    setYears(MOCK_YEARS);
+    setIsLoading(false);
   }, []);
 
   const handleBrandChange = (brand: string) => {
@@ -85,6 +75,11 @@ export default function Home() {
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
   };
+  
+  const handleLocationSave = () => {
+    setUserLocation(tempLocation);
+    setIsLocationModalOpen(false);
+  }
 
   const filteredCars = useMemo(() => {
     return allCars.filter(car => {
@@ -153,7 +148,7 @@ export default function Home() {
                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin size={16} className="text-primary"/>
                     <span>Your Location: <b>{userLocation}</b></span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7"><Edit2 size={14}/></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}><Edit2 size={14}/></Button>
                  </div>
             </div>
 
@@ -265,6 +260,23 @@ export default function Home() {
         </div>
       </main>
       <Footer />
+
+      <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Location</DialogTitle>
+                <DialogDescription>Enter your city to find cars near you.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Label htmlFor="location">Location</Label>
+                <Input id="location" value={tempLocation} onChange={(e) => setTempLocation(e.target.value)} placeholder="e.g., Trivandrum, Kerala" />
+            </div>
+            <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleLocationSave}>Save</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

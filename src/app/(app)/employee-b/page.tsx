@@ -27,9 +27,7 @@ import type { Inquiry, Car } from '@/lib/types';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { answerCarQueries } from '@/ai/flows/answer-car-queries';
 import { useToast } from '@/hooks/use-toast';
-import { db, rtdb } from '@/lib/firebase';
-import { ref, onValue, off, update } from 'firebase/database';
-import { doc, getDoc } from 'firebase/firestore';
+import { MOCK_INQUIRIES, MOCK_CARS } from '@/lib/mock-data';
 
 
 const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, onSelect: (id: string) => void, isSelected: boolean }) => {
@@ -70,20 +68,10 @@ export default function EmployeeBPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const inquiriesRef = ref(rtdb, 'inquiries/');
-    onValue(inquiriesRef, (snapshot) => {
-      const data = snapshot.val();
-      const inquiriesList: Inquiry[] = data ? Object.keys(data).map(key => ({
-        id: key,
-        ...data[key]
-      })) : [];
-      setInquiries(inquiriesList.sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
-      setIsLoading(false);
-    });
-
-    return () => {
-      off(inquiriesRef);
-    }
+    // Using mock data
+    const sortedInquiries = MOCK_INQUIRIES.sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    setInquiries(sortedInquiries);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -97,8 +85,7 @@ export default function EmployeeBPage() {
   const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
   
   const updateInquiry = (inquiryId: string, updates: Partial<Inquiry>) => {
-    const inquiryRef = ref(rtdb, `inquiries/${inquiryId}`);
-    update(inquiryRef, updates);
+    setInquiries(prev => prev.map(inq => inq.id === inquiryId ? {...inq, ...updates} : inq));
   };
 
   return (
@@ -164,11 +151,9 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         const fetchCarDetails = async () => {
             if (!inquiry.carId) return;
             setIsSummaryLoading(true);
-            const carDocRef = doc(db, 'cars', inquiry.carId);
-            const carDocSnap = await getDoc(carDocRef);
-            if (carDocSnap.exists()) {
-                const carData = { id: carDocSnap.id, ...carDocSnap.data() } as Car;
-                setCar(carData);
+            const carData = MOCK_CARS.find(c => c.id === inquiry.carId) || null;
+            setCar(carData);
+            if (carData) {
                 summarizeCarDetails(carData).then(result => {
                     setSummary(result.summary);
                 }).catch(err => {
@@ -178,7 +163,6 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                     setIsSummaryLoading(false);
                 });
             } else {
-                setCar(null);
                 setIsSummaryLoading(false);
             }
         };

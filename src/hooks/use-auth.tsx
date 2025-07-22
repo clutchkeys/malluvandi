@@ -3,15 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { auth, db } from '@/lib/firebase';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut,
-  updateProfile,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { MOCK_USERS } from '@/lib/mock-data';
 
 interface AuthContextType {
   user: User | null;
@@ -29,76 +21,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          setUser({ 
-            id: firebaseUser.uid, 
-            name: firebaseUser.displayName || userData.name,
-            email: firebaseUser.email || userData.email,
-            role: userData.role
-          });
-        } else {
-            await signOut(auth);
-            setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Simulate checking for a logged-in user in session storage
+    const storedUser = sessionStorage.getItem('mallu-vandi-user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, pass: string): Promise<User | null> => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    const firebaseUser = userCredential.user;
+    setLoading(true);
+    // This is a mock login. In a real app, you'd call Firebase here.
+    // The password is not checked in this mock implementation.
+    const foundUser = MOCK_USERS.find(u => u.email === email);
     
-    const userDocRef = doc(db, "users", firebaseUser.uid);
-    const userDocSnap = await getDoc(userDocRef);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
-    if(userDocSnap.exists()){
-        const userData = userDocSnap.data();
-        const appUser: User = { 
-          id: firebaseUser.uid, 
-          name: firebaseUser.displayName || userData.name,
-          email: firebaseUser.email || userData.email,
-          role: userData.role
-        };
-        setUser(appUser);
-        return appUser;
+    if (foundUser) {
+        setUser(foundUser);
+        sessionStorage.setItem('mallu-vandi-user', JSON.stringify(foundUser));
+        setLoading(false);
+        return foundUser;
     }
-    // This case should ideally not happen if registration is done correctly
-    await signOut(auth);
+    
+    setLoading(false);
     return null;
   };
   
   const register = async (name: string, email: string, pass: string): Promise<User | null> => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const firebaseUser = userCredential.user;
+     setLoading(true);
+     await new Promise(resolve => setTimeout(resolve, 500));
+     
+     if (MOCK_USERS.some(u => u.email === email)) {
+        setLoading(false);
+        throw new Error("An account with this email already exists.");
+     }
 
-    await updateProfile(firebaseUser, { displayName: name });
-    
-    const newUserFirestoreData = {
+     const newUser: User = {
+        id: `user-${Date.now()}`,
         name,
         email,
-        role: 'customer',
-    };
-    
-    await setDoc(doc(db, "users", firebaseUser.uid), newUserFirestoreData);
-    
-    const appUser: User = { ...newUserFirestoreData, id: firebaseUser.uid };
-    setUser(appUser);
-    return appUser;
+        role: 'customer'
+     };
+     
+     // In a real app, you would add this user to your DB.
+     // For this mock, we won't permanently add them to the MOCK_USERS array.
+     setUser(newUser);
+     sessionStorage.setItem('mallu-vandi-user', JSON.stringify(newUser));
+     setLoading(false);
+     return newUser;
   }
 
   const logout = async () => {
-    await signOut(auth);
     setUser(null);
+    sessionStorage.removeItem('mallu-vandi-user');
     router.push('/');
   };
 

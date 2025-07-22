@@ -3,7 +3,7 @@ export type Role = 'admin' | 'manager' | 'employee-a' | 'employee-b' | 'customer
 export type CarBadge = 'price_drop' | 'new' | 'featured';
 
 export interface User {
-  id: string; // Firebase Auth UID
+  id: string; // Firebase Auth UID or mock ID
   name: string;
   email: string;
   role: Role;
