@@ -2,7 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Helper functions
     function isStaff() {
       return request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
@@ -11,39 +12,44 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-b'
       );
     }
-    
     function isAdminOrManager() {
       return request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager'
       );
     }
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
 
+    // User profiles
     match /users/{userId} {
-      // Admins/Managers can manage any user. Users can read/write their own data.
-      allow read, write: if isAdminOrManager() || (request.auth != null && request.auth.uid == userId);
+      // Users can read their own profile. Admins/Managers can read any profile.
+      allow read: if isOwner(userId) || isAdminOrManager();
+      // Users can update their own profile. Admins/Managers can update any profile (e.g., to change roles).
+      allow write: if isOwner(userId) || isAdminOrManager();
     }
-
-    match /config/{docId} {
-      // Config is public to read, but only editable by admins/managers.
-      allow get: if true;
-      allow write: if isAdminOrManager();
-    }
-
+    
+    // Car listings
     match /cars/{carId} {
-      // Anyone can see approved cars. Staff can see all cars.
-      allow get: if resource.data.status == 'approved' || isStaff();
-      // The public homepage needs to list approved cars.
-      allow list: if true;
-      
-      // Employee-A can create cars.
-      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-a';
-      
-      // Admins/Managers can update any car. Employee-A can update their own submissions.
-      allow update: if isAdminOrManager() || (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-a' && resource.data.submittedBy == request.auth.uid);
-      
-      // Admins/Managers can delete cars.
+      // Anyone can get a single approved car document for the detail page.
+      allow get: if resource.data.status == 'approved';
+      // Anyone can list approved cars for the homepage/search. Staff can list all.
+      allow list: if isStaff() || request.query.filters.size() == 0 || (request.query.filters.size() > 0 && request.query.filters[0][2] == 'approved');
+      // Only authenticated users can create car listings.
+      allow create: if request.auth != null;
+      // Only the user who submitted the listing or an admin/manager can update it.
+      allow update: if isOwner(resource.data.submittedBy) || isAdminOrManager();
+      // Only an admin/manager can delete a listing.
       allow delete: if isAdminOrManager();
+    }
+
+    // Configuration data like filters
+    match /config/{docId} {
+      // Anyone can read config data (e.g., for filter options).
+      allow read: if true;
+      // Only Admins/Managers can write config data.
+      allow write: if isAdminOrManager();
     }
   }
 }
