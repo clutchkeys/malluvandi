@@ -51,30 +51,24 @@ export function CarDetailView({ car }: { car: Car }) {
           const userDoc = await getDoc(doc(db, 'users', car.submittedBy));
           if (userDoc.exists()) {
             setSellerName(userDoc.data().name);
+          } else {
+             setSellerName("Mallu Vandi");
           }
         } catch (error) {
           console.error("Error fetching seller name:", error);
-          setSellerName("Unknown Seller");
+          setSellerName("Mallu Vandi");
         }
       };
       fetchSellerName();
+    } else {
+        setSellerName("Mallu Vandi");
     }
   }, [car.submittedBy]);
   
   const handleInquireClick = () => {
-    const isGuestOrCustomer = !user || user.role === 'customer';
-    if (isGuestOrCustomer) {
-      setIsAdOpen(true);
-    } else {
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleAdClose = () => {
-    setIsAdOpen(false);
     setIsModalOpen(true);
   };
-
+  
   return (
     <>
       <div className="grid md:grid-cols-3 gap-8">
@@ -172,7 +166,6 @@ export function CarDetailView({ car }: { car: Car }) {
         onClose={() => setIsModalOpen(false)}
         car={car}
       />
-      <FullScreenAd isOpen={isAdOpen} onClose={handleAdClose} />
     </>
   );
 }

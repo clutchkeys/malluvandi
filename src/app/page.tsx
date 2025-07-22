@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -8,118 +8,62 @@ import { CarCard } from '@/components/car-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, Loader2, Search, MapPin, Edit2 } from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import type { Car } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const mockCars: Car[] = [
-  {
-    id: '1',
-    brand: 'Maruti Suzuki',
-    model: 'Swift',
-    year: 2021,
-    price: 650000,
-    kmRun: 25000,
-    color: 'Red',
-    ownership: 1,
-    insurance: 'Comprehensive',
-    challans: 'None',
-    additionalDetails: 'Excellent condition, single owner.',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    status: 'approved',
-    submittedBy: 'user1',
-    badges: ['price_drop', 'featured']
-  },
-  {
-    id: '2',
-    brand: 'Hyundai',
-    model: 'i20',
-    year: 2020,
-    price: 720000,
-    kmRun: 35000,
-    color: 'White',
-    ownership: 1,
-    insurance: 'Third Party',
-    challans: 'None',
-    additionalDetails: 'Well maintained, no scratches.',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    status: 'approved',
-    submittedBy: 'user2',
-    badges: ['new']
-  },
-  {
-    id: '3',
-    brand: 'Tata',
-    model: 'Nexon',
-    year: 2022,
-    price: 850000,
-    kmRun: 15000,
-    color: 'Blue',
-    ownership: 1,
-    insurance: 'Comprehensive',
-    challans: '1 Pending',
-    additionalDetails: 'Top model with sunroof.',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    status: 'approved',
-    submittedBy: 'user3',
-    badges: ['featured']
-  },
-   {
-    id: '4',
-    brand: 'Toyota',
-    model: 'Fortuner',
-    year: 2019,
-    price: 2800000,
-    kmRun: 55000,
-    color: 'Black',
-    ownership: 2,
-    insurance: 'Comprehensive',
-    challans: 'None',
-    additionalDetails: '4x4 variant, immaculate condition.',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    status: 'approved',
-    submittedBy: 'user4',
-  },
-    {
-    id: '5',
-    brand: 'Honda',
-    model: 'City',
-    year: 2023,
-    price: 1200000,
-    kmRun: 8000,
-    color: 'Silver',
-    ownership: 1,
-    insurance: 'Comprehensive',
-    challans: 'None',
-    additionalDetails: 'Almost new, very sparingly used.',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    status: 'approved',
-    submittedBy: 'user5',
-    badges: ['new']
-  },
-];
-
-
-const carBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Toyota', 'Honda'];
-const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV'];
-const carYears = [2023, 2022, 2021, 2020, 2019];
 
 export default function Home() {
-  const [allCars] = useState<Car[]>(mockCars);
-  const [isLoading, setIsLoading] = useState(false);
+  const [allCars, setAllCars] = useState<Car[]>([]);
+  const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
+  const [nearbyCars, setNearbyCars] = useState<Car[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
 
-  // Filters state
+  // Filter options state
+  const [brands, setBrands] = useState<string[]>([]);
+  const [models, setModels] = useState<{[key: string]: string[]}>({});
+  const [years, setYears] = useState<number[]>([]);
+  const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV']; // This can be moved to Firestore as well
+
+  // Filters values
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
+
+   useEffect(() => {
+    const fetchInitialData = async () => {
+        setIsLoading(true);
+        try {
+            // Fetch cars
+            const carsQuery = query(collection(db, 'cars'), where('status', '==', 'approved'));
+            const carsSnapshot = await getDocs(carsQuery);
+            const carsList = carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
+            setAllCars(carsList);
+
+            // Separate featured and nearby cars from the main list for display
+            // This logic can be more sophisticated, e.g., fetching specifically featured cars
+            setFeaturedCars(carsList.filter(c => c.badges?.includes('featured')).slice(0, 8));
+            setNearbyCars(carsList.slice(0, 4)); // Placeholder for actual location-based filtering
+
+        } catch (error) {
+            console.error("Failed to fetch cars:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchInitialData();
+  }, []);
 
   const handleBrandChange = (brand: string) => {
     setSelectedBrands(prev => 
@@ -152,7 +96,7 @@ export default function Home() {
       const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
       const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
-      // Note: Body type is not in mock data, so this filter won't work without updating Car type and mock data
+      // Note: Body type is not in car data, so this filter won't work without updating Car type and data
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
@@ -221,7 +165,7 @@ export default function Home() {
                             <div>
                                 <h3 className="font-semibold mb-4 text-lg">Brands</h3>
                                 <div className="space-y-3">
-                                    {carBrands.map(brand => (
+                                    {brands.map(brand => (
                                         <div key={brand} className="flex items-center space-x-2">
                                             <Checkbox id={brand} checked={selectedBrands.includes(brand)} onCheckedChange={() => handleBrandChange(brand)}/>
                                             <label htmlFor={brand} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{brand}</label>
@@ -245,7 +189,7 @@ export default function Home() {
                                 <Select value={selectedYear} onValueChange={setSelectedYear}>
                                     <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
                                     <SelectContent>
-                                        {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                        {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -299,7 +243,21 @@ export default function Home() {
             <section className="mt-16">
                 <h2 className="text-2xl font-bold mb-6">Cars Near You</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {allCars.slice(0, 4).map(car => (
+                    {isLoading ? (
+                         Array.from({length: 4}).map((_, i) => (
+                            <Card key={i}>
+                                <Skeleton className="h-48 w-full"/>
+                                <CardContent className="p-3 space-y-2">
+                                    <Skeleton className="h-5 w-3/4"/>
+                                    <Skeleton className="h-6 w-1/2"/>
+                                    <Skeleton className="h-4 w-full"/>
+                                </CardContent>
+                                <CardFooter className="p-3">
+                                    <Skeleton className="h-9 w-full"/>
+                                </CardFooter>
+                            </Card>
+                        ))
+                    ) : nearbyCars.map(car => (
                          <CarCard key={car.id} car={car} />
                     ))}
                 </div>

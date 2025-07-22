@@ -6,9 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Gauge, PaintBucket, Users, ArrowRight, TrendingDown, Sparkles, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { useState } from 'react';
-import { FullScreenAd } from './full-screen-ad';
 
 interface CarCardProps {
   car: Car;
@@ -22,20 +19,8 @@ const badgeIcons = {
 
 export function CarCard({ car }: CarCardProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const [isAdOpen, setIsAdOpen] = useState(false);
 
   const handleCardClick = () => {
-    const isGuestOrCustomer = !user || user.role === 'customer';
-    if (isGuestOrCustomer) {
-      setIsAdOpen(true);
-    } else {
-      router.push(`/car/${car.id}`);
-    }
-  };
-
-  const handleAdClose = () => {
-    setIsAdOpen(false);
     router.push(`/car/${car.id}`);
   };
 
@@ -83,7 +68,6 @@ export function CarCard({ car }: CarCardProps) {
           </CardFooter>
           </Card>
       </div>
-      <FullScreenAd isOpen={isAdOpen} onClose={handleAdClose} />
     </>
   );
 }
