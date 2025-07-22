@@ -7,9 +7,8 @@ import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Loader2, Search } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -20,7 +19,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '@/lib/firebase';
 
 const BrandCard = ({ logo, name }: { logo: React.ReactNode; name: string }) => (
-  <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-md transition-shadow cursor-pointer">
+  <Card className="flex flex-col items-center justify-center p-4 aspect-[4/3] hover:shadow-lg transition-shadow cursor-pointer bg-card/50 backdrop-blur-sm">
     {logo}
     <p className="mt-4 text-sm font-medium text-muted-foreground">{name}</p>
   </Card>
@@ -122,116 +121,129 @@ export default function Home() {
       <Header />
       <main className="flex-grow">
         {/* Hero Section */}
-        <div className="relative bg-card h-80 flex items-center justify-center">
+        <section className="relative bg-card h-96 flex items-center justify-center text-center text-white overflow-hidden">
+          <div className="absolute inset-0 bg-black/50 z-10" />
           <Image
-            src="https://placehold.co/1600x400.png"
-            alt="Hero Banner"
+            src="https://placehold.co/1920x1080.png"
+            alt="Hero Banner of a modern car"
             layout="fill"
             objectFit="cover"
-            className="opacity-20"
-            data-ai-hint="dealership showroom"
+            className="z-0"
+            data-ai-hint="car driving sunset"
+            priority
           />
-          <div className="relative text-center px-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-primary">Find Your Perfect Used Car</h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Quality, trust, and the best deals on pre-owned cars in Kerala.</p>
+          <div className="relative z-20 container mx-auto px-4">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">Find Your Next Ride</h1>
+            <p className="text-lg md:text-xl text-primary-foreground/90 mt-4 max-w-3xl mx-auto">
+              Kerala's most trusted marketplace for buying and selling quality pre-owned cars.
+            </p>
+            <div className="mt-8 max-w-2xl mx-auto">
+                <div className="relative">
+                    <Input
+                        placeholder="Search by make, model, or keyword..."
+                        className="w-full text-base h-14 pl-12 pr-32 bg-white/90 text-foreground"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                    />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"/>
+                    <Button size="lg" className="absolute right-2 top-1/2 -translate-y-1/2">
+                        Search
+                    </Button>
+                </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Find Your Car Section */}
-        <div className="container mx-auto px-4 -mt-20 relative z-10">
+        {/* Filters Section */}
+        <div className="container mx-auto px-4 -mt-12 relative z-10">
           <Card className="shadow-2xl">
             <CardContent className="p-4 md:p-6">
-              <Tabs defaultValue="used">
-                <TabsList className="grid w-full grid-cols-1" style={{width: 'fit-content'}}>
-                  <TabsTrigger value="used">Used Cars</TabsTrigger>
-                </TabsList>
-                <TabsContent value="used" className="mt-6">
-                   <div className="space-y-6">
-                      <Input
-                          placeholder="Search by keyword..."
-                          className="w-full text-base"
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                          <Select value={selectedBrand} onValueChange={handleBrandChange}>
-                              <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
-                              <SelectContent>
-                                  {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
-                              <SelectTrigger><SelectValue placeholder="Model" /></SelectTrigger>
-                              <SelectContent>
-                                  {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <Select value={selectedYear} onValueChange={setSelectedYear}>
-                              <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                              <SelectContent>
-                                  {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                      </div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                  <div className="flex flex-col gap-2">
+                    <Label>Brand</Label>
+                    <Select value={selectedBrand} onValueChange={handleBrandChange}>
+                        <SelectTrigger><SelectValue placeholder="Any Brand" /></SelectTrigger>
+                        <SelectContent>
+                            {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                   <div className="flex flex-col gap-2">
+                    <Label>Model</Label>
+                    <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedBrand}>
+                        <SelectTrigger><SelectValue placeholder="Any Model" /></SelectTrigger>
+                        <SelectContent>
+                            {(carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                   <div className="flex flex-col gap-2">
+                    <Label>Year</Label>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
+                        <SelectContent>
+                            {carYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                   </div>
                       
-                      <Collapsible>
-                          <CollapsibleTrigger asChild>
-                              <Button variant="link" className="p-0 text-sm text-muted-foreground hover:text-primary hover:no-underline -mt-2">
-                                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                  Advanced Filters
-                              </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-4 border-t">
-                                  <div className="space-y-3">
-                                      <Label htmlFor="price-range">Price Range</Label>
-                                      <Slider
-                                          id="price-range"
-                                          value={priceRange}
-                                          max={5000000}
-                                          step={50000}
-                                          onValueChange={setPriceRange}
-                                      />
-                                      <div className="flex justify-between text-xs text-muted-foreground">
-                                          <span>₹{priceRange[0].toLocaleString()}</span>
-                                          <span>₹{priceRange[1].toLocaleString()}</span>
-                                      </div>
-                                  </div>
-                                  <div className="space-y-3">
-                                      <Label htmlFor="km-range">Kilometers</Label>
-                                      <Slider
-                                          id="km-range"
-                                          value={kmRange}
-                                          max={200000}
-                                          step={5000}
-                                          onValueChange={setKmRange}
-                                      />
-                                      <div className="flex justify-between text-xs text-muted-foreground">
-                                          <span>{kmRange[0].toLocaleString()} km</span>
-                                          <span>{kmRange[1].toLocaleString()} km</span>
-                                      </div>
-                                  </div>
-                                  <div className="space-y-3">
-                                      <Label>Ownership</Label>
-                                      <Select value={selectedOwnership} onValueChange={setSelectedOwnership}>
-                                          <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
-                                          <SelectContent>
-                                              <SelectItem value="1">First Owner</SelectItem>
-                                              <SelectItem value="2">Second Owner</SelectItem>
-                                              <SelectItem value="3">Third or more</SelectItem>
-                                          </SelectContent>
-                                      </Select>
+                  <Collapsible>
+                      <CollapsibleTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                              <SlidersHorizontal className="mr-2 h-4 w-4" />
+                              More Filters
+                          </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="absolute mt-2 -ml-[300px] md:-ml-[450px] lg:-ml-[680px]">
+                        <Card className="p-6 shadow-2xl w-[400px] md:w-[600px] lg:w-[900px]">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-4 border-t">
+                              <div className="space-y-3">
+                                  <Label htmlFor="price-range">Price Range</Label>
+                                  <Slider
+                                      id="price-range"
+                                      value={priceRange}
+                                      max={5000000}
+                                      step={50000}
+                                      onValueChange={setPriceRange}
+                                  />
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                      <span>₹{priceRange[0].toLocaleString()}</span>
+                                      <span>₹{priceRange[1].toLocaleString()}</span>
                                   </div>
                               </div>
-                          </CollapsibleContent>
-                      </Collapsible>
-
-                      <div className="flex justify-end pt-4 border-t">
-                          <Button onClick={handleResetFilters} variant="outline">Reset All Filters</Button>
-                      </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                              <div className="space-y-3">
+                                  <Label htmlFor="km-range">Kilometers</Label>
+                                  <Slider
+                                      id="km-range"
+                                      value={kmRange}
+                                      max={200000}
+                                      step={5000}
+                                      onValueChange={setKmRange}
+                                  />
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                      <span>{kmRange[0].toLocaleString()} km</span>
+                                      <span>{kmRange[1].toLocaleString()} km</span>
+                                  </div>
+                              </div>
+                              <div className="space-y-3">
+                                  <Label>Ownership</Label>
+                                  <Select value={selectedOwnership} onValueChange={setSelectedOwnership}>
+                                      <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
+                                      <SelectContent>
+                                          <SelectItem value="1">First Owner</SelectItem>
+                                          <SelectItem value="2">Second Owner</SelectItem>
+                                          <SelectItem value="3">Third or more</SelectItem>
+                                      </SelectContent>
+                                  </Select>
+                              </div>
+                          </div>
+                           <div className="flex justify-end pt-4 mt-4 border-t">
+                              <Button onClick={handleResetFilters} variant="ghost">Reset Filters</Button>
+                          </div>
+                        </Card>
+                      </CollapsibleContent>
+                  </Collapsible>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -254,9 +266,10 @@ export default function Home() {
                         {filteredCars.slice(7).map(car => <CarCard key={car.id} car={car} />)}
                     </>
                 ) : (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                        <p className="text-lg">No cars match your current filters.</p>
-                        <p className="text-sm">Try adjusting your search criteria.</p>
+                    <div className="col-span-full text-center py-12 text-muted-foreground bg-card rounded-lg">
+                        <p className="text-lg font-semibold">No cars match your current filters.</p>
+                        <p className="text-sm mt-1">Try adjusting your search criteria or resetting filters.</p>
+                        <Button onClick={handleResetFilters} variant="outline" className="mt-4">Reset All Filters</Button>
                     </div>
                 )}
              </div>
