@@ -3,53 +3,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isAuthenticated() {
-      return request.auth != null;
+    function isStaff() {
+      return request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-a' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-b'
+      );
     }
     
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isRole(role) {
-      return isAuthenticated() && getRole() == role;
-    }
-    
-    function isOneOfRoles(roles) {
-      return isAuthenticated() && getRole() in roles;
+    function isAdminOrManager() {
+      return request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager'
+      );
     }
 
     match /users/{userId} {
-      // Any authenticated user can see user profiles (for names, etc)
-      allow read: if isAuthenticated();
-      // Users can only create their own profile
-      allow create: if isOwner(userId);
-      // Users can update their own profile, Admins/Managers can update any
-      allow update: if isOwner(userId) || isOneOfRoles(['admin', 'manager']);
-      // Only Admins can delete users
-      allow delete: if isRole('admin');
+      // Admins/Managers can manage any user. Users can read/write their own data.
+      allow read, write: if isAdminOrManager() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    match /config/{docId} {
+      // Config is public to read, but only editable by admins/managers.
+      allow get: if true;
+      allow write: if isAdminOrManager();
     }
 
     match /cars/{carId} {
-      // Anyone can read approved cars. Staff can read any car.
-      allow read: if resource.data.status == 'approved' || isOneOfRoles(['admin', 'manager', 'employee-a', 'employee-b']);
-      // Only Employee-A, Admins, or Managers can create cars
-      allow create: if isOneOfRoles(['admin', 'manager', 'employee-a']);
-      // Admin/Managers can update any car. Employee-A can only update their own submitted cars.
-      allow update: if isOneOfRoles(['admin', 'manager']) || (isRole('employee-a') && resource.data.submittedBy == request.auth.uid);
-      // Only Admin/Managers can delete cars.
-      allow delete: if isOneOfRoles(['admin', 'manager']);
-    }
-
-    match /config/{doc} {
-      // Anyone can read config
-      allow read: if true;
-      // Only Admin/Managers can write config
-      allow write: if isOneOfRoles(['admin', 'manager']);
+      // Anyone can see approved cars. Staff can see all cars.
+      allow get: if resource.data.status == 'approved' || isStaff();
+      // The public homepage needs to list approved cars.
+      allow list: if true;
+      
+      // Employee-A can create cars.
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-a';
+      
+      // Admins/Managers can update any car. Employee-A can update their own submissions.
+      allow update: if isAdminOrManager() || (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee-a' && resource.data.submittedBy == request.auth.uid);
+      
+      // Admins/Managers can delete cars.
+      allow delete: if isAdminOrManager();
     }
   }
 }
