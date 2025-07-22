@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Role } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -26,6 +27,13 @@ export function Header() {
     'employee-a': '/employee-a',
     'employee-b': '/employee-b',
   };
+  
+  const navLinks = [
+    { href: '/', label: 'Buy Cars'},
+    { href: '/sell', label: 'Sell Cars'},
+    { href: '/about', label: 'About Us'},
+    { href: '/contact', label: 'Contact'},
+  ]
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
@@ -39,11 +47,18 @@ export function Header() {
             priority
           />
         </Link>
-        <nav>
+        <nav className="hidden md:flex items-center gap-6">
+          {navLinks.map(link => (
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-4">
           {loading ? (
              <div className="flex items-center gap-2">
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-10 rounded-full" />
             </div>
           ) : (
             <>
@@ -72,6 +87,9 @@ export function Header() {
                            <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}>Dashboard</Link>
                         </DropdownMenuItem>
                      )}
+                      <DropdownMenuItem asChild>
+                           <Link href="/account">My Account</Link>
+                        </DropdownMenuItem>
                      <DropdownMenuItem onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
@@ -79,7 +97,7 @@ export function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="space-x-2">
+                <div className="hidden md:flex items-center space-x-2">
                    <Button asChild variant="ghost">
                     <Link href="/login">Login</Link>
                   </Button>
@@ -88,9 +106,38 @@ export function Header() {
                   </Button>
                 </div>
               )}
+               <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" className="md:hidden">
+                      <Menu className="h-5 w-5" />
+                      <span className="sr-only">Toggle navigation menu</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left">
+                    <nav className="grid gap-6 text-lg font-medium mt-8">
+                       {navLinks.map(link => (
+                          <Link key={link.href} href={link.href} className="text-muted-foreground hover:text-foreground">
+                            {link.label}
+                          </Link>
+                        ))}
+                    </nav>
+                     <div className="absolute bottom-8 left-6 right-6">
+                        {!user && (
+                          <div className="flex flex-col gap-2">
+                            <Button asChild size="lg" className="w-full">
+                                <Link href="/login">Login</Link>
+                            </Button>
+                             <Button asChild variant="secondary" size="lg" className="w-full">
+                                <Link href="/register">Sign Up</Link>
+                            </Button>
+                          </div>
+                        )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
             </>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );
