@@ -1,8 +1,9 @@
+
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu, User as UserIcon, LogIn, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import {
   DropdownMenu,
@@ -16,10 +17,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Role } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { Separator } from './ui/separator';
+import { useState } from 'react';
 
 
 export function Header() {
   const { user, logout, loading } = useAuth();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
     admin: '/admin',
@@ -106,32 +110,63 @@ export function Header() {
                   </Button>
                 </div>
               )}
-               <Sheet>
+               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="icon" className="md:hidden">
                       <Menu className="h-5 w-5" />
                       <span className="sr-only">Toggle navigation menu</span>
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left">
-                    <SheetHeader>
-                        <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                  <SheetContent side="left" className="p-0">
+                    <SheetHeader className="p-6 pb-4">
+                        <SheetTitle>
+                           <Link href="/" onClick={() => setIsSheetOpen(false)}>
+                            <Image
+                                src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
+                                alt="Mallu Vandi Logo"
+                                width={140}
+                                height={35}
+                            />
+                           </Link>
+                        </SheetTitle>
                     </SheetHeader>
-                    <nav className="grid gap-6 text-lg font-medium mt-8">
+                    <Separator />
+                    <nav className="grid gap-2 p-6 text-lg font-medium">
                        {navLinks.map(link => (
-                          <Link key={link.href} href={link.href} className="text-muted-foreground hover:text-foreground">
-                            {link.label}
+                          <Link 
+                            key={link.href} 
+                            href={link.href}
+                            onClick={() => setIsSheetOpen(false)}
+                            className="flex items-center justify-between rounded-md p-3 text-base text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <span>{link.label}</span>
+                            <ChevronRight className="h-5 w-5" />
                           </Link>
                         ))}
                     </nav>
-                     <div className="absolute bottom-8 left-6 right-6">
-                        {!user && (
+                     <div className="absolute bottom-0 left-0 right-0 p-6 border-t">
+                        {!user ? (
                           <div className="flex flex-col gap-2">
-                            <Button asChild size="lg" className="w-full">
-                                <Link href="/login">Login</Link>
+                            <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
+                                <Link href="/login" className="flex items-center justify-center gap-2">
+                                  <LogIn /> Login
+                                </Link>
                             </Button>
-                             <Button asChild variant="secondary" size="lg" className="w-full">
-                                <Link href="/register">Sign Up</Link>
+                             <Button asChild variant="secondary" size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
+                                <Link href="/register" className="flex items-center justify-center gap-2">
+                                  <UserIcon /> Sign Up
+                                </Link>
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {user.role !== 'customer' && (
+                                <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
+                                    <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}>Dashboard</Link>
+                                </Button>
+                            )}
+                             <Button asChild variant="secondary" size="lg" className="w-full" onClick={() => {logout(); setIsSheetOpen(false);}}>
+                                <span className="flex items-center justify-center gap-2"><LogOut /> Logout</span>
                             </Button>
                           </div>
                         )}

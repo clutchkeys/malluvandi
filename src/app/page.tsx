@@ -22,6 +22,24 @@ import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data
 import { Skeleton } from '@/components/ui/skeleton';
 
 
+const keralaDistricts = [
+  "Thiruvananthapuram",
+  "Kollam",
+  "Pathanamthitta",
+  "Alappuzha",
+  "Kottayam",
+  "Idukki",
+  "Ernakulam",
+  "Thrissur",
+  "Palakkad",
+  "Malappuram",
+  "Kozhikode",
+  "Wayanad",
+  "Kannur",
+  "Kasaragod"
+];
+
+
 export default function Home() {
   const [allCars, setAllCars] = useState<Car[]>([]);
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
@@ -47,6 +65,9 @@ export default function Home() {
 
    useEffect(() => {
     setIsLoading(true);
+    // Set default location
+    setUserLocation('Ernakulam');
+    setTempLocation('Ernakulam');
     // Using mock data
     setAllCars(MOCK_CARS);
     setFeaturedCars(MOCK_CARS.filter(c => c.badges?.includes('featured')).slice(0, 8));
@@ -81,6 +102,7 @@ export default function Home() {
   const handleLocationSave = () => {
     setUserLocation(tempLocation);
     setIsLocationModalOpen(false);
+    // Future enhancement: You could re-fetch or re-filter nearbyCars here based on the new location.
   }
 
   const filteredCars = useMemo(() => {
@@ -200,10 +222,15 @@ export default function Home() {
         </section>
 
         <div className="container mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-6">
-                 <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold">Featured Listings</h2>
-                     <div className="lg:hidden">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                 <h2 className="text-2xl font-bold">Featured Listings</h2>
+                 <div className="w-full md:w-auto flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}>
+                        <MapPin size={16} className="text-primary"/>
+                        <span>Location: <b>{userLocation}</b></span>
+                        <Edit2 size={14}/>
+                    </div>
+                     <div className="md:hidden">
                         <Sheet>
                             <SheetTrigger asChild>
                                 <Button variant="outline"><SlidersHorizontal className="mr-2 h-4 w-4"/> Filters</Button>
@@ -219,11 +246,6 @@ export default function Home() {
                         </Sheet>
                     </div>
                  </div>
-                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin size={16} className="text-primary"/>
-                    <span>Your Location: <b>{userLocation}</b></span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}><Edit2 size={14}/></Button>
-                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
@@ -238,7 +260,7 @@ export default function Home() {
                 
                 {/* Listings */}
                 <section className="lg:col-span-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                         {isLoading ? (
                         <div className="col-span-full flex justify-center py-12">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -246,7 +268,7 @@ export default function Home() {
                         ) : filteredCars.length > 0 ? (
                             <>
                                 {filteredCars.slice(0, 3).map(car => <CarCard key={car.id} car={car} />)}
-                                <div className="hidden xl:block"><AdPlaceholder shape="post" /></div>
+                                <div className="hidden xl:block col-span-1"><AdPlaceholder shape="post" /></div>
                                 {filteredCars.slice(3).map(car => <CarCard key={car.id} car={car} />)}
                             </>
                         ) : (
@@ -261,8 +283,8 @@ export default function Home() {
             </div>
              {/* Nearby Cars Section */}
             <section className="mt-16">
-                <h2 className="text-2xl font-bold mb-6">Cars Near You</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <h2 className="text-2xl font-bold mb-6">Cars Near You in {userLocation}</h2>
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                     {isLoading ? (
                          Array.from({length: 4}).map((_, i) => (
                             <Card key={i}>
@@ -289,16 +311,25 @@ export default function Home() {
       <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Edit Location</DialogTitle>
-                <DialogDescription>Enter your city to find cars near you.</DialogDescription>
+                <DialogTitle>Change Location</DialogTitle>
+                <DialogDescription>Select your district to find cars near you.</DialogDescription>
             </DialogHeader>
             <div className="py-4">
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" value={tempLocation} onChange={(e) => setTempLocation(e.target.value)} placeholder="e.g., Trivandrum, Kerala" />
+                <Label htmlFor="location-select">District</Label>
+                <Select value={tempLocation} onValueChange={setTempLocation}>
+                    <SelectTrigger id="location-select">
+                        <SelectValue placeholder="Select a district" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {keralaDistricts.map(district => (
+                            <SelectItem key={district} value={district}>{district}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <DialogFooter>
                 <Button variant="ghost" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleLocationSave}>Save</Button>
+                <Button onClick={handleLocationSave}>Save Location</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
