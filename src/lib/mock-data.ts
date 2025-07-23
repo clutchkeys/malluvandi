@@ -2,11 +2,71 @@ import type { User, Car, Inquiry } from './types';
 
 // Mock Users
 export const MOCK_USERS: User[] = [
-  { id: 'admin-01', name: 'Adithya', email: 'admin@malluvandi.com', role: 'admin', status: 'Online', attendance: '100%', performanceScore: 10 },
-  { id: 'manager-01', name: 'Ashitha', email: 'manager@malluvandi.com', role: 'manager', status: 'Online', attendance: '98%', performanceScore: 9 },
-  { id: 'empA-01', name: 'Arjun', email: 'employee.a@malluvandi.com', role: 'employee-a', status: 'Offline', attendance: '95%', performanceScore: 8 },
-  { id: 'empB-01', name: 'Bhavana', email: 'employee.b@malluvandi.com', role: 'employee-b', status: 'Online', attendance: '99%', performanceScore: 9 },
-  { id: 'empB-02', name: 'Ben', email: 'ben.b@malluvandi.com', role: 'employee-b', status: 'Offline', attendance: '92%', performanceScore: 7 },
+  { 
+    id: 'admin-01', 
+    name: 'Adithya', 
+    email: 'admin@malluvandi.com', 
+    role: 'admin', 
+    status: 'Online', 
+    performanceScore: 10,
+    attendance: [
+      { date: '2024-07-01', status: 'present', hoursWorked: 8 },
+      { date: '2024-07-02', status: 'present', hoursWorked: 8 },
+      { date: '2024-07-03', status: 'present', hoursWorked: 8 },
+    ]
+  },
+  { 
+    id: 'manager-01', 
+    name: 'Ashitha', 
+    email: 'manager@malluvandi.com', 
+    role: 'manager', 
+    status: 'Online', 
+    performanceScore: 9,
+    attendance: [
+       { date: '2024-07-01', status: 'present', hoursWorked: 8 },
+       { date: '2024-07-02', status: 'paid-leave', reason: 'Personal' },
+       { date: '2024-07-03', status: 'present', hoursWorked: 8 },
+    ]
+  },
+  { 
+    id: 'empA-01', 
+    name: 'Arjun', 
+    email: 'employee.a@malluvandi.com', 
+    role: 'employee-a', 
+    status: 'Offline', 
+    performanceScore: 8,
+    attendance: [
+       { date: '2024-07-01', status: 'present', hoursWorked: 8 },
+       { date: '2024-07-02', status: 'present', hoursWorked: 8 },
+       { date: '2024-07-03', status: 'unpaid-leave', reason: 'Sick' },
+    ]
+  },
+  { 
+    id: 'empB-01', 
+    name: 'Bhavana', 
+    email: 'employee.b@malluvandi.com', 
+    role: 'employee-b', 
+    status: 'Online', 
+    performanceScore: 9,
+     attendance: [
+       { date: '2024-07-01', status: 'present', hoursWorked: 8 },
+       { date: '2024-07-02', status: 'present', hoursWorked: 8 },
+       { date: '2024-07-03', status: 'present', hoursWorked: 8 },
+    ]
+  },
+  { 
+    id: 'empB-02', 
+    name: 'Ben', 
+    email: 'ben.b@malluvandi.com', 
+    role: 'employee-b', 
+    status: 'Offline', 
+    performanceScore: 7,
+     attendance: [
+       { date: '2024-07-01', status: 'absent' },
+       { date: '2024-07-02', status: 'present', hoursWorked: 4 },
+       { date: '2024-07-03', status: 'present', hoursWorked: 8 },
+    ]
+  },
   { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer' },
 ];
 

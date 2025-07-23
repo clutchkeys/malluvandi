@@ -78,12 +78,17 @@ import {
   BarChart3,
   List,
   LayoutDashboard,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import type { User, Role, Car as CarType, Inquiry } from '@/lib/types';
+import type { User, Role, Car as CarType, Inquiry, AttendanceRecord } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth } from 'date-fns';
 
 
 const userSchema = z.object({
@@ -164,6 +169,7 @@ export default function AdminPage() {
 
   const pendingCars = useMemo(() => carsState.filter(car => car.status === 'pending'), [carsState]);
   const salesEmployees = useMemo(() => usersState.filter(u => u.role === 'employee-b'), [usersState]);
+  const allEmployees = useMemo(() => usersState.filter(u => u.role.startsWith('employee')), [usersState]);
 
   // Approval Handlers
   const handleApproval = async (carId: string, status: 'approved' | 'rejected') => {
@@ -332,6 +338,7 @@ export default function AdminPage() {
     { id: 'listings', label: 'Car Listings', icon: List },
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
     { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
+    { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
     { id: 'performance', label: 'Employee Performance', icon: BarChart3, adminOnly: true },
     { id: 'filters', label: 'Filter Management', icon: Sliders },
   ];
@@ -495,6 +502,10 @@ export default function AdminPage() {
                 </Card>
             )}
 
+            {activeView === 'attendance' && user?.role === 'admin' && (
+              <AttendanceTracker employees={allEmployees} />
+            )}
+
             {activeView === 'performance' && user?.role === 'admin' && (
                 <Card>
                     <CardHeader>
@@ -507,14 +518,13 @@ export default function AdminPage() {
                                 <TableRow>
                                     <TableHead>Employee</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Attendance</TableHead>
                                     <TableHead>Performance Score</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading.users ? <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                                usersState.filter(u => u.role.startsWith('employee')).map(emp => (
+                                {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                allEmployees.map(emp => (
                                     <TableRow key={emp.id}>
                                         <TableCell>{emp.name}</TableCell>
                                         <TableCell>
@@ -523,7 +533,6 @@ export default function AdminPage() {
                                                 {emp.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{emp.attendance}</TableCell>
                                         <TableCell>{emp.performanceScore}/10</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(emp)}><Edit size={16}/></Button>
@@ -734,3 +743,107 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
         </div>
     )
 }
+
+function AttendanceTracker({ employees }: { employees: User[] }) {
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employees[0]?.id || '');
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+    const selectedEmployee = useMemo(() => employees.find(e => e.id === selectedEmployeeId), [employees, selectedEmployeeId]);
+    const attendanceData = useMemo(() => {
+        const data: { [key: string]: AttendanceRecord } = {};
+        selectedEmployee?.attendance?.forEach(rec => {
+            data[format(new Date(rec.date), 'yyyy-MM-dd')] = rec;
+        });
+        return data;
+    }, [selectedEmployee]);
+    
+    const selectedDayRecord = selectedDate ? attendanceData[format(selectedDate, 'yyyy-MM-dd')] : null;
+
+    const statusColors = {
+        present: 'bg-green-100 text-green-800',
+        'paid-leave': 'bg-blue-100 text-blue-800',
+        'unpaid-leave': 'bg-yellow-100 text-yellow-800',
+        absent: 'bg-red-100 text-red-800',
+    };
+    
+    const DayComponent = ({ date }: { date: Date }) => {
+        const record = attendanceData[format(date, 'yyyy-MM-dd')];
+        const baseClasses = 'h-full w-full flex items-center justify-center rounded-full';
+        const colorClass = record ? statusColors[record.status] : '';
+        const selectedClass = isSameDay(date, selectedDate || new Date(0)) ? 'ring-2 ring-primary ring-offset-2' : '';
+        return <div className={cn(baseClasses, colorClass, selectedClass)}>{format(date, 'd')}</div>;
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Attendance Tracker</CardTitle>
+                <CardDescription>View employee attendance records by month.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-3 gap-6">
+                <div className="md:col-span-1">
+                    <Label htmlFor="employee-select">Select Employee</Label>
+                    <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                        <SelectTrigger id="employee-select">
+                            <SelectValue placeholder="Select an employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {employees.map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    
+                    <div className="mt-6 space-y-4">
+                        <h3 className="font-semibold">Legend</h3>
+                        <div className="space-y-2 text-sm">
+                           {Object.entries(statusColors).map(([status, className]) => (
+                               <div key={status} className="flex items-center gap-2">
+                                   <div className={cn('h-4 w-4 rounded-full', className.split(' ')[0])} />
+                                   <span className="capitalize">{status.replace('-', ' ')}</span>
+                               </div>
+                           ))}
+                        </div>
+                    </div>
+                     <div className="mt-6">
+                         {selectedDayRecord ? (
+                             <Card className="bg-muted/50">
+                                 <CardHeader className="pb-2"><CardTitle className="text-base">Details for {format(selectedDate!, 'MMMM d')}</CardTitle></CardHeader>
+                                 <CardContent className="text-sm space-y-1">
+                                    <p><strong>Status:</strong> <span className="capitalize">{selectedDayRecord.status.replace('-', ' ')}</span></p>
+                                    {selectedDayRecord.hoursWorked && <p><strong>Hours Worked:</strong> {selectedDayRecord.hoursWorked}</p>}
+                                    {selectedDayRecord.reason && <p><strong>Reason:</strong> {selectedDayRecord.reason}</p>}
+                                 </CardContent>
+                             </Card>
+                         ) : selectedDate && isSameMonth(selectedDate, currentMonth) ? (
+                              <Card className="bg-muted/50"><CardContent className="p-4 text-center text-sm text-muted-foreground">No record for this day.</CardContent></Card>
+                         ) : null}
+                    </div>
+                </div>
+
+                <div className="md:col-span-2">
+                    <div className="flex items-center justify-between mb-4">
+                       <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft/></Button>
+                       <h3 className="text-lg font-semibold">{format(currentMonth, 'MMMM yyyy')}</h3>
+                       <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight/></Button>
+                    </div>
+                     <Calendar
+                        mode="single"
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        selected={selectedDate || undefined}
+                        onSelect={(day) => setSelectedDate(day || null)}
+                        components={{ Day: DayComponent }}
+                        className="rounded-md border"
+                        classNames={{
+                           day_outside: 'text-muted-foreground opacity-50',
+                           day: 'h-12 w-12 rounded-full',
+                        }}
+                     />
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+

@@ -2,13 +2,20 @@ export type Role = 'admin' | 'manager' | 'employee-a' | 'employee-b' | 'customer
 
 export type CarBadge = 'price_drop' | 'new' | 'featured';
 
+export interface AttendanceRecord {
+  date: string; // YYYY-MM-DD
+  status: 'present' | 'paid-leave' | 'unpaid-leave' | 'absent';
+  hoursWorked?: number;
+  reason?: string;
+}
+
 export interface User {
   id: string; // Firebase Auth UID or mock ID
   name: string;
   email: string;
   role: Role;
   status?: 'Online' | 'Offline';
-  attendance?: string;
+  attendance?: AttendanceRecord[];
   performanceScore?: number;
 }
 
