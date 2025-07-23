@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -13,9 +14,6 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star } from 'lucide-react';
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
-import { useAuth } from '@/hooks/use-auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 const badgeIcons: Record<CarBadge, React.ReactNode> = {
   price_drop: <TrendingDown size={14} className="mr-1"/>,
@@ -23,13 +21,11 @@ const badgeIcons: Record<CarBadge, React.ReactNode> = {
   featured: <Star size={14} className="mr-1"/>,
 }
 
-export function CarDetailView({ car }: { car: Car }) {
+export function CarDetailView({ car, sellerName }: { car: Car, sellerName: string }) {
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
-  const { user } = useAuth();
-  const [sellerName, setSellerName] = useState('');
 
   useEffect(() => {
     if (car) {
@@ -43,27 +39,6 @@ export function CarDetailView({ car }: { car: Car }) {
         .finally(() => setIsSummaryLoading(false));
     }
   }, [car]);
-
-  useEffect(() => {
-    if (car.submittedBy) {
-      const fetchSellerName = async () => {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', car.submittedBy));
-          if (userDoc.exists()) {
-            setSellerName(userDoc.data().name);
-          } else {
-             setSellerName("Mallu Vandi");
-          }
-        } catch (error) {
-          console.error("Error fetching seller name:", error);
-          setSellerName("Mallu Vandi");
-        }
-      };
-      fetchSellerName();
-    } else {
-        setSellerName("Mallu Vandi");
-    }
-  }, [car.submittedBy]);
   
   const handleInquireClick = () => {
     setIsModalOpen(true);
