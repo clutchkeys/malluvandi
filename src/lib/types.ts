@@ -18,6 +18,7 @@ export interface User {
   attendance?: AttendanceRecord[];
   performanceScore?: number;
   newsletterSubscribed?: boolean;
+  banned?: boolean;
 }
 
 export interface Car {

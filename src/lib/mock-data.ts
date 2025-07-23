@@ -72,9 +72,9 @@ export const MOCK_USERS: User[] = [
     ],
      newsletterSubscribed: false,
   },
-  { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer', newsletterSubscribed: true },
-  { id: 'cust-02', name: 'Diana', email: 'diana@test.com', role: 'customer', newsletterSubscribed: true },
-  { id: 'cust-03', name: 'Ethan', email: 'ethan@test.com', role: 'customer', newsletterSubscribed: false },
+  { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer', newsletterSubscribed: true, banned: false },
+  { id: 'cust-02', name: 'Diana', email: 'diana@test.com', role: 'customer', newsletterSubscribed: true, banned: false },
+  { id: 'cust-03', name: 'Ethan', email: 'ethan@test.com', role: 'customer', newsletterSubscribed: false, banned: true },
 ];
 
 // Mock Brands, Models, Years
@@ -88,6 +88,11 @@ export const MOCK_MODELS: { [key: string]: string[] } = {
   'Toyota': ['Innova Crysta', 'Fortuner', 'Glanza'],
 };
 export const MOCK_YEARS = [2024, 2023, 2022, 2021, 2020, 2019, 2018];
+export const MOCK_FILTER_CATEGORIES = [
+    { id: 'brand', name: 'Brand', options: MOCK_BRANDS },
+    { id: 'model', name: 'Model', options: MOCK_MODELS['Maruti Suzuki'] }, // Example options
+    { id: 'year', name: 'Year', options: MOCK_YEARS.map(String) }
+];
 
 
 // Mock Cars
