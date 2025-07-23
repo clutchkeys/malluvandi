@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -357,7 +358,7 @@ export default function AdminPage() {
     { id: 'approvals', label: 'Pending Approvals', icon: Car },
     { id: 'listings', label: 'Car Listings', icon: List },
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
-    { id: 'users', label: 'User Management', icon: Users },
+    { id: 'users', label: 'User Management', icon: Users, managerOnly: false },
     { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
     { id: 'employees', label: 'Employees', icon: BarChart3, adminOnly: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: true },
@@ -367,8 +368,12 @@ export default function AdminPage() {
 
   const SideNav = () => (
      <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-        {navItems.map(item =>
-          (!item.adminOnly || user?.role === 'admin') && (
+        {navItems.map(item => {
+          const isManagerOnlyHidden = item.id === 'users' && user?.role === 'manager';
+          if ((item.adminOnly && user?.role !== 'admin') || isManagerOnlyHidden) {
+            return null;
+          }
+          return (
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
@@ -381,7 +386,7 @@ export default function AdminPage() {
               {item.label}
             </button>
           )
-        )}
+        })}
       </nav>
   )
 
@@ -541,7 +546,7 @@ export default function AdminPage() {
                 </Card>
             )}
 
-            {activeView === 'users' && (
+            {activeView === 'users' && user?.role === 'admin' && (
                 <Card>
                     <CardHeader>
                       <CardTitle>User Management</CardTitle>
