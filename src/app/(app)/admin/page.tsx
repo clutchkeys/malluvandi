@@ -97,6 +97,7 @@ import {
   Bell,
   Ban,
   CircleOff,
+  Menu
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -105,6 +106,7 @@ import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_Y
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth, parseISO } from 'date-fns';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 
 const userSchema = z.object({
@@ -141,12 +143,12 @@ export default function AdminPage() {
   const [isCarFormOpen, setIsCarFormOpen] = useState(false);
   const [isFilterFormOpen, setIsFilterFormOpen] = useState<{type: 'category' | 'value', isOpen: boolean}>({type: 'category', isOpen: false});
   const [isReassignInquiryOpen, setIsReassignInquiryOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string, description: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string, description: string, categoryId?: string } | null>(null);
 
   // States for editing specific items
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [carToEdit, setCarToEdit] = useState<CarType | null>(null);
-  const [filterToEdit, setFilterToEdit] = useState<{type: 'category' | 'value', value: any} | null>(null);
+  const [filterToEdit, setFilterToEdit] = useState<{type: 'category' | 'value', value: any, categoryId?: string} | null>(null);
   const [inquiryToReassign, setInquiryToReassign] = useState<Inquiry | null>(null);
   const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
   
@@ -276,29 +278,36 @@ export default function AdminPage() {
   }
 
   // --- Filter Management ---
-    const handleOpenFilterForm = (type: 'category' | 'value', value: any | null) => {
-        setFilterToEdit(value ? { type, value } : null);
-        if (type === 'value' && value) {
-            // This is complex now, let's simplify for the example
-        }
+    const handleOpenFilterForm = (type: 'category' | 'value', value: any | null, categoryId?: string) => {
+        setFilterToEdit(value ? { type, value, categoryId } : null);
         setIsFilterFormOpen({ type, isOpen: true });
     }
 
     const onFilterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        const name = formData.get('name') as string;
         const type = isFilterFormOpen.type;
-
+        
         if (type === 'category') {
-            const name = formData.get('name') as string;
-            const id = name.toLowerCase().replace(' ', '-');
+            const id = name.toLowerCase().replace(/\s+/g, '-');
             if (filterToEdit) {
-                setFilterCategories(cats => cats.map(c => c.id === (filterToEdit!.value as any).id ? { ...c, name } : c));
+                setFilterCategories(cats => cats.map(c => c.id === (filterToEdit.value as any).id ? { ...c, name } : c));
             } else {
                 setFilterCategories(cats => [...cats, { id, name, options: [] }]);
             }
+        } else if (type === 'value' && filterToEdit?.categoryId) {
+            const categoryId = filterToEdit.categoryId;
+            if (filterToEdit.value) { // Editing existing value
+                setFilterCategories(cats => cats.map(c => 
+                    c.id === categoryId ? { ...c, options: c.options.map(o => o === filterToEdit.value ? name : o) } : c
+                ));
+            } else { // Adding new value
+                 setFilterCategories(cats => cats.map(c => 
+                    c.id === categoryId ? { ...c, options: [...c.options, name] } : c
+                ));
+            }
         }
-        // Simplified: managing values would be more complex and require more state
         
         toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Saved`});
         setIsFilterFormOpen({ type: 'category', isOpen: false });
@@ -308,7 +317,7 @@ export default function AdminPage() {
   // --- Generic Delete Handler ---
   const handleDelete = async () => {
     if (!itemToDelete) return;
-    const { type, id } = itemToDelete;
+    const { type, id, categoryId } = itemToDelete;
     
     if (type === 'user') {
         setUsersState(prev => prev.filter(u => u.id !== id));
@@ -321,6 +330,12 @@ export default function AdminPage() {
     if (type === 'filterCategory') {
         setFilterCategories(cats => cats.filter(c => c.id !== id));
         toast({ title: 'Filter Category Deleted' });
+    }
+    if (type === 'filterValue' && categoryId) {
+         setFilterCategories(cats => cats.map(c => 
+            c.id === categoryId ? { ...c, options: c.options.filter(o => o !== id) } : c
+        ));
+        toast({ title: 'Filter Option Deleted' });
     }
     
     setItemToDelete(null);
@@ -344,11 +359,31 @@ export default function AdminPage() {
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
-    { id: 'performance', label: 'Employee Performance', icon: BarChart3, adminOnly: true },
+    { id: 'employees', label: 'Employees', icon: BarChart3, adminOnly: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: true },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
     { id: 'filters', label: 'Filter Management', icon: Sliders },
   ];
+
+  const SideNav = () => (
+     <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+        {navItems.map(item =>
+          (!item.adminOnly || user?.role === 'admin') && (
+            <button
+              key={item.id}
+              onClick={() => setActiveView(item.id)}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                activeView === item.id && 'bg-muted text-primary'
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          )
+        )}
+      </nav>
+  )
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -358,28 +393,26 @@ export default function AdminPage() {
             <h2 className="font-semibold text-lg">Admin Panel</h2>
           </div>
           <div className="flex-1">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-              {navItems.map(item =>
-                (!item.adminOnly || user?.role === 'admin') && (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                      activeView === item.id && 'bg-muted text-primary'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </button>
-                )
-              )}
-            </nav>
+            <SideNav />
           </div>
         </div>
       </aside>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+           <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col">
+                <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 -mx-6">
+                    <h2 className="font-semibold text-lg">Admin Panel</h2>
+                </div>
+                <SideNav />
+            </SheetContent>
+          </Sheet>
           <div className="w-full flex-1">
              <h1 className="text-lg font-semibold capitalize">{activeView.replace('-', ' ')}</h1>
           </div>
@@ -571,10 +604,10 @@ export default function AdminPage() {
               <AttendanceTracker employees={allStaff} />
             )}
 
-            {activeView === 'performance' && user?.role === 'admin' && (
+            {activeView === 'employees' && user?.role === 'admin' && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Employee Performance</CardTitle>
+                        <CardTitle>Employees</CardTitle>
                         <CardDescription>Monitor employee status, attendance, and scores.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -618,44 +651,87 @@ export default function AdminPage() {
                 <NewsletterPanel subscribers={newsletterSubscribers} />
             )}
 
-             {activeView === 'filters' && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Filter Management</CardTitle>
-                        <CardDescription>Add, edit, or delete filter categories and their values.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                       <div className="flex justify-end mb-4">
-                            <Button size="sm" onClick={() => handleOpenFilterForm('category', null)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Add Category
-                            </Button>
-                        </div>
-                        <div className="rounded-lg border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Category Name</TableHead>
-                                    <TableHead>No. of Options</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> :
-                                filterCategories.map(cat => (
-                                    <TableRow key={cat.id}>
-                                        <TableCell className="font-medium">{cat.name}</TableCell>
-                                        <TableCell>{cat.options.length}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('category', cat)}><Edit size={16}/></Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'filterCategory', id: cat.id, description: `This will delete the '${cat.name}' filter category and all its options.`})}><Trash2 size={16}/></Button>
-                                        </TableCell>
-                                    </TableRow>
+            {activeView === 'filters' && (
+                <Tabs defaultValue="categories" className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                        <TabsList>
+                            <TabsTrigger value="categories">Categories</TabsTrigger>
+                            <TabsTrigger value="options">Options</TabsTrigger>
+                        </TabsList>
+                        <Button size="sm" onClick={() => handleOpenFilterForm('category', null)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Category
+                        </Button>
+                    </div>
+                    <TabsContent value="categories">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Filter Categories</CardTitle>
+                                <CardDescription>Add, edit, or delete filter categories.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Category Name</TableHead>
+                                            <TableHead>No. of Options</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                            filterCategories.map(cat => (
+                                                <TableRow key={cat.id}>
+                                                    <TableCell className="font-medium">{cat.name}</TableCell>
+                                                    <TableCell>{cat.options.length}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('category', cat)}><Edit size={16} /></Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterCategory', id: cat.id, description: `This will delete the '${cat.name}' filter category and all its options.` })}><Trash2 size={16} /></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="options">
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Filter Options</CardTitle>
+                                <CardDescription>Manage options within each category.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {filterCategories.map(cat => (
+                                    <div key={cat.id}>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h3 className="font-semibold">{cat.name}</h3>
+                                            <Button size="sm" variant="outline" onClick={() => handleOpenFilterForm('value', null, cat.id)}>
+                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                                            </Button>
+                                        </div>
+                                        {cat.options.length > 0 ? (
+                                            <div className="rounded-lg border">
+                                                <Table>
+                                                    <TableBody>
+                                                        {cat.options.map(opt => (
+                                                            <TableRow key={opt}>
+                                                                <TableCell>{opt}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('value', opt, cat.id)}><Edit size={16} /></Button>
+                                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterValue', id: opt, categoryId: cat.id, description: `This will delete the option '${opt}' from '${cat.name}'.`})}><Trash2 size={16} /></Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        ) : <p className="text-sm text-muted-foreground text-center py-4">No options in this category.</p>}
+                                    </div>
                                 ))}
-                            </TableBody>
-                        </Table>
-                        </div>
-                    </CardContent>
-                </Card>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             )}
         </main>
       </div>
@@ -724,19 +800,12 @@ export default function AdminPage() {
 
          <Dialog open={isFilterFormOpen.isOpen} onOpenChange={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>
             <DialogContent>
-                <DialogHeader><DialogTitle>{filterToEdit ? 'Edit' : 'Add'} {isFilterFormOpen.type}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{filterToEdit ? 'Edit' : 'Add'} {isFilterFormOpen.type.charAt(0).toUpperCase() + isFilterFormOpen.type.slice(1)}</DialogTitle></DialogHeader>
                  <form className="space-y-4" onSubmit={onFilterSubmit}>
-                    {isFilterFormOpen.type === 'category' ? (
-                        <div>
-                            <Label>Category Name</Label>
-                            <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || ''} required />
-                        </div>
-                    ) : (
-                         <div>
-                            <Label>Value Name</Label>
-                            <Input name="name" defaultValue={filterToEdit?.value || ''} required />
-                        </div>
-                    )}
+                    <div>
+                        <Label>{isFilterFormOpen.type === 'category' ? 'Category' : 'Option'} Name</Label>
+                        <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || filterToEdit?.value || ''} required />
+                    </div>
                     <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>Cancel</Button><Button type="submit">Save</Button></DialogFooter>
                 </form>
             </DialogContent>
