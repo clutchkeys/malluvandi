@@ -2,11 +2,11 @@ import type { User, Car, Inquiry } from './types';
 
 // Mock Users
 export const MOCK_USERS: User[] = [
-  { id: 'admin-01', name: 'Adithya', email: 'admin@malluvandi.com', role: 'admin' },
-  { id: 'manager-01', name: 'Ashitha', email: 'manager@malluvandi.com', role: 'manager' },
-  { id: 'empA-01', name: 'Arjun', email: 'employee.a@malluvandi.com', role: 'employee-a' },
-  { id: 'empB-01', name: 'Bhavana', email: 'employee.b@malluvandi.com', role: 'employee-b' },
-  { id: 'empB-02', name: 'Ben', email: 'ben.b@malluvandi.com', role: 'employee-b' },
+  { id: 'admin-01', name: 'Adithya', email: 'admin@malluvandi.com', role: 'admin', status: 'Online', attendance: '100%', performanceScore: 10 },
+  { id: 'manager-01', name: 'Ashitha', email: 'manager@malluvandi.com', role: 'manager', status: 'Online', attendance: '98%', performanceScore: 9 },
+  { id: 'empA-01', name: 'Arjun', email: 'employee.a@malluvandi.com', role: 'employee-a', status: 'Offline', attendance: '95%', performanceScore: 8 },
+  { id: 'empB-01', name: 'Bhavana', email: 'employee.b@malluvandi.com', role: 'employee-b', status: 'Online', attendance: '99%', performanceScore: 9 },
+  { id: 'empB-02', name: 'Ben', email: 'ben.b@malluvandi.com', role: 'employee-b', status: 'Offline', attendance: '92%', performanceScore: 7 },
   { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer' },
 ];
 

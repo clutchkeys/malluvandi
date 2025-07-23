@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import {
   LayoutDashboard,
@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading) {
@@ -46,6 +47,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  // Admins have a custom layout within their page, so we don't need the standard header for them.
+  if (user.role === 'admin' || user.role === 'manager') {
+    if (pathname.startsWith('/admin')) {
+        return <>{children}</>;
+    }
+  }
+
 
   const navItems = {
     admin: [

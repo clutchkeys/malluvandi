@@ -26,12 +26,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -64,7 +58,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -81,10 +74,14 @@ import {
   PlusCircle,
   Eye,
   Loader2,
+  Sliders,
+  BarChart3,
+  List,
 } from 'lucide-react';
-import type { User, Role, Car as CarType, Inquiry, CarBadge } from '@/lib/types';
+import type { User, Role, Car as CarType, Inquiry } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
+import { cn } from '@/lib/utils';
 
 
 const userSchema = z.object({
@@ -92,6 +89,7 @@ const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
   role: z.enum(['admin', 'manager', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
+  performanceScore: z.number().min(0).max(10).optional(),
 });
 
 export default function AdminPage() {
@@ -99,7 +97,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('approvals');
+  const [activeView, setActiveView] = useState('approvals');
   const [isLoading, setIsLoading] = useState({
       cars: true, users: true, inquiries: true, filters: true
   });
@@ -113,8 +111,6 @@ export default function AdminPage() {
   const [brandsState, setBrandsState] = useState<string[]>([]);
   const [modelsState, setModelsState] = useState<{[key: string]: string[]}>({});
   const [yearsState, setYearsState] = useState<number[]>([]);
-  const carBadges: CarBadge[] = ['price_drop', 'new', 'featured'];
-
   
   // Dialog/Alert states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -180,16 +176,16 @@ export default function AdminPage() {
   // --- User Management ---
   const handleOpenUserForm = (user: User | null) => {
     setUserToEdit(user);
-    form.reset(user ? user : { name: '', email: '', role: 'employee-a' });
+    form.reset(user ? { ...user, performanceScore: user.performanceScore || 0 } : { name: '', email: '', role: 'employee-a', performanceScore: 0 });
     setIsUserFormOpen(true);
   }
   
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
     if (userToEdit) {
         setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, role: values.role as Role } : u
+            u.id === userToEdit.id ? { ...u, role: values.role as Role, performanceScore: values.performanceScore } : u
         ));
-        toast({ title: 'User Role Updated' });
+        toast({ title: 'User Updated' });
     }
     setIsUserFormOpen(false);
   };
@@ -206,8 +202,6 @@ export default function AdminPage() {
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
-    const selectedBadges = carBadges.filter(badge => formData.has(badge));
-
     const carData = {
         brand: formValues.brand,
         model: formValues.model,
@@ -220,7 +214,6 @@ export default function AdminPage() {
         challans: formValues.challans,
         additionalDetails: formValues.details,
         status: formValues.status,
-        badges: selectedBadges,
     };
     
     if (carToEdit) {
@@ -324,188 +317,255 @@ export default function AdminPage() {
   const roleDisplay: Record<Exclude<Role, 'customer'>, { name: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined }> = {
     admin: { name: 'Admin', variant: 'destructive' },
     manager: { name: 'Manager', variant: 'default' },
-    'employee-a': { name: 'Content Manager', variant: 'secondary' },
+    'employee-a': { name: 'Content Editor', variant: 'secondary' },
     'employee-b': { name: 'Sales', variant: 'outline' },
   };
 
   const viewingInquiryCar = carsState.find(c => c.id === viewingInquiry?.carId);
   const viewingInquiryAssignee = usersState.find(u => u.id === viewingInquiry?.assignedTo);
+  
+  const navItems = [
+    { id: 'approvals', label: 'Pending Approvals', icon: Car },
+    { id: 'listings', label: 'Car Listings', icon: List },
+    { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
+    { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
+    { id: 'performance', label: 'Employee Performance', icon: BarChart3, adminOnly: true },
+    { id: 'filters', label: 'Filter Management', icon: Sliders },
+  ];
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Listings</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{carsState.length}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pending Approvals</CardTitle><Car className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{pendingCars.length}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Inquiries</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{inquiriesState.length}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{usersState.length}</div></CardContent>
-        </Card>
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-muted/40 md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2">
+          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+            <h2 className="font-semibold">Admin Panel</h2>
+          </div>
+          <div className="flex-1">
+            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+              {navItems.map(item =>
+                (!item.adminOnly || user?.role === 'admin') && (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                      activeView === item.id && 'bg-muted text-primary'
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                )
+              )}
+            </nav>
+          </div>
+        </div>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
-          <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
-          <TabsTrigger value="listings">Car Listings</TabsTrigger>
-          <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
-          {user?.role === 'admin' && <TabsTrigger value="users">User Management</TabsTrigger>}
-          <TabsTrigger value="filters">Filter Management</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="approvals">
-          <Card>
-            <CardHeader><CardTitle>Car Listings for Approval</CardTitle><CardDescription>Review and approve or reject new car listings.</CardDescription></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Submitted By</TableHead><TableHead>Price</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                  pendingCars.length > 0 ? pendingCars.map(car => (
-                    <TableRow key={car.id}>
-                      <TableCell className="font-medium"><div className="flex items-center gap-4"><Image src={car.images[0]} alt={car.model} width={64} height={48} className="rounded-md object-cover" data-ai-hint="car exterior"/><div>{car.brand} {car.model} ({car.year})<div className="text-xs text-muted-foreground">{car.color}</div></div></div></TableCell>
-                      <TableCell>{usersState.find(u => u.id === car.submittedBy)?.name || car.submittedBy.substring(0,5)}</TableCell>
-                      <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleApproval(car.id, 'approved')}><CheckCircle2 size={20} /></Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleApproval(car.id, 'rejected')}><XCircle size={20} /></Button>
-                      </TableCell>
-                    </TableRow>
-                  )) : <TableRow><TableCell colSpan={4} className="h-24 text-center">No pending approvals.</TableCell></TableRow>}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="listings">
-          <Card>
-            <CardHeader className="flex-row justify-between items-center"><CardTitle>All Car Listings</CardTitle><Button onClick={() => handleOpenCarForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Car</Button></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Status</TableHead><TableHead>Badges</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {isLoading.cars ? <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                  carsState.map(car => (
-                    <TableRow key={car.id}>
-                      <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
-                      <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
-                      <TableCell><Badge variant={car.status === 'approved' ? 'default' : car.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{car.status}</Badge></TableCell>
-                      <TableCell><div className="flex gap-1">{car.badges?.map(b => <Badge key={b} variant="outline" className="text-xs capitalize">{b.replace('_', ' ')}</Badge>)}</div></TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenCarForm(car)}><Edit size={16}/></Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'car', id: car.id, description: `This will permanently delete the listing for ${car.brand} ${car.model}.`})}><Trash2 size={16}/></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="inquiries">
-          <Card>
-            <CardHeader><CardTitle>Customer Inquiries</CardTitle><CardDescription>Track and manage all customer inquiries.</CardDescription></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Car</TableHead><TableHead>Assigned To</TableHead><TableHead>Status</TableHead><TableHead>Remarks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {isLoading.inquiries ? <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                  inquiriesState.map(inq => {
-                    const assignee = usersState.find(u => u.id === inq.assignedTo);
-                    return (
-                      <TableRow key={inq.id} className="cursor-pointer" onClick={() => setViewingInquiry(inq)}>
-                        <TableCell>{inq.customerName}</TableCell>
-                        <TableCell>{inq.carSummary || 'N/A'}</TableCell>
-                        <TableCell>{assignee?.name || 'Unassigned'}</TableCell>
-                        <TableCell><Badge variant={inq.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inq.status}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{inq.remarks || "No remarks yet."}</TableCell>
-                        <TableCell className="text-right flex items-center justify-end">
-                          <Button variant="ghost" size="sm" onClick={() => setViewingInquiry(inq)}><Eye className="mr-2 h-4 w-4"/> View</Button>
-                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setInquiryToReassign(inq); setIsReassignInquiryOpen(true);}}>Re-assign</Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {user?.role === 'admin' && (
-          <TabsContent value="users">
-              <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                  <div><CardTitle>User Management</CardTitle><CardDescription>Edit user roles.</CardDescription></div>
-                  </CardHeader>
-                  <CardContent>
-                      <Table>
-                          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                          {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                          usersState.map(u => (
-                              <TableRow key={u.id}>
-                              <TableCell className="font-medium">{u.name}</TableCell>
-                              <TableCell>{u.email}</TableCell>
-                              <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
-                              <TableCell className="text-right">
-                                  <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
-                                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name} from Firestore, but will not delete their login account.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
-                              </TableCell>
-                              </TableRow>
-                          ))}
-                          </TableBody>
-                      </Table>
-                  </CardContent>
-              </Card>
-          </TabsContent>
-        )}
-        
-        <TabsContent value="filters">
-            <div className="grid gap-6 md:grid-cols-3">
+      <div className="flex flex-col">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between"><CardTitle>Brands</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('brand', null)}>Add</Button></CardHeader>
-                    <CardContent>
-                        <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
-                        </Table>
-                    </CardContent>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Listings</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{carsState.length}</div></CardContent>
                 </Card>
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between"><CardTitle>Models</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('model', null)}>Add</Button></CardHeader>
-                    <CardContent>
-                        <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Brand</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                             <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button></TableCell></TableRow>)))}</TableBody>
-                        </Table>
-                    </CardContent>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pending Approvals</CardTitle><Car className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{pendingCars.length}</div></CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader className="flex-row items-center justify-between"><CardTitle>Years</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>Add</Button></CardHeader>
-                    <CardContent>
-                        <Table><TableHeader><TableRow><TableHead>Year</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
-                        </Table>
-                    </CardContent>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Inquiries</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{inquiriesState.length}</div></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                  <CardContent><div className="text-2xl font-bold">{usersState.length}</div></CardContent>
                 </Card>
             </div>
-        </TabsContent>
-      </Tabs>
+
+            {activeView === 'approvals' && (
+                <Card>
+                    <CardHeader><CardTitle>Car Listings for Approval</CardTitle><CardDescription>Review and approve or reject new car listings.</CardDescription></CardHeader>
+                    <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Submitted By</TableHead><TableHead>Price</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                        {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                        pendingCars.length > 0 ? pendingCars.map(car => (
+                            <TableRow key={car.id}>
+                            <TableCell className="font-medium"><div className="flex items-center gap-4"><Image src={car.images[0]} alt={car.model} width={64} height={48} className="rounded-md object-cover" data-ai-hint="car exterior"/><div>{car.brand} {car.model} ({car.year})<div className="text-xs text-muted-foreground">{car.color}</div></div></div></TableCell>
+                            <TableCell>{usersState.find(u => u.id === car.submittedBy)?.name || car.submittedBy.substring(0,5)}</TableCell>
+                            <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleApproval(car.id, 'approved')}><CheckCircle2 size={20} /></Button>
+                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleApproval(car.id, 'rejected')}><XCircle size={20} /></Button>
+                            </TableCell>
+                            </TableRow>
+                        )) : <TableRow><TableCell colSpan={4} className="h-24 text-center">No pending approvals.</TableCell></TableRow>}
+                        </TableBody>
+                    </Table>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeView === 'listings' && (
+                <Card>
+                    <CardHeader className="flex-row justify-between items-center"><CardTitle>All Car Listings</CardTitle><Button onClick={() => handleOpenCarForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Car</Button></CardHeader>
+                    <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                        {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                        carsState.map(car => (
+                            <TableRow key={car.id}>
+                            <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
+                            <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                            <TableCell><Badge variant={car.status === 'approved' ? 'default' : car.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{car.status}</Badge></TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenCarForm(car)}><Edit size={16}/></Button>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'car', id: car.id, description: `This will permanently delete the listing for ${car.brand} ${car.model}.`})}><Trash2 size={16}/></Button>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    </CardContent>
+                </Card>
+            )}
+            
+            {activeView === 'inquiries' && (
+                <Card>
+                    <CardHeader><CardTitle>Customer Inquiries</CardTitle><CardDescription>Track and manage all customer inquiries.</CardDescription></CardHeader>
+                    <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Car</TableHead><TableHead>Assigned To</TableHead><TableHead>Status</TableHead><TableHead>Remarks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                        {isLoading.inquiries ? <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                        inquiriesState.map(inq => {
+                            const assignee = usersState.find(u => u.id === inq.assignedTo);
+                            return (
+                            <TableRow key={inq.id} className="cursor-pointer" onClick={() => setViewingInquiry(inq)}>
+                                <TableCell>{inq.customerName}</TableCell>
+                                <TableCell>{inq.carSummary || 'N/A'}</TableCell>
+                                <TableCell>{assignee?.name || 'Unassigned'}</TableCell>
+                                <TableCell><Badge variant={inq.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inq.status}</Badge></TableCell>
+                                <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{inq.remarks || "No remarks yet."}</TableCell>
+                                <TableCell className="text-right flex items-center justify-end">
+                                <Button variant="ghost" size="sm" onClick={() => setViewingInquiry(inq)}><Eye className="mr-2 h-4 w-4"/> View</Button>
+                                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setInquiryToReassign(inq); setIsReassignInquiryOpen(true);}}>Re-assign</Button>
+                                </TableCell>
+                            </TableRow>
+                            )
+                        })}
+                        </TableBody>
+                    </Table>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeView === 'users' && user?.role === 'admin' && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                    <div><CardTitle>User Management</CardTitle><CardDescription>Edit user roles.</CardDescription></div>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                            {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                            usersState.map(u => (
+                                <TableRow key={u.id}>
+                                <TableCell className="font-medium">{u.name}</TableCell>
+                                <TableCell>{u.email}</TableCell>
+                                <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name} from Firestore, but will not delete their login account.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeView === 'performance' && user?.role === 'admin' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Employee Performance</CardTitle>
+                        <CardDescription>Monitor employee status, attendance, and scores.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Employee</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Attendance</TableHead>
+                                    <TableHead>Performance Score</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading.users ? <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                usersState.filter(u => u.role.startsWith('employee')).map(emp => (
+                                    <TableRow key={emp.id}>
+                                        <TableCell>{emp.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={emp.status === 'Online' ? 'default' : 'outline'} className="gap-1">
+                                                <span className={cn("h-2 w-2 rounded-full", emp.status === 'Online' ? 'bg-green-500' : 'bg-gray-400')}></span>
+                                                {emp.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{emp.attendance}</TableCell>
+                                        <TableCell>{emp.performanceScore}/10</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(emp)}><Edit size={16}/></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeView === 'filters' && (
+                 <div className="grid gap-6 md:grid-cols-3">
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Brands</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('brand', null)}>Add</Button></CardHeader>
+                        <CardContent>
+                            <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Models</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('model', null)}>Add</Button></CardHeader>
+                        <CardContent>
+                            <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Brand</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button></TableCell></TableRow>)))}</TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Years</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>Add</Button></CardHeader>
+                        <CardContent>
+                            <Table><TableHeader><TableRow><TableHead>Year</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+        </main>
+      </div>
 
         {/* --- Dialogs & Alerts --- */}
 
         <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
             <DialogContent>
-                <DialogHeader><DialogTitle>{userToEdit ? 'Edit User Role' : 'Add New User'}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{userToEdit ? 'Edit User' : 'Add New User'}</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onUserSubmit)} className="space-y-4">
                         <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
@@ -515,14 +575,23 @@ export default function AdminPage() {
                                 <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                        <SelectItem value="manager">Manager</SelectItem>
-                                        <SelectItem value="employee-a">Content Manager (Employee A)</SelectItem>
-                                        <SelectItem value="employee-b">Sales & Support (Employee B)</SelectItem>
+                                        {user?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
+                                        {user?.role === 'admin' && <SelectItem value="manager">Manager</SelectItem>}
+                                        <SelectItem value="employee-a">Content Editor</SelectItem>
+                                        <SelectItem value="employee-b">Sales & Support</SelectItem>
                                     </SelectContent>
                                 </Select><FormMessage />
                             </FormItem>
                         )}/>
+                        {(userToEdit?.role.startsWith('employee')) && (
+                             <FormField control={form.control} name="performanceScore" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Performance Score (out of 10)</FormLabel>
+                                    <FormControl><Input type="number" min="0" max="10" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                        )}
                         <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsUserFormOpen(false)}>Cancel</Button><Button type="submit">Save</Button></DialogFooter>
                     </form>
                 </Form>
@@ -547,17 +616,6 @@ export default function AdminPage() {
                  <FormFieldItem label="Challans" name="challans" defaultValue={carToEdit?.challans} />
                 <FormFieldItem label="Details" name="details" as="textarea" defaultValue={carToEdit?.additionalDetails} />
                 <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} />
-                 <div>
-                    <Label>Badges</Label>
-                    <div className="flex items-center space-x-4 mt-2">
-                        {carBadges.map(badge => (
-                            <div key={badge} className="flex items-center space-x-2">
-                                <Checkbox id={badge} name={badge} defaultChecked={carToEdit?.badges?.includes(badge)} />
-                                <label htmlFor={badge} className="text-sm font-medium capitalize">{badge.replace('_', ' ')}</label>
-                            </div>
-                        ))}
-                    </div>
-                 </div>
               </div>
               <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCarFormOpen(false)}>Cancel</Button><Button type="submit">Save Car</Button></DialogFooter>
             </form>

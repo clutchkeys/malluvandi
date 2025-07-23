@@ -7,6 +7,9 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  status?: 'Online' | 'Offline';
+  attendance?: string;
+  performanceScore?: number;
 }
 
 export interface Car {
