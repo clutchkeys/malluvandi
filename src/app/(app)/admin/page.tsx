@@ -77,9 +77,11 @@ import {
   Sliders,
   BarChart3,
   List,
+  LayoutDashboard,
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
@@ -97,7 +99,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [activeView, setActiveView] = useState('approvals');
+  const [activeView, setActiveView] = useState('dashboard');
   const [isLoading, setIsLoading] = useState({
       cars: true, users: true, inquiries: true, filters: true
   });
@@ -325,6 +327,7 @@ export default function AdminPage() {
   const viewingInquiryAssignee = usersState.find(u => u.id === viewingInquiry?.assignedTo);
   
   const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'approvals', label: 'Pending Approvals', icon: Car },
     { id: 'listings', label: 'Car Listings', icon: List },
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
@@ -363,24 +366,27 @@ export default function AdminPage() {
       </div>
       <div className="flex flex-col">
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Listings</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">{carsState.length}</div></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pending Approvals</CardTitle><Car className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">{pendingCars.length}</div></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Inquiries</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">{inquiriesState.length}</div></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">{usersState.length}</div></CardContent>
-                </Card>
-            </div>
+            
+            {activeView === 'dashboard' && (
+               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Listings</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                      <CardContent><div className="text-2xl font-bold">{carsState.length}</div></CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pending Approvals</CardTitle><Car className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                      <CardContent><div className="text-2xl font-bold">{pendingCars.length}</div></CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Inquiries</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                      <CardContent><div className="text-2xl font-bold">{inquiriesState.length}</div></CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                      <CardContent><div className="text-2xl font-bold">{usersState.length}</div></CardContent>
+                    </Card>
+                </div>
+            )}
 
             {activeView === 'approvals' && (
                 <Card>
@@ -530,33 +536,40 @@ export default function AdminPage() {
                 </Card>
             )}
 
-            {activeView === 'filters' && (
-                 <div className="grid gap-6 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Brands</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('brand', null)}>Add</Button></CardHeader>
-                        <CardContent>
-                            <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Models</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('model', null)}>Add</Button></CardHeader>
-                        <CardContent>
-                            <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Brand</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button></TableCell></TableRow>)))}</TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex-row items-center justify-between"><CardTitle>Years</CardTitle><Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>Add</Button></CardHeader>
-                        <CardContent>
-                            <Table><TableHeader><TableRow><TableHead>Year</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
+             {activeView === 'filters' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Filter Management</CardTitle>
+                        <CardDescription>Add, edit, or delete filter options for the public website.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue="brands">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="brands">Brands</TabsTrigger>
+                                <TabsTrigger value="models">Models</TabsTrigger>
+                                <TabsTrigger value="years">Years</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="brands" className="mt-4">
+                                <div className="flex justify-end mb-4"><Button size="sm" onClick={() => handleOpenFilterForm('brand', null)}>Add Brand</Button></div>
+                                <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.map(brand => (<TableRow key={brand}><TableCell>{brand}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('brand', brand)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                                </Table>
+                            </TabsContent>
+                            <TabsContent value="models" className="mt-4">
+                                <div className="flex justify-end mb-4"><Button size="sm" onClick={() => handleOpenFilterForm('model', null)}>Add Model</Button></div>
+                                <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Brand</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : brandsState.flatMap(brand => (modelsState[brand] || []).map(model => (<TableRow key={`${brand}-${model}`}><TableCell>{model}</TableCell><TableCell><Badge variant="secondary">{brand}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('model', {brand, model})}><Edit size={16}/></Button></TableCell></TableRow>)))}</TableBody>
+                                </Table>
+                            </TabsContent>
+                            <TabsContent value="years" className="mt-4">
+                                <div className="flex justify-end mb-4"><Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>Add Year</Button></div>
+                                <Table><TableHeader><TableRow><TableHead>Year</TableHead><TableHead className="text-right w-24">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>{isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> : yearsState.map(year => (<TableRow key={year}><TableCell>{year}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('year', year)}><Edit size={16}/></Button></TableCell></TableRow>))}</TableBody>
+                                </Table>
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                </Card>
             )}
         </main>
       </div>
