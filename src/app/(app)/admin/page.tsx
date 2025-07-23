@@ -15,6 +15,15 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,7 +89,11 @@ import {
   LayoutDashboard,
   CalendarDays,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Mail,
+  Settings,
+  UserCheck,
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -88,19 +101,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
-import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth } from 'date-fns';
+import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth, parseISO } from 'date-fns';
 
 
 const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['admin', 'manager', 'employee-a', 'employee-b'], { required_error: 'Role is required' }),
+  role: z.enum(['admin', 'manager', 'employee-a', 'employee-b', 'customer'], { required_error: 'Role is required' }),
   performanceScore: z.number().min(0).max(10).optional(),
 });
 
 export default function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -153,7 +166,7 @@ export default function AdminPage() {
     setIsLoading({ cars: true, users: true, inquiries: true, filters: true });
     // Using mock data
     setCarsState(MOCK_CARS);
-    setUsersState(MOCK_USERS.filter(u => u.role !== 'customer'));
+    setUsersState(MOCK_USERS);
     setInquiriesState(MOCK_INQUIRIES);
     setBrandsState(MOCK_BRANDS);
     setModelsState(MOCK_MODELS);
@@ -169,7 +182,9 @@ export default function AdminPage() {
 
   const pendingCars = useMemo(() => carsState.filter(car => car.status === 'pending'), [carsState]);
   const salesEmployees = useMemo(() => usersState.filter(u => u.role === 'employee-b'), [usersState]);
-  const allEmployees = useMemo(() => usersState.filter(u => u.role.startsWith('employee')), [usersState]);
+  const allStaff = useMemo(() => usersState.filter(u => u.role !== 'customer'), [usersState]);
+  const allCustomers = useMemo(() => usersState.filter(u => u.role === 'customer'), [usersState]);
+  const newsletterSubscribers = useMemo(() => usersState.filter(u => u.newsletterSubscribed), [usersState]);
 
   // Approval Handlers
   const handleApproval = async (carId: string, status: 'approved' | 'rejected') => {
@@ -191,7 +206,7 @@ export default function AdminPage() {
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
     if (userToEdit) {
         setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, role: values.role as Role, performanceScore: values.performanceScore } : u
+            u.id === userToEdit.id ? { ...u, role: values.role as Role, performanceScore: u.role.startsWith('employee') ? values.performanceScore : undefined } : u
         ));
         toast({ title: 'User Updated' });
     }
@@ -322,11 +337,12 @@ export default function AdminPage() {
     setItemToDelete(null);
   }
 
-  const roleDisplay: Record<Exclude<Role, 'customer'>, { name: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined }> = {
+  const roleDisplay: Record<Role, { name: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined }> = {
     admin: { name: 'Admin', variant: 'destructive' },
     manager: { name: 'Manager', variant: 'default' },
     'employee-a': { name: 'Content Editor', variant: 'secondary' },
     'employee-b': { name: 'Sales', variant: 'outline' },
+    customer: { name: 'Customer', variant: 'outline'}
   };
 
   const viewingInquiryCar = carsState.find(c => c.id === viewingInquiry?.carId);
@@ -337,18 +353,19 @@ export default function AdminPage() {
     { id: 'approvals', label: 'Pending Approvals', icon: Car },
     { id: 'listings', label: 'Car Listings', icon: List },
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
-    { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
+    { id: 'users', label: 'User Management', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
     { id: 'performance', label: 'Employee Performance', icon: BarChart3, adminOnly: true },
+    { id: 'newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
     { id: 'filters', label: 'Filter Management', icon: Sliders },
   ];
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
+      <aside className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <h2 className="font-semibold">Admin Panel</h2>
+            <h2 className="font-semibold text-lg">Admin Panel</h2>
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
@@ -370,10 +387,36 @@ export default function AdminPage() {
             </nav>
           </div>
         </div>
-      </div>
+      </aside>
       <div className="flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          <div className="w-full flex-1">
+             <h1 className="text-lg font-semibold capitalize">{activeView.replace('-', ' ')}</h1>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                 <Avatar className="h-8 w-8">
+                  <AvatarImage src={`https://i.pravatar.cc/40?u=${user?.id}`} />
+                  <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="sr-only">Toggle user menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem><Settings className="mr-2 h-4 w-4" />Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            
             {activeView === 'dashboard' && (
                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
@@ -475,35 +518,63 @@ export default function AdminPage() {
                 </Card>
             )}
 
-            {activeView === 'users' && user?.role === 'admin' && (
+            {activeView === 'users' && (
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                    <div><CardTitle>User Management</CardTitle><CardDescription>Edit user roles.</CardDescription></div>
+                    <CardHeader>
+                      <CardTitle>User Management</CardTitle>
+                      <CardDescription>Manage staff and customer accounts.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                            {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                            usersState.map(u => (
-                                <TableRow key={u.id}>
-                                <TableCell className="font-medium">{u.name}</TableCell>
-                                <TableCell>{u.email}</TableCell>
-                                <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.id === user?.id}><Edit size={16}/></Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name} from Firestore, but will not delete their login account.`})} disabled={u.id === user?.id}><Trash2 size={16}/></Button>
-                                </TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
+                        <Tabs defaultValue="staff">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="staff">Staff</TabsTrigger>
+                                <TabsTrigger value="customers">Customers</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="staff" className="mt-4">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                    {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                    allStaff.map(u => (
+                                        <TableRow key={u.id}>
+                                        <TableCell className="font-medium">{u.name}</TableCell>
+                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.role === 'admin' && user?.role !== 'admin'}><Edit size={16}/></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})} disabled={u.role === 'admin'}><Trash2 size={16}/></Button>
+                                        </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                            </TabsContent>
+                             <TabsContent value="customers" className="mt-4">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Subscribed</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                    {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> :
+                                    allCustomers.map(u => (
+                                        <TableRow key={u.id}>
+                                        <TableCell className="font-medium">{u.name}</TableCell>
+                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell>{u.newsletterSubscribed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)}><Edit size={16}/></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})}><Trash2 size={16}/></Button>
+                                        </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
             )}
 
             {activeView === 'attendance' && user?.role === 'admin' && (
-              <AttendanceTracker employees={allEmployees} />
+              <AttendanceTracker employees={allStaff} />
             )}
 
             {activeView === 'performance' && user?.role === 'admin' && (
@@ -524,7 +595,7 @@ export default function AdminPage() {
                             </TableHeader>
                             <TableBody>
                                 {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                                allEmployees.map(emp => (
+                                allStaff.filter(s => s.role.startsWith('employee')).map(emp => (
                                     <TableRow key={emp.id}>
                                         <TableCell>{emp.name}</TableCell>
                                         <TableCell>
@@ -539,6 +610,30 @@ export default function AdminPage() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeView === 'newsletter' && user?.role === 'admin' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Newsletter Subscribers</CardTitle>
+                        <CardDescription>A list of all users who have subscribed to marketing emails.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <Table>
+                            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                            {isLoading.users ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></TableCell></TableRow> :
+                            newsletterSubscribers.map(u => (
+                                <TableRow key={u.id}>
+                                <TableCell className="font-medium">{u.name}</TableCell>
+                                <TableCell>{u.email}</TableCell>
+                                <TableCell><Badge variant={roleDisplay[u.role as Role]?.variant}>{roleDisplay[u.role as Role]?.name}</Badge></TableCell>
+                                </TableRow>
+                            ))}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -594,13 +689,14 @@ export default function AdminPage() {
                         <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={form.control} name="role" render={({ field }) => (
                             <FormItem><FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={user?.role !== 'admin'}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        {user?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
-                                        {user?.role === 'admin' && <SelectItem value="manager">Manager</SelectItem>}
+                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="manager">Manager</SelectItem>
                                         <SelectItem value="employee-a">Content Editor</SelectItem>
                                         <SelectItem value="employee-b">Sales & Support</SelectItem>
+                                        <SelectItem value="customer">Customer</SelectItem>
                                     </SelectContent>
                                 </Select><FormMessage />
                             </FormItem>
@@ -753,7 +849,7 @@ function AttendanceTracker({ employees }: { employees: User[] }) {
     const attendanceData = useMemo(() => {
         const data: { [key: string]: AttendanceRecord } = {};
         selectedEmployee?.attendance?.forEach(rec => {
-            data[format(new Date(rec.date), 'yyyy-MM-dd')] = rec;
+            data[format(parseISO(rec.date), 'yyyy-MM-dd')] = rec;
         });
         return data;
     }, [selectedEmployee]);
@@ -846,4 +942,3 @@ function AttendanceTracker({ employees }: { employees: User[] }) {
         </Card>
     );
 }
-

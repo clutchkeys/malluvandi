@@ -17,6 +17,7 @@ export interface User {
   status?: 'Online' | 'Offline';
   attendance?: AttendanceRecord[];
   performanceScore?: number;
+  newsletterSubscribed?: boolean;
 }
 
 export interface Car {

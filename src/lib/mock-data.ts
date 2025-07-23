@@ -13,7 +13,8 @@ export const MOCK_USERS: User[] = [
       { date: '2024-07-01', status: 'present', hoursWorked: 8 },
       { date: '2024-07-02', status: 'present', hoursWorked: 8 },
       { date: '2024-07-03', status: 'present', hoursWorked: 8 },
-    ]
+    ],
+    newsletterSubscribed: true,
   },
   { 
     id: 'manager-01', 
@@ -26,7 +27,8 @@ export const MOCK_USERS: User[] = [
        { date: '2024-07-01', status: 'present', hoursWorked: 8 },
        { date: '2024-07-02', status: 'paid-leave', reason: 'Personal' },
        { date: '2024-07-03', status: 'present', hoursWorked: 8 },
-    ]
+    ],
+    newsletterSubscribed: false,
   },
   { 
     id: 'empA-01', 
@@ -39,7 +41,8 @@ export const MOCK_USERS: User[] = [
        { date: '2024-07-01', status: 'present', hoursWorked: 8 },
        { date: '2024-07-02', status: 'present', hoursWorked: 8 },
        { date: '2024-07-03', status: 'unpaid-leave', reason: 'Sick' },
-    ]
+    ],
+    newsletterSubscribed: false,
   },
   { 
     id: 'empB-01', 
@@ -52,7 +55,8 @@ export const MOCK_USERS: User[] = [
        { date: '2024-07-01', status: 'present', hoursWorked: 8 },
        { date: '2024-07-02', status: 'present', hoursWorked: 8 },
        { date: '2024-07-03', status: 'present', hoursWorked: 8 },
-    ]
+    ],
+    newsletterSubscribed: false,
   },
   { 
     id: 'empB-02', 
@@ -65,9 +69,12 @@ export const MOCK_USERS: User[] = [
        { date: '2024-07-01', status: 'absent' },
        { date: '2024-07-02', status: 'present', hoursWorked: 4 },
        { date: '2024-07-03', status: 'present', hoursWorked: 8 },
-    ]
+    ],
+     newsletterSubscribed: false,
   },
-  { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer' },
+  { id: 'cust-01', name: 'Charles', email: 'customer@test.com', role: 'customer', newsletterSubscribed: true },
+  { id: 'cust-02', name: 'Diana', email: 'diana@test.com', role: 'customer', newsletterSubscribed: true },
+  { id: 'cust-03', name: 'Ethan', email: 'ethan@test.com', role: 'customer', newsletterSubscribed: false },
 ];
 
 // Mock Brands, Models, Years
