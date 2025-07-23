@@ -48,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Admins have a custom layout within their page, so we don't need the standard header for them.
+  // Admins and Managers have a custom layout within their page, so we don't need the standard header for them.
   if (user.role === 'admin' || user.role === 'manager') {
     if (pathname.startsWith('/admin')) {
         return <>{children}</>;
