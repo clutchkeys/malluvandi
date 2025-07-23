@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -167,9 +168,9 @@ export default function EmployeeAPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">My Car Listings</h1>
+    <>
+      <div className="flex items-center justify-between">
+        <div></div>
         <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
           <DialogTrigger asChild>
             <Button onClick={handleAddNewClick}><PlusCircle className="mr-2 h-4 w-4" /> Add New Car</Button>
@@ -262,7 +263,7 @@ export default function EmployeeAPage() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="mt-4">
         <CardHeader>
           <CardTitle>My Listings</CardTitle>
           <CardDescription>A list of all cars you have submitted.</CardDescription>
@@ -308,6 +309,6 @@ export default function EmployeeAPage() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

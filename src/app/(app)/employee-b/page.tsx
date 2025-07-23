@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -96,10 +97,6 @@ export default function EmployeeBPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.24))]">
-       <div className="flex items-center justify-between space-y-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Sales & Support Dashboard</h1>
-      </div>
       <ResizablePanelGroup direction="horizontal" className="h-full max-w-full rounded-lg border">
         <ResizablePanel defaultSize={30} minSize={25}>
           <div className="flex flex-col h-full">
@@ -126,12 +123,11 @@ export default function EmployeeBPage() {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
-          <ScrollArea className="h-full">
-            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiry} /> : <div className="p-8 text-center text-muted-foreground">Select an inquiry to view details</div>}
+          <ScrollArea className="h-[calc(100vh-theme(spacing.24))]">
+            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiry} /> : <div className="p-8 text-center text-muted-foreground h-full flex items-center justify-center">Select an inquiry to view details</div>}
           </ScrollArea>
         </ResizablePanel>
       </ResizablePanelGroup>
-    </div>
   );
 }
 
