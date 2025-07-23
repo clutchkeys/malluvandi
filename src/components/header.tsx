@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Role } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -114,6 +114,9 @@ export function Header() {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                    </SheetHeader>
                     <nav className="grid gap-6 text-lg font-medium mt-8">
                        {navLinks.map(link => (
                           <Link key={link.href} href={link.href} className="text-muted-foreground hover:text-foreground">
