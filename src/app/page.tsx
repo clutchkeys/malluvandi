@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X } from 'lucide-react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -98,6 +100,61 @@ export default function Home() {
     });
   }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange, allCars]);
 
+  const FilterContent = () => (
+    <div className="space-y-6">
+        <div>
+            <h3 className="font-semibold mb-4 text-lg">Brands</h3>
+            <div className="space-y-3">
+                {brands.map(brand => (
+                    <div key={brand} className="flex items-center space-x-2">
+                        <Checkbox id={`filter-${brand}`} checked={selectedBrands.includes(brand)} onCheckedChange={() => handleBrandChange(brand)}/>
+                        <label htmlFor={`filter-${brand}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{brand}</label>
+                    </div>
+                ))}
+            </div>
+        </div>
+        <div>
+            <h3 className="font-semibold mb-4 text-lg">Body Type</h3>
+            <div className="space-y-3">
+                {carBodyTypes.map(type => (
+                    <div key={type} className="flex items-center space-x-2">
+                        <Checkbox id={`filter-${type}`} checked={selectedBodyTypes.includes(type)} onCheckedChange={() => handleBodyTypeChange(type)}/>
+                        <label htmlFor={`filter-${type}`} className="text-sm font-medium leading-none">{type}</label>
+                    </div>
+                ))}
+            </div>
+        </div>
+          <div>
+            <h3 className="font-semibold mb-4 text-lg">Year</h3>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
+                <SelectContent>
+                    {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="space-y-3">
+            <Label htmlFor="price-range">Price Range</Label>
+            <Slider id="price-range" value={priceRange} max={5000000} step={50000} onValueChange={setPriceRange}/>
+            <div className="flex justify-between text-xs text-muted-foreground">
+                <span>₹{priceRange[0].toLocaleString()}</span>
+                <span>₹{priceRange[1].toLocaleString()}</span>
+            </div>
+        </div>
+        <div className="space-y-3">
+            <Label htmlFor="km-range">Kilometers</Label>
+            <Slider id="km-range" value={kmRange} max={200000} step={5000} onValueChange={setKmRange}/>
+            <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{kmRange[0].toLocaleString()} km</span>
+                <span>{kmRange[1].toLocaleString()} km</span>
+            </div>
+        </div>
+          <div className="pt-4 border-t">
+            <Button onClick={handleResetFilters} variant="ghost" className="w-full">Reset All Filters</Button>
+        </div>
+    </div>
+  );
+
 
   return (
     <div className="flex flex-col min-h-screen bg-muted/20">
@@ -144,7 +201,24 @@ export default function Home() {
 
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Featured Listings</h2>
+                 <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold">Featured Listings</h2>
+                     <div className="lg:hidden">
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <Button variant="outline"><SlidersHorizontal className="mr-2 h-4 w-4"/> Filters</Button>
+                            </SheetTrigger>
+                            <SheetContent>
+                                <SheetHeader>
+                                    <SheetTitle>Filters</SheetTitle>
+                                </SheetHeader>
+                                <div className="py-4">
+                                  <FilterContent />
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
+                 </div>
                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin size={16} className="text-primary"/>
                     <span>Your Location: <b>{userLocation}</b></span>
@@ -154,59 +228,10 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                 {/* Filters Sidebar */}
-                <aside className="lg:col-span-1 lg:sticky lg:top-24">
+                <aside className="hidden lg:block lg:col-span-1 lg:sticky lg:top-24">
                     <Card className="shadow-lg">
-                        <CardContent className="p-6 space-y-6">
-                            <div>
-                                <h3 className="font-semibold mb-4 text-lg">Brands</h3>
-                                <div className="space-y-3">
-                                    {brands.map(brand => (
-                                        <div key={brand} className="flex items-center space-x-2">
-                                            <Checkbox id={brand} checked={selectedBrands.includes(brand)} onCheckedChange={() => handleBrandChange(brand)}/>
-                                            <label htmlFor={brand} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{brand}</label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="font-semibold mb-4 text-lg">Body Type</h3>
-                                <div className="space-y-3">
-                                    {carBodyTypes.map(type => (
-                                        <div key={type} className="flex items-center space-x-2">
-                                            <Checkbox id={type} checked={selectedBodyTypes.includes(type)} onCheckedChange={() => handleBodyTypeChange(type)}/>
-                                            <label htmlFor={type} className="text-sm font-medium leading-none">{type}</label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                             <div>
-                                <h3 className="font-semibold mb-4 text-lg">Year</h3>
-                                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                    <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-3">
-                                <Label htmlFor="price-range">Price Range</Label>
-                                <Slider id="price-range" value={priceRange} max={5000000} step={50000} onValueChange={setPriceRange}/>
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>₹{priceRange[0].toLocaleString()}</span>
-                                    <span>₹{priceRange[1].toLocaleString()}</span>
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                <Label htmlFor="km-range">Kilometers</Label>
-                                <Slider id="km-range" value={kmRange} max={200000} step={5000} onValueChange={setKmRange}/>
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>{kmRange[0].toLocaleString()} km</span>
-                                    <span>{kmRange[1].toLocaleString()} km</span>
-                                </div>
-                            </div>
-                             <div className="pt-4 border-t">
-                                <Button onClick={handleResetFilters} variant="ghost" className="w-full">Reset All Filters</Button>
-                            </div>
+                        <CardContent className="p-6">
+                            <FilterContent />
                         </CardContent>
                     </Card>
                 </aside>
