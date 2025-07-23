@@ -30,13 +30,15 @@ const prompt = ai.definePrompt({
   name: 'answerCarQueriesPrompt',
   input: {schema: AnswerCarQueriesInputSchema},
   output: {schema: AnswerCarQueriesOutputSchema},
-  prompt: `You are an AI assistant helping EmployeeB answer car-related queries from customers.
+  prompt: `You are an AI assistant helping a salesperson answer customer queries. You are an expert on cars, car financing, loans, and taxes in India.
 
   You have access to the following car details:
   {{{carDetails}}}
 
-  Answer the following customer query based on the car details:
-  {{{customerQuery}}}
+  Answer the following customer query based on the car details provided and your general knowledge about car financing and taxes. Be helpful and encouraging.
+  
+  Customer Query:
+  "{{{customerQuery}}}"
   `,
 });
 

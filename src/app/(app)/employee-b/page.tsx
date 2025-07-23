@@ -16,6 +16,13 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,7 +49,7 @@ const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, 
             <p className="text-sm text-muted-foreground">{inquiry.carSummary}</p>
             <div className="flex justify-between items-center mt-2">
                 <p className="text-xs text-muted-foreground">{date || ''}</p>
-                <Badge variant={inquiry.status === 'new' ? 'default' : 'secondary'} className="capitalize">{inquiry.status}</Badge>
+                <Badge variant={inquiry.status === 'new' ? 'default' : inquiry.status === 'contacted' ? 'secondary' : 'outline'} className="capitalize">{inquiry.status}</Badge>
             </div>
         </button>
     );
@@ -197,6 +204,11 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         onUpdate(inquiry.id, { privateNotes });
         toast({ title: 'Notes Saved' });
     }
+    
+    const handleStatusChange = (newStatus: 'new' | 'contacted' | 'closed') => {
+      onUpdate(inquiry.id, { status: newStatus });
+      toast({ title: 'Status Updated', description: `Inquiry status changed to ${newStatus}.` });
+    }
 
     if (!car) return <div className="p-6">Loading car details or car not found...</div>;
 
@@ -204,8 +216,24 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         <div className="p-6 space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Customer: {inquiry.customerName}</CardTitle>
-                    <CardDescription>Phone: {inquiry.customerPhone} | Inquiring about: {car.brand} {car.model}</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Customer: {inquiry.customerName}</CardTitle>
+                            <CardDescription>Phone: {inquiry.customerPhone} | Inquiring about: {car.brand} {car.model}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Select onValueChange={handleStatusChange} defaultValue={inquiry.status}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Update status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="new">New</SelectItem>
+                                    <SelectItem value="contacted">Contacted</SelectItem>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </CardHeader>
             </Card>
 
@@ -221,7 +249,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <Card>
-                    <CardHeader><CardTitle>Call Remarks</CardTitle><CardDescription>Visible to admins.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle>Call Remarks</CardTitle><CardDescription>Visible to admins and managers.</CardDescription></CardHeader>
                     <CardContent><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Log call outcomes, customer feedback..." /></CardContent>
                     <CardFooter><Button size="sm" onClick={handleSaveRemarks}>Save Remarks</Button></CardFooter>
                 </Card>
@@ -235,7 +263,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Bot /> AI Assistant</CardTitle>
-                    <CardDescription>Ask questions about the car to get quick answers for the customer.</CardDescription>
+                    <CardDescription>Ask questions about the car, loans, or taxes to get quick answers for the customer.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <ScrollArea className="h-48 w-full rounded-md border p-4">
@@ -248,7 +276,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                         ))}
                     </ScrollArea>
                     <form onSubmit={handleQuerySubmit} className="flex gap-2">
-                        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g., What is the mileage?" disabled={isAiAnswering}/>
+                        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g., What is the mileage? or Can I get a loan for this?" disabled={isAiAnswering}/>
                         <Button type="submit" disabled={isAiAnswering}>
                             {isAiAnswering ? <Loader2 className="animate-spin" /> : <Send />}
                         </Button>
