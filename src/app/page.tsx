@@ -8,7 +8,7 @@ import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X } from 'lucide-react';
+import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X, Star } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -42,11 +42,11 @@ const keralaDistricts = [
 
 export default function Home() {
   const [allCars, setAllCars] = useState<Car[]>([]);
-  const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(userLocation);
+  const [recommendedCars, setRecommendedCars] = useState<Car[]>([]);
 
   // Filter options state
   const [brands, setBrands] = useState<string[]>([]);
@@ -68,11 +68,34 @@ export default function Home() {
     setUserLocation('Ernakulam');
     setTempLocation('Ernakulam');
     // Using mock data
-    setAllCars(MOCK_CARS);
-    setFeaturedCars(MOCK_CARS.filter(c => c.badges?.includes('featured')).slice(0, 8));
+    const approvedCars = MOCK_CARS.filter(c => c.status === 'approved');
+    setAllCars(approvedCars);
     setBrands(MOCK_BRANDS);
     setModels(MOCK_MODELS);
     setYears(MOCK_YEARS);
+    
+    // Recommendation logic
+    try {
+      const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
+      if (viewedCarIds.length > 0) {
+        const lastViewedId = viewedCarIds[0];
+        const lastViewedCar = MOCK_CARS.find(c => c.id === lastViewedId);
+
+        if (lastViewedCar) {
+            const recommendations = MOCK_CARS.filter(c => 
+                c.status === 'approved' &&
+                c.id !== lastViewedId && // Don't recommend the same car
+                !viewedCarIds.includes(c.id) && // Don't recommend other already viewed cars
+                c.brand === lastViewedCar.brand // Simple logic: recommend same brand
+            ).slice(0, 4);
+            setRecommendedCars(recommendations);
+        }
+      }
+    } catch (error) {
+        console.error("Could not get recommendations from localStorage", error);
+    }
+
+
     setIsLoading(false);
   }, []);
 
@@ -226,9 +249,22 @@ export default function Home() {
           </div>
         </section>
 
+        {recommendedCars.length > 0 && (
+            <section className="py-12 bg-secondary/30">
+                <div className="container mx-auto px-4">
+                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                        <Star className="text-yellow-400" /> Recommended For You
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {recommendedCars.map(car => <CarCard key={car.id} car={car} />)}
+                    </div>
+                </div>
+            </section>
+        )}
+
         <div id="listings-section" className="container mx-auto px-4 py-12">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                 <h2 className="text-2xl font-bold">Featured Listings</h2>
+                 <h2 className="text-2xl font-bold">All Listings</h2>
                  <div className="w-full md:w-auto flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}>
                         <MapPin size={16} className="text-primary"/>

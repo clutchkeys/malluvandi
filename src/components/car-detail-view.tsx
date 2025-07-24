@@ -28,6 +28,18 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
   const [isAdOpen, setIsAdOpen] = useState(false);
 
   useEffect(() => {
+    // Track viewed car in localStorage
+    try {
+      const viewedCars = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
+      // Keep the list to a reasonable size, e.g., last 10 viewed
+      const updatedViewedCars = [car.id, ...viewedCars.filter(id => id !== car.id)].slice(0, 10);
+      localStorage.setItem('viewedCars', JSON.stringify(updatedViewedCars));
+    } catch (error) {
+      console.error("Could not update viewed cars in localStorage", error);
+    }
+  }, [car.id]);
+
+  useEffect(() => {
     if (car) {
       setIsSummaryLoading(true);
       summarizeCarDetails(car)
