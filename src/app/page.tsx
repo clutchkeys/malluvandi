@@ -291,14 +291,16 @@ export default function Home() {
             </div>
         </div>
 
-        {/* Brand Marquee */}
-        <section className="py-16 bg-secondary">
-          <div className="container mx-auto px-4">
-             <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
-             <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
-          </div>
-        </section>
       </main>
+      
+      {/* Brand Marquee */}
+      <section className="py-16 bg-secondary">
+        <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
+            <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
+        </div>
+      </section>
+
       <Footer />
 
       <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
@@ -329,5 +331,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
