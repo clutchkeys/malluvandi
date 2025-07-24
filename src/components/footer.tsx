@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Facebook, Twitter, Instagram, Linkedin, Phone, MapPin, Youtube } from 'lucide-react';
@@ -68,7 +69,7 @@ export function Footer() {
         
         <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
           <div className="text-center text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Mallu Vandi. All rights reserved.
+            &copy; {new Date().getFullYear()} Mallu Vandi. Powered by Advalix and made by Alxvgh.
           </div>
            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
@@ -79,3 +80,5 @@ export function Footer() {
     </footer>
   );
 }
+
+    
