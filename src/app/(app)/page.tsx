@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,8 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
   admin: '/admin',
   manager: '/admin',
-  'employee-a': '/employee-a',
-  'employee-b': '/employee-b',
+  'employee-a': '/employee-a/dashboard',
+  'employee-b': '/employee-b/dashboard',
 };
 
 export default function AppIndexPage() {

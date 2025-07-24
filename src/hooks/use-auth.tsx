@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -38,10 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
     if (foundUser) {
-        setUser(foundUser);
-        sessionStorage.setItem('mallu-vandi-user', JSON.stringify(foundUser));
+        const userWithStatus = {...foundUser, status: 'Online' as const};
+        setUser(userWithStatus);
+        sessionStorage.setItem('mallu-vandi-user', JSON.stringify(userWithStatus));
         setLoading(false);
-        return foundUser;
+        return userWithStatus;
     }
     
     setLoading(false);
@@ -73,6 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    // In a real app, you'd make a call to your backend to set status to 'Offline'.
+    // Here we just clear the session.
     setUser(null);
     sessionStorage.removeItem('mallu-vandi-user');
     router.push('/');

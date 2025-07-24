@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  Bell
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -45,13 +46,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, loading, router]);
   
    useEffect(() => {
-    // Set active view based on pathname for employees
-    if (pathname.startsWith('/employee-a')) {
-      setActiveView('listings');
-    } else if (pathname.startsWith('/employee-b')) {
-      setActiveView('inquiries');
+    if (pathname.includes('/dashboard')) {
+        setActiveView('dashboard')
+    } else if (pathname.includes('/listings')) {
+        setActiveView('listings')
+    } else if (pathname.includes('/inquiries')) {
+        setActiveView('inquiries')
+    } else if (pathname.includes('/notifications')) {
+        setActiveView('notifications')
     } else {
-        setActiveView('');
+        setActiveView('')
     }
   }, [pathname]);
 
@@ -72,10 +76,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = {
     'employee-a': [
-      { id: 'listings', href: '/employee-a', icon: List, label: 'My Listings' },
+      { id: 'dashboard', href: '/employee-a/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { id: 'listings', href: '/employee-a/listings', icon: List, label: 'My Listings' },
+      { id: 'notifications', href: '/employee-a/notifications', icon: Bell, label: 'Notifications' },
     ],
     'employee-b': [
-      { id: 'inquiries', href: '/employee-b', icon: Mail, label: 'Inquiries' },
+      { id: 'dashboard', href: '/employee-b/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { id: 'inquiries', href: '/employee-b/inquiries', icon: Mail, label: 'Inquiries' },
+      { id: 'notifications', href: '/employee-b/notifications', icon: Bell, label: 'Notifications' },
     ],
   };
 

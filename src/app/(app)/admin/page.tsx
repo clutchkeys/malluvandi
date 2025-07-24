@@ -85,7 +85,6 @@ import {
   Eye,
   Loader2,
   Sliders,
-  BarChart3,
   List,
   LayoutDashboard,
   CalendarDays,
@@ -213,7 +212,7 @@ export default function AdminPage() {
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
     if (userToEdit) {
         setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, role: values.role as Role, performanceScore: u.role.startsWith('employee') ? values.performanceScore : undefined } : u
+            u.id === userToEdit.id ? { ...u, ...values, role: values.role as Role, performanceScore: u.role.startsWith('employee') ? values.performanceScore : undefined } : u
         ));
         toast({ title: 'User Updated' });
     }
@@ -360,7 +359,7 @@ export default function AdminPage() {
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
     { id: 'users', label: 'User Management', icon: Users, managerOnly: false },
     { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
-    { id: 'employees', label: 'Employees', icon: BarChart3, adminOnly: true },
+    { id: 'employees', label: 'Employees', icon: Users, adminOnly: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: true },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
     { id: 'filters', label: 'Filter Management', icon: Sliders },
@@ -560,14 +559,21 @@ export default function AdminPage() {
                             </TabsList>
                             <TabsContent value="staff" className="mt-4">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Performance</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                                     <TableBody>
-                                    {isLoading.users ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                    {isLoading.users ? <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
                                     allStaff.map(u => (
                                         <TableRow key={u.id}>
                                         <TableCell className="font-medium">{u.name}</TableCell>
                                         <TableCell>{u.email}</TableCell>
                                         <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
+                                        <TableCell>
+                                            <Badge variant={u.status === 'Online' ? 'default' : 'outline'} className="gap-1">
+                                                <span className={cn("h-2 w-2 rounded-full", u.status === 'Online' ? 'bg-green-500' : 'bg-gray-400')}></span>
+                                                {u.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{u.performanceScore || 0}/10</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.role === 'admin' && user?.role !== 'admin'}><Edit size={16}/></Button>
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})} disabled={u.role === 'admin'}><Trash2 size={16}/></Button>
@@ -764,11 +770,11 @@ export default function AdminPage() {
                                 </Select><FormMessage />
                             </FormItem>
                         )}/>
-                        {(userToEdit?.role.startsWith('employee')) && (
+                        {(form.getValues('role')?.startsWith('employee')) && (
                              <FormField control={form.control} name="performanceScore" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Performance Score (out of 10)</FormLabel>
-                                    <FormControl><Input type="number" min="0" max="10" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                                    <FormControl><Input type="number" min="0" max="10" {...field} onChange={e => field.onChange(parseInt(e.target.value))} value={field.value || 0}/></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}/>
