@@ -83,13 +83,10 @@ export default function Home() {
   };
   
   const handleBrandClickFromMarquee = (brand: string) => {
-    if (selectedBrands.includes(brand)) {
-        setSelectedBrands([]); // Deselect if already selected
-    } else {
-        setSelectedBrands([brand]);
+    if (brands.includes(brand)) {
+      setSelectedBrands([brand]);
+      document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
     }
-    // Scroll to listings section
-    document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   const handleBodyTypeChange = (type: string) => {
