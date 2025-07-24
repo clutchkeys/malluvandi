@@ -19,6 +19,7 @@ import type { Role } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
 import { useState } from 'react';
+import { ThemeToggle } from './theme-toggle';
 
 
 export function Header() {
@@ -58,7 +59,7 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {loading ? (
              <div className="flex items-center gap-2">
                 <Skeleton className="h-10 w-24" />
@@ -110,6 +111,7 @@ export function Header() {
                   </Button>
                 </div>
               )}
+               <ThemeToggle />
                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="icon" className="md:hidden">
