@@ -1,4 +1,3 @@
-
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -94,7 +93,7 @@ export function Header() {
                         </DropdownMenuItem>
                      )}
                       <DropdownMenuItem asChild>
-                           <Link href="/settings">My Account</Link>
+                           <Link href="/my-account">My Account</Link>
                         </DropdownMenuItem>
                      <DropdownMenuItem onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -183,5 +182,3 @@ export function Header() {
     </header>
   );
 }
-
-    

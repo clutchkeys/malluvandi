@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -9,7 +8,7 @@ import {
   Mail,
   LogOut,
   Menu,
-  Settings,
+  User,
   Bell
 } from 'lucide-react';
 import Link from 'next/link';
@@ -28,6 +27,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -154,6 +154,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="w-full flex-1">
              <h1 className="text-lg font-semibold capitalize">{activeView.replace('-', ' ')}</h1>
           </div>
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
@@ -183,7 +184,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link href="/">Public Website</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/my-account"><User className="mr-2 h-4 w-4" />My Account</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />

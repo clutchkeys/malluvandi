@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { GeistSans } from 'geist/font/sans';
 import { CookieConsent } from '@/components/cookie-consent';
 import { SplashScreen } from '@/components/splash-screen';
+import { AiChatPopup } from '@/components/ai-chat-popup';
 
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           <CookieConsent />
+          <AiChatPopup />
         </Providers>
       </body>
     </html>
