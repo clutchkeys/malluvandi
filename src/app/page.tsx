@@ -121,7 +121,7 @@ export default function Home() {
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
       const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
-      const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= priceRange[1];
+      const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
       // Note: Body type is not in car data, so this filter won't work without updating Car type and data
       const bodyTypeMatch = true; 
@@ -290,16 +290,15 @@ export default function Home() {
                 </section>
             </div>
         </div>
-
-      </main>
       
-      {/* Brand Marquee */}
-      <section className="py-16 bg-secondary">
-        <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
-            <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
-        </div>
-      </section>
+        {/* Brand Marquee */}
+        <section className="py-16 bg-secondary">
+          <div className="container mx-auto px-4">
+              <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
+              <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
+          </div>
+        </section>
+      </main>
 
       <Footer />
 
