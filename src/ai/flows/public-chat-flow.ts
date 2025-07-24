@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -53,16 +54,11 @@ const publicChatFlow = ai.defineFlow(
   },
   async (input) => {
     const { history, message } = input;
-    
-    const prompt = {
-        system: systemPrompt,
-        messages: [...(history || []), { role: 'user' as const, content: message }],
-    };
 
     const { output } = await ai.generate({
-        prompt: prompt.system,
-        history: prompt.messages.slice(0, -1),
-        prompt: prompt.messages.slice(-1)[0].content,
+        system: systemPrompt,
+        history: history || [],
+        prompt: message,
     });
     
     return { reply: output!.text! };
