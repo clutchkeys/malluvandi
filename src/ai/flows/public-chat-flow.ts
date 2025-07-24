@@ -55,12 +55,12 @@ const publicChatFlow = ai.defineFlow(
   async (input) => {
     const { history, message } = input;
 
-    const { output } = await ai.generate({
+    const response = await ai.generate({
         system: systemPrompt,
         history: history || [],
         prompt: message,
     });
     
-    return { reply: output!.text! };
+    return { reply: response.text };
   }
 );
