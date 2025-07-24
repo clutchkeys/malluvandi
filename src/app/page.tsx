@@ -6,20 +6,22 @@ import Image from 'next/image';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
+import { BikeCard } from '@/components/bike-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X } from 'lucide-react';
+import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X, Bike } from 'lucide-react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import type { Car } from '@/lib/types';
+import type { Car, Bike as BikeType } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
-import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from '@/lib/mock-data';
+import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS, MOCK_BIKES, ALL_BRANDS } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BrandMarquee } from '@/components/brand-marquee';
 
 
 const keralaDistricts = [
@@ -42,8 +44,10 @@ const keralaDistricts = [
 
 export default function Home() {
   const [allCars, setAllCars] = useState<Car[]>([]);
+  const [allBikes, setAllBikes] = useState<BikeType[]>([]);
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [nearbyCars, setNearbyCars] = useState<Car[]>([]);
+  const [nearbyBikes, setNearbyBikes] = useState<BikeType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -53,7 +57,7 @@ export default function Home() {
   const [brands, setBrands] = useState<string[]>([]);
   const [models, setModels] = useState<{[key: string]: string[]}>({});
   const [years, setYears] = useState<number[]>([]);
-  const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV']; // This can be moved to Firestore as well
+  const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV'];
 
   // Filters values
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,8 +74,10 @@ export default function Home() {
     setTempLocation('Ernakulam');
     // Using mock data
     setAllCars(MOCK_CARS);
+    setAllBikes(MOCK_BIKES);
     setFeaturedCars(MOCK_CARS.filter(c => c.badges?.includes('featured')).slice(0, 8));
     setNearbyCars(MOCK_CARS.slice(0, 4));
+    setNearbyBikes(MOCK_BIKES.slice(0, 4));
     setBrands(MOCK_BRANDS);
     setModels(MOCK_MODELS);
     setYears(MOCK_YEARS);
@@ -83,6 +89,16 @@ export default function Home() {
       prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
     );
   };
+  
+  const handleBrandClickFromMarquee = (brand: string) => {
+    if (selectedBrands.includes(brand)) {
+        setSelectedBrands([]); // Deselect if already selected
+    } else {
+        setSelectedBrands([brand]);
+    }
+    // Scroll to listings section
+    document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   const handleBodyTypeChange = (type: string) => {
     setSelectedBodyTypes(prev =>
@@ -141,7 +157,7 @@ export default function Home() {
                 {carBodyTypes.map(type => (
                     <div key={type} className="flex items-center space-x-2">
                         <Checkbox id={`filter-${type}`} checked={selectedBodyTypes.includes(type)} onCheckedChange={() => handleBodyTypeChange(type)}/>
-                        <label htmlFor={`filter-${type}`} className="text-sm font-medium leading-none">{type}</label>
+                        <label htmlFor={`filter-${type}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{type}</label>
                     </div>
                 ))}
             </div>
@@ -179,7 +195,7 @@ export default function Home() {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted/20">
+    <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-grow">
         {/* Hero Section */}
@@ -221,7 +237,15 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="container mx-auto px-4 py-8">
+        {/* Brand Marquee */}
+        <section className="py-12 bg-secondary">
+          <div className="container mx-auto px-4">
+             <h2 className="text-2xl font-bold text-center mb-6">Browse by Brands</h2>
+             <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
+          </div>
+        </section>
+
+        <div id="listings-section" className="container mx-auto px-4 py-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                  <h2 className="text-2xl font-bold">Featured Listings</h2>
                  <div className="w-full md:w-auto flex items-center justify-between gap-4">
@@ -260,7 +284,7 @@ export default function Home() {
                 
                 {/* Listings */}
                 <section className="lg:col-span-3">
-                    <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                         {isLoading ? (
                         <div className="col-span-full flex justify-center py-12">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -268,7 +292,7 @@ export default function Home() {
                         ) : filteredCars.length > 0 ? (
                             <>
                                 {filteredCars.slice(0, 3).map(car => <CarCard key={car.id} car={car} />)}
-                                <div className="hidden xl:block col-span-1"><AdPlaceholder shape="post" /></div>
+                                <div className="hidden sm:block xl:block col-span-1"><AdPlaceholder shape="post" /></div>
                                 {filteredCars.slice(3).map(car => <CarCard key={car.id} car={car} />)}
                             </>
                         ) : (
@@ -281,12 +305,15 @@ export default function Home() {
                     </div>
                 </section>
             </div>
-             {/* Nearby Cars Section */}
+             {/* Nearby Bikes Section */}
             <section className="mt-16">
-                <h2 className="text-2xl font-bold mb-6">Cars Near You in {userLocation}</h2>
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <Bike className="h-8 w-8 text-primary" />
+                  <h2 className="text-2xl font-bold">Bikes Near You in {userLocation}</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                     {isLoading ? (
-                         Array.from({length: 4}).map((_, i) => (
+                         Array.from({length: 5}).map((_, i) => (
                             <Card key={i}>
                                 <Skeleton className="h-48 w-full"/>
                                 <CardContent className="p-3 space-y-2">
@@ -299,8 +326,8 @@ export default function Home() {
                                 </CardFooter>
                             </Card>
                         ))
-                    ) : nearbyCars.map(car => (
-                         <CarCard key={car.id} car={car} />
+                    ) : nearbyBikes.map(bike => (
+                         <BikeCard key={bike.id} bike={bike} />
                     ))}
                 </div>
             </section>
