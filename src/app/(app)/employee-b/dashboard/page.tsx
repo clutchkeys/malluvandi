@@ -39,11 +39,12 @@ export default function EmployeeBDashboardPage() {
       const qNotif = query(
           notifRef,
           where('recipientGroup', 'in', ['all', 'all-staff', 'employee-b']),
-          orderBy('createdAt', 'desc'),
           limit(5)
       );
       const unsubNotif = onSnapshot(qNotif, (snapshot) => {
-          setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+          const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+          fetchedNotifications.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setNotifications(fetchedNotifications);
           setIsNotifLoading(false);
       });
 

@@ -42,12 +42,13 @@ function NotificationsDropdown() {
         const q = query(
             collection(db, 'notifications'),
             where('recipientGroup', 'in', recipientGroups),
-            orderBy('createdAt', 'desc'),
             limit(10)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+            const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+            fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setNotifications(fetchedNotifications);
             // Simple unread logic: any notification created in the last 24 hours is "unread"
             const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
             const newUnreadCount = snapshot.docs.filter(doc => doc.data().createdAt > twentyFourHoursAgo).length;
@@ -262,5 +263,3 @@ export function Header() {
     </header>
   );
 }
-
-    

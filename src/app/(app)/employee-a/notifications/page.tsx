@@ -19,11 +19,12 @@ export default function EmployeeANotificationsPage() {
             const notifRef = collection(db, 'notifications');
             const q = query(
                 notifRef,
-                where('recipientGroup', 'in', ['all', 'all-staff', 'employee-a']),
-                orderBy('createdAt', 'desc')
+                where('recipientGroup', 'in', ['all', 'all-staff', 'employee-a'])
             );
             const unsubscribe = onSnapshot(q, (snapshot) => {
-                setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+                const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+                fetchedNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                setNotifications(fetchedNotifications);
                 setIsNotifLoading(false);
             });
             return () => unsubscribe();
