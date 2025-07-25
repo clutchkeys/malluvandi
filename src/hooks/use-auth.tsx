@@ -37,20 +37,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // If a user is logged in on page load, log them out for security.
-        await signOut(auth);
-        setUser(null);
-        toast({
-            title: "Session Expired",
-            description: "For your security, you have been logged out. Please log in again.",
-        });
-      }
-      setLoading(false);
+        if (firebaseUser) {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+                setUser(userData);
+            } else {
+                setUser(null);
+            }
+        } else {
+            setUser(null);
+        }
+        setLoading(false);
     });
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, pass: string): Promise<User | null> => {
