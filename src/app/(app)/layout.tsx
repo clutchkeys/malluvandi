@@ -35,10 +35,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [activeView, setActiveView] = useState('');
 
+  const roleRedirects = {
+      'admin': '/admin',
+      'manager': '/admin',
+      'employee-a': '/employee-a',
+      'employee-b': '/employee-b',
+  }
+
   useEffect(() => {
     if (!loading) {
         if(!user) {
             router.push('/login');
+        } else if (user.role !== 'customer' && pathname === '/my-account') {
+             router.push(roleRedirects[user.role as keyof typeof roleRedirects]);
         } else if (user.role === 'customer' && (pathname.startsWith('/employee-a') || pathname.startsWith('/employee-b') || pathname.startsWith('/admin'))) {
             router.push('/my-account');
         }

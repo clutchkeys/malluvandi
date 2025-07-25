@@ -12,12 +12,11 @@ import type { Role } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
-const roleRedirects: Record<Role, string> = {
+const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
   admin: '/admin',
   manager: '/admin',
   'employee-a': '/employee-a',
   'employee-b': '/employee-b',
-  customer: '/',
 };
 
 export function LoginForm() {
@@ -40,7 +39,8 @@ export function LoginForm() {
       const user = await login(email, password);
       if (user) {
         toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-        router.push(roleRedirects[user.role] || '/');
+        const redirectPath = user.role === 'customer' ? '/my-account' : roleRedirects[user.role as Exclude<Role, 'customer'>];
+        router.push(redirectPath);
         router.refresh(); // Force a refresh to update header state
       } else {
         throw new Error('Invalid credentials');
