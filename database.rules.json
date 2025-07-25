@@ -1,26 +1,87 @@
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager')",
-        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
-      }
-    },
-    "cars": {
-      ".read": "auth != null || data.child('status').val() === 'approved'",
-      "$carId": {
-        ".write": "auth != null && (newData.child('submittedBy').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager')",
-        ".validate": "newData.hasChildren(['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'insurance', 'challans', 'additionalDetails', 'images', 'status', 'submittedBy', 'price']) && (newData.child('submittedBy').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager') && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected')"
-      }
-    },
-    "inquiries": {
-      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager' || root.child('users').child(auth.uid).child('role').val() === 'employee-b')",
-      ".write": "(auth != null && !data.exists() && newData.exists()) || (auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager' || root.child('users').child(auth.uid).child('role').val() === 'employee-b'))",
-      ".indexOn": ["assignedTo", "status"]
-    },
-     "config": {
-      ".read": true,
-      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check user role
+    function getRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    // Helper function to check if user is an admin or manager
+    function isStaff(uid) {
+      let role = getRole(uid);
+      return role == 'admin' || role == 'manager';
+    }
+    
+    function isEmployeeA(uid) {
+      let role = getRole(uid);
+      return role == 'employee-a';
+    }
+
+    function isEmployeeB(uid) {
+      let role = getRole(uid);
+      return role == 'employee-b';
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      // Any authenticated user can create their own user document (on sign up)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can only read or update their own data
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // Only admins can delete users
+      allow delete: if request.auth != null && getRole(request.auth.uid) == 'admin';
+      
+      // Allow admins/managers to read any user document
+      allow list: if request.auth != null && isStaff(request.auth.uid);
+    }
+    
+    // Cars Collection
+    match /cars/{carId} {
+      // Anyone can read approved car listings
+      allow read: if resource.data.status == 'approved';
+      // Authenticated users (customers or employee-a) can create new listings
+      allow create: if request.auth != null && (getRole(request.auth.uid) == 'customer' || isEmployeeA(request.auth.uid));
+      
+      // Admins/Managers can update any field
+      // Employee-A can only update listings they submitted, and only if it's not approved yet.
+      allow update: if request.auth != null && 
+                    (isStaff(request.auth.uid) || 
+                    (isEmployeeA(request.auth.uid) && resource.data.submittedBy == request.auth.uid));
+                    
+      // Only Admins/Managers can delete
+      allow delete: if request.auth != null && isStaff(request.auth.uid);
+      
+      // Staff can list all cars (for admin panels)
+      allow list: if request.auth != null && (isStaff(request.auth.uid) || isEmployeeA(request.auth.uid) || isEmployeeB(request.auth.uid));
+    }
+
+    // Inquiries Collection
+    match /inquiries/{inquiryId} {
+        // Any authenticated user can create an inquiry
+        allow create: if request.auth != null;
+        
+        // Only the assigned employee-b, or a manager/admin can read an inquiry
+        allow read, update: if request.auth != null && 
+                           (resource.data.assignedTo == request.auth.uid || isStaff(request.auth.uid));
+                           
+        // Only managers/admins can delete
+        allow delete: if request.auth != null && isStaff(request.auth.uid);
+        
+        // Employee-B can list inquiries assigned to them
+        // Admins/Managers can list all inquiries
+        allow list: if request.auth != null && 
+                    (isEmployeeB(request.auth.uid) || isStaff(request.auth.uid));
+    }
+    
+    // Config Collection
+    match /config/{docId} {
+      // Publicly readable config (e.g., filter options)
+      allow get;
+      // Only admins can write to config
+      allow write: if request.auth != null && getRole(request.auth.uid) == 'admin';
     }
   }
 }
