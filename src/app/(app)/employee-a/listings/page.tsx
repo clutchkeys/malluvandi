@@ -168,11 +168,12 @@ export default function EmployeeAListingsPage() {
           model: formValues.model,
           year: parseInt(formValues.year),
           price: parseInt(formValues.price),
+          engineCC: parseInt(formValues.engineCC),
+          fuel: formValues.fuel,
+          transmission: formValues.transmission,
           kmRun: parseInt(formValues.kmRun),
           color: formValues.color,
           ownership: parseInt(formValues.ownership),
-          insurance: formValues.insurance,
-          challans: formValues.challans,
           additionalDetails: formValues.details,
           status: 'pending' as const,
           submittedBy: user.id,
@@ -241,6 +242,31 @@ export default function EmployeeAListingsPage() {
                   <Input id="price" name="price" type="number" className="col-span-3" defaultValue={carToEdit?.price} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="engineCC" className="text-right">Engine CC</Label>
+                  <Input id="engineCC" name="engineCC" type="number" className="col-span-3" defaultValue={carToEdit?.engineCC} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="fuel" className="text-right">Fuel</Label>
+                   <Select name="fuel" defaultValue={carToEdit?.fuel} required>
+                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select fuel type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Petrol">Petrol</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                        <SelectItem value="Electric">Electric</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="transmission" className="text-right">Transmission</Label>
+                   <Select name="transmission" defaultValue={carToEdit?.transmission} required>
+                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select transmission" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Automatic">Automatic</SelectItem>
+                        <SelectItem value="Manual">Manual</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="kmRun" className="text-right">KM Run</Label>
                   <Input id="kmRun" name="kmRun" type="number" className="col-span-3" defaultValue={carToEdit?.kmRun} required />
                 </div>
@@ -252,17 +278,9 @@ export default function EmployeeAListingsPage() {
                   <Label htmlFor="ownership" className="text-right">Ownership</Label>
                   <Input id="ownership" name="ownership" type="number" className="col-span-3" defaultValue={carToEdit?.ownership} required />
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="insurance" className="text-right">Insurance</Label>
-                  <Input id="insurance" name="insurance" className="col-span-3" defaultValue={carToEdit?.insurance} required />
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="challans" className="text-right">Challans</Label>
-                  <Input id="challans" name="challans" className="col-span-3" defaultValue={carToEdit?.challans} required />
-                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="details" className="text-right">Details</Label>
-                  <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} required />
+                  <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} placeholder="Include insurance details, challans, etc."/>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="images" className="text-right">Images</Label>

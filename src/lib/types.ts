@@ -28,22 +28,24 @@ export interface Car {
   brand: string;
   model: string;
   year: number;
+  price: number;
+  engineCC: number;
+  fuel: 'Petrol' | 'Diesel' | 'Electric';
+  transmission: 'Automatic' | 'Manual';
   color: string;
   kmRun: number;
   ownership: number;
-  insurance: string;
-  challans: string;
   additionalDetails: string;
   images: string[];
   status: 'pending' | 'approved' | 'rejected';
-  submittedBy: string; // EmployeeA ID
-  price: number;
+  submittedBy: string; // User ID
   badges?: CarBadge[];
 }
 
 export interface Inquiry {
-  id: string;
+  id:string;
   carId: string;
+  carSummary: string;
   customerName: string;
   customerPhone: string;
   submittedAt: string; // ISO 8601 date string
@@ -51,5 +53,4 @@ export interface Inquiry {
   status: 'new' | 'contacted' | 'closed';
   remarks: string; // Visible to admin
   privateNotes: string; // Visible only to EmployeeB
-  carSummary?: string; // e.g. "Maruti Suzuki Swift"
 }

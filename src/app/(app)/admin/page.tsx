@@ -293,11 +293,12 @@ export default function AdminPage() {
         model: formValues.model,
         year: parseInt(formValues.year),
         price: parseInt(formValues.price),
+        engineCC: parseInt(formValues.engineCC),
+        fuel: formValues.fuel,
+        transmission: formValues.transmission,
         kmRun: parseInt(formValues.kmRun),
         color: formValues.color,
         ownership: parseInt(formValues.ownership),
-        insurance: formValues.insurance,
-        challans: formValues.challans,
         additionalDetails: formValues.details,
         status: formValues.status,
     };
@@ -853,7 +854,7 @@ export default function AdminPage() {
                                 </div>
                                  <Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Year
-                                </Button>
+                                 </Button>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -929,15 +930,16 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                     <FormFieldItem label="Brand" name="brand" as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} required defaultValue={carToEdit?.brand} />
                     <FormFieldItem label="Model" name="model" as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} required defaultValue={carToEdit?.model} />
-                    <FormFieldItem label="Year" name="year" type="number" required defaultValue={carToEdit?.year} />
-                    <FormFieldItem label="Price (₹)" name="price" type="number" required defaultValue={carToEdit?.price} />
-                    <FormFieldItem label="KM Run" name="kmRun" type="number" required defaultValue={carToEdit?.kmRun} />
-                    <FormFieldItem label="Color" name="color" required defaultValue={carToEdit?.color} />
+                    <FormFieldItem label="Manufactured Year" name="year" type="number" required defaultValue={carToEdit?.year} />
+                    <FormFieldItem label="Expected Price (₹)" name="price" type="number" required defaultValue={carToEdit?.price} />
+                    <FormFieldItem label="Engine CC" name="engineCC" type="number" required defaultValue={carToEdit?.engineCC} />
+                    <FormFieldItem label="Fuel" name="fuel" as="select" options={['Petrol', 'Diesel', 'Electric']} required defaultValue={carToEdit?.fuel} />
+                    <FormFieldItem label="Transmission" name="transmission" as="select" options={['Automatic', 'Manual']} required defaultValue={carToEdit?.transmission} />
+                    <FormFieldItem label="KM Driven" name="kmRun" type="number" required defaultValue={carToEdit?.kmRun} />
+                    <FormFieldItem label="Colour" name="color" required defaultValue={carToEdit?.color} />
                     <FormFieldItem label="Ownership" name="ownership" type="number" required defaultValue={carToEdit?.ownership} />
-                    <FormFieldItem label="Insurance" name="insurance" required defaultValue={carToEdit?.insurance} />
                 </div>
-                 <FormFieldItem label="Challans" name="challans" required defaultValue={carToEdit?.challans} />
-                <FormFieldItem label="Details" name="details" as="textarea" required defaultValue={carToEdit?.additionalDetails} />
+                <FormFieldItem label="Additional Details" name="details" as="textarea" placeholder="Include insurance details, challans, etc." defaultValue={carToEdit?.additionalDetails} />
                 <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} required />
               </div>
               <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCarFormOpen(false)}>Cancel</Button><Button type="submit">Save Car</Button></DialogFooter>
@@ -1019,7 +1021,7 @@ export default function AdminPage() {
 const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: string, name: string, as?: 'input' | 'textarea' | 'select', options?: any[]} & React.InputHTMLAttributes<HTMLInputElement> & React.TextareaHTMLAttributes<HTMLTextAreaElement> & React.SelectHTMLAttributes<HTMLSelectElement>) => {
     const commonProps = {id: name, name, className: "col-span-3", ...props};
     const renderField = () => {
-        if (as === 'textarea') return <Textarea {...commonProps} required />;
+        if (as === 'textarea') return <Textarea {...commonProps} />;
         if (as === 'select') {
           const selectProps = props as React.SelectHTMLAttributes<HTMLSelectElement>;
           return (
@@ -1029,13 +1031,13 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
                   const event = { target: { value: value, name: name } } as React.ChangeEvent<HTMLSelectElement>;
                   selectProps.onChange(event);
               }
-            }} disabled={props.disabled} required>
+            }} disabled={props.disabled} required={props.required}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>{(options || []).map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
             </Select>
         );
       }
-      return <Input {...commonProps} required />;
+      return <Input {...commonProps} />;
     };
     return (
         <div className="grid grid-cols-4 items-center gap-4">

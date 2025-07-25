@@ -127,11 +127,12 @@ export default function SellCarPage() {
           model: formValues.model,
           year: parseInt(formValues.year),
           price: parseInt(formValues.price),
+          engineCC: parseInt(formValues.engineCC),
+          fuel: formValues.fuel,
+          transmission: formValues.transmission,
           kmRun: parseInt(formValues.kmRun),
           color: formValues.color,
           ownership: parseInt(formValues.ownership),
-          insurance: formValues.insurance,
-          challans: formValues.challans,
           additionalDetails: formValues.details,
           images: imageUrls,
           status: 'pending' as const,
@@ -220,38 +221,55 @@ export default function SellCarPage() {
                           </Select>
                         </div>
                          <div className="space-y-2">
-                          <Label htmlFor="year">Year</Label>
+                          <Label htmlFor="year">Manufactured Year</Label>
                           <Input id="year" name="year" type="number" placeholder="e.g., 2022" required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="price">Expected Price (₹)</Label>
                           <Input id="price" name="price" type="number" placeholder="e.g., 750000" required />
                         </div>
+                         <div className="space-y-2">
+                          <Label htmlFor="engineCC">Engine CC</Label>
+                          <Input id="engineCC" name="engineCC" type="number" placeholder="e.g., 1197" required />
+                        </div>
                         <div className="space-y-2">
-                          <Label htmlFor="kmRun">KM Run</Label>
+                          <Label htmlFor="fuel">Fuel</Label>
+                           <Select name="fuel" required>
+                              <SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Petrol">Petrol</SelectItem>
+                                <SelectItem value="Diesel">Diesel</SelectItem>
+                                <SelectItem value="Electric">Electric</SelectItem>
+                              </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="transmission">Transmission</Label>
+                           <Select name="transmission" required>
+                              <SelectTrigger><SelectValue placeholder="Select transmission" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Automatic">Automatic</SelectItem>
+                                <SelectItem value="Manual">Manual</SelectItem>
+                              </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="kmRun">KM Driven</Label>
                           <Input id="kmRun" name="kmRun" type="number" placeholder="e.g., 15000" required />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="color">Color</Label>
+                          <Label htmlFor="color">Colour</Label>
                           <Input id="color" name="color" placeholder="e.g., Red" required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="ownership">No. of Owners</Label>
                           <Input id="ownership" name="ownership" type="number" placeholder="e.g., 1" required />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="insurance">Insurance Details</Label>
-                          <Input id="insurance" name="insurance" placeholder="e.g., Comprehensive, until Oct 2025" required />
-                        </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="challans">Pending Challans</Label>
-                      <Input id="challans" name="challans" placeholder="e.g., None, or details of any challans" required />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="details">Additional Details</Label>
-                      <Textarea id="details" name="details" placeholder="Tell us more about your car's condition, features, or any other relevant information." required />
+                      <Textarea id="details" name="details" placeholder="Include insurance details, any pending challans, car's condition, features, or any other relevant information."/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="images">Upload Images (select multiple)</Label>

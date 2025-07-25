@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star } from 'lucide-react';
+import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench } from 'lucide-react';
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 
@@ -42,7 +42,20 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
   useEffect(() => {
     if (car) {
       setIsSummaryLoading(true);
-      summarizeCarDetails(car)
+      const carSummaryData = {
+          brand: car.brand,
+          model: car.model,
+          year: car.year,
+          color: car.color,
+          kmRun: car.kmRun,
+          ownership: car.ownership,
+          // Since insurance and challans are now in additional details, we can pass it here
+          // This might need adjustment based on how you want the summary to work
+          insurance: car.additionalDetails, 
+          challans: '',
+          additionalDetails: car.additionalDetails
+      };
+      summarizeCarDetails(carSummaryData)
         .then(result => setSummary(result.summary))
         .catch(err => {
           console.error(err);
@@ -93,8 +106,8 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                   <div className="flex items-start gap-3"><Gauge className="text-muted-foreground" size={20}/><p><span className="font-medium">Kilometers</span><br/>{car.kmRun.toLocaleString('en-IN')} km</p></div>
                   <div className="flex items-start gap-3"><PaintBucket className="text-muted-foreground" size={20}/><p><span className="font-medium">Color</span><br/>{car.color}</p></div>
                   <div className="flex items-start gap-3"><Users className="text-muted-foreground" size={20}/><p><span className="font-medium">Ownership</span><br/>{car.ownership} {car.ownership > 1 ? 'Owners' : 'Owner'}</p></div>
-                  <div className="flex items-start gap-3"><ShieldCheck className="text-muted-foreground" size={20}/><p><span className="font-medium">Insurance</span><br/>{car.insurance}</p></div>
-                  <div className="flex items-start gap-3"><FileWarning className="text-muted-foreground" size={20}/><p><span className="font-medium">Challans</span><br/>{car.challans}</p></div>
+                  <div className="flex items-start gap-3"><Cog className="text-muted-foreground" size={20}/><p><span className="font-medium">Engine</span><br/>{car.engineCC} CC</p></div>
+                  <div className="flex items-start gap-3"><Wrench className="text-muted-foreground" size={20}/><p><span className="font-medium">Transmission</span><br/>{car.transmission}</p></div>
               </CardContent>
           </Card>
 
