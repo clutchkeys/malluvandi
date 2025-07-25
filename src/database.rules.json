@@ -1,100 +1,45 @@
 
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // Helper function to check user role
-    function getRole(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role;
-    }
-
-    // Helper function to check if user is an admin or manager
-    function isStaff(uid) {
-      let role = getRole(uid);
-      return role == 'admin' || role == 'manager';
-    }
-    
-    function isEmployeeA(uid) {
-      let role = getRole(uid);
-      return role == 'employee-a';
-    }
-
-    function isEmployeeB(uid) {
-      let role = getRole(uid);
-      return role == 'employee-b';
-    }
-    
-    // Users Collection
-    match /users/{userId} {
-      // Any authenticated user can create their own user document (on sign up)
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // Users can only read or update their own data
-      allow read, update: if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));
-      // Only admins can delete users
-      allow delete: if request.auth != null && getRole(request.auth.uid) == 'admin';
-      
-      // Allow admins/managers to read any user document
-      allow list: if request.auth != null && isStaff(request.auth.uid);
-    }
-    
-    // Cars Collection
-    match /cars/{carId} {
-      // Anyone can read approved car listings
-      allow get, list: if resource.data.status == 'approved';
-
-      // Authenticated users can create new listings
-      allow create: if request.auth != null;
-      
-      // Admins/Managers can update any field
-      // Employee-A can only update listings they submitted
-      allow update: if request.auth != null && 
-                    (isStaff(request.auth.uid) || 
-                    (isEmployeeA(request.auth.uid) && resource.data.submittedBy == request.auth.uid));
-                    
-      // Only Admins/Managers can delete
-      allow delete: if request.auth != null && isStaff(request.auth.uid);
-    }
-
-    // Inquiries Collection
-    match /inquiries/{inquiryId} {
-        // Any authenticated user can create an inquiry
-        allow create: if request.auth != null;
-        
-        // Only the assigned employee-b, or a manager/admin can read an inquiry
-        allow read, update: if request.auth != null && 
-                           (resource.data.assignedTo == request.auth.uid || isStaff(request.auth.uid));
-                           
-        // Only managers/admins can delete
-        allow delete: if request.auth != null && isStaff(request.auth.uid);
-        
-        // Employee-B can list inquiries assigned to them
-        // Admins/Managers can list all inquiries
-        allow list: if request.auth != null && 
-                    (isEmployeeB(request.auth.uid) || isStaff(request.auth.uid));
-    }
-    
-    // Brands collection
-    match /brands/{brandId} {
-        // Allow any authenticated user to read brands (for logos)
-        allow get, list: if request.auth != null;
-        // Only staff can create, update, or delete brands
-        allow write: if request.auth != null && isStaff(request.auth.uid);
-    }
-
-    // Notifications Collection
-    match /notifications/{notificationId} {
-      allow create: if request.auth != null && isStaff(request.auth.uid);
-      allow read, list: if request.auth != null;
-      allow delete: if request.auth != null && isStaff(request.auth.uid);
-    }
-
-    // Config Collection
-    match /config/{docId} {
-      // Publicly readable config (e.g., filter options)
-      allow get;
-      // Only admins or content editors can write to config
-      allow write: if request.auth != null && (isStaff(request.auth.uid) || isEmployeeA(request.auth.uid));
+{
+  "rules": {
+    "rules_version": "2",
+    "service cloud.firestore": {
+      "match": "/databases/{database}/documents" {
+        "function getRole(uid)": "return get(/databases/$(database)/documents/users/$(uid)).data.role;",
+        "function isStaff(uid)": "let role = getRole(uid); return role == 'admin' || role == 'manager' || role == 'employee-a' || role == 'employee-b';",
+        "function isEmployeeA(uid)": "return getRole(uid) == 'employee-a';",
+        "function isEmployeeB(uid)": "return getRole(uid) == 'employee-b';",
+        "match": "/users/{userId}" {
+          "allow create": "if request.auth != null;",
+          "allow read, update": "if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));",
+          "allow delete": "if request.auth != null && getRole(request.auth.uid) == 'admin';",
+          "allow list": "if request.auth != null && isStaff(request.auth.uid);"
+        },
+        "match": "/cars/{carId}" {
+          "allow get, list": "if resource.data.status == 'approved' || request.auth != null;",
+          "allow create": "if request.auth != null;",
+          "allow update": "if request.auth != null && (isStaff(request.auth.uid) || (isEmployeeA(request.auth.uid) && resource.data.submittedBy == request.auth.uid));",
+          "allow delete": "if request.auth != null && isStaff(request.auth.uid);"
+        },
+        "match": "/inquiries/{inquiryId}" {
+          "allow create": "if request.auth != null;",
+          "allow read, update": "if request.auth != null && (resource.data.assignedTo == request.auth.uid || isStaff(request.auth.uid));",
+          "allow delete": "if request.auth != null && isStaff(request.auth.uid);",
+          "allow list": "if request.auth != null && (isEmployeeB(request.auth.uid) || isStaff(request.auth.uid));"
+        },
+        "match": "/brands/{brandId}" {
+          "allow get, list": "if request.auth != null;",
+          "allow write": "if request.auth != null && isStaff(request.auth.uid);"
+        },
+        "match": "/notifications/{notificationId}" {
+          "allow create": "if request.auth != null && isStaff(request.auth.uid);",
+          "allow read, list": "if request.auth != null && (resource.data.recipientGroup == 'all' || (resource.data.recipientGroup == 'all-customers' && getRole(request.auth.uid) == 'customer') || (resource.data.recipientGroup == 'all-staff' && isStaff(request.auth.uid)) || resource.data.recipientGroup == getRole(request.auth.uid));",
+          "allow delete": "if request.auth != null && isStaff(request.auth.uid);"
+        },
+        "match": "/config/{docId}" {
+          "allow get": "if true;",
+          "allow write": "if request.auth != null && (isStaff(request.auth.uid) || isEmployeeA(request.auth.uid));"
+        }
+      }
     }
   }
 }
