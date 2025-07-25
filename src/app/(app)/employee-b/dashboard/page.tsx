@@ -11,27 +11,46 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Loader2, MessageSquare } from 'lucide-react';
+import { CheckCircle, Loader2, MessageSquare, Bell } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import type { Notification } from '@/lib/types';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function EmployeeBDashboardPage() {
   const { user, loading } = useAuth();
   const [stats, setStats] = useState({ assigned: 0, closed: 0 });
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotifLoading, setIsNotifLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
+      // Fetch inquiry stats
       const inquiriesRef = collection(db, 'inquiries');
-      const q = query(inquiriesRef, where("assignedTo", "==", user.id));
-
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const qInquiries = query(inquiriesRef, where("assignedTo", "==", user.id));
+      const unsubInquiries = onSnapshot(qInquiries, (querySnapshot) => {
           const userInquiries = querySnapshot.docs.map(doc => doc.data());
           const closedInquiries = userInquiries.filter(inq => inq.status === 'closed').length;
           setStats({ assigned: userInquiries.length, closed: closedInquiries });
       });
 
-      return () => unsubscribe();
+      // Fetch notifications
+      const notifRef = collection(db, 'notifications');
+      const qNotif = query(
+          notifRef,
+          where('recipientGroup', 'in', ['all', 'all-staff', 'employee-b']),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+      );
+      const unsubNotif = onSnapshot(qNotif, (snapshot) => {
+          setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+          setIsNotifLoading(false);
+      });
+
+      return () => {
+        unsubInquiries();
+        unsubNotif();
+      };
     }
   }, [user]);
 
@@ -87,9 +106,27 @@ export default function EmployeeBDashboardPage() {
                 <CardDescription>Recent announcements from the admin team.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="text-center text-muted-foreground py-8">
-                    No new notifications.
-                </div>
+                 {isNotifLoading ? (
+                    <div className="text-center text-muted-foreground py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+                ) : notifications.length > 0 ? (
+                    <div className="space-y-4">
+                        {notifications.map(notif => (
+                            <div key={notif.id} className="flex items-start gap-4">
+                                <div className="bg-primary/10 text-primary p-2 rounded-full">
+                                    <Bell className="h-5 w-5"/>
+                                </div>
+                                <div>
+                                    <p className="text-sm">{notif.message}</p>
+                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                        No new notifications.
+                    </div>
+                )}
             </CardContent>
        </Card>
     </div>

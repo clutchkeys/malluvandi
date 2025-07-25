@@ -54,3 +54,11 @@ export interface Inquiry {
   remarks: string; // Visible to admin
   privateNotes: string; // Visible only to EmployeeB
 }
+
+export interface Notification {
+  id: string;
+  message: string;
+  recipientGroup: 'all' | 'all-staff' | 'all-customers' | 'employee-a' | 'employee-b';
+  createdAt: string; // ISO 8601 date string
+  createdBy: string; // User ID
+}

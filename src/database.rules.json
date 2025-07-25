@@ -17,64 +17,52 @@ service cloud.firestore {
     
     function isEmployee(uid) {
       let role = getRole(uid);
-      return role == 'employee-a' || role == 'employee-b' || isStaff(uid);
+      return role == 'employee-a' || role == 'employee-b' || isStaff(request.auth.uid);
     }
     
     // Users Collection
     match /users/{userId} {
-      // Any authenticated user can create their own user document (on sign up)
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Allow authenticated users to read any user doc (to get names, etc.)
-      // Allow users to update their own data, or staff to update any user.
-      allow read, update: if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));
-      // Only admins can delete users
+      allow read: if request.auth != null; // Allow any logged in user to read user data.
+      allow update: if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));
       allow delete: if request.auth != null && getRole(request.auth.uid) == 'admin';
-      
-      // Allow any authenticated user to list users
       allow list: if request.auth != null;
     }
     
     // Cars Collection
     match /cars/{carId} {
-      // PUBLIC ACCESS: Anyone can read/list approved car listings
       allow get, list: if resource.data.status == 'approved';
       
-      // ANY authenticated user can create a car listing
       allow create: if request.auth != null;
       
-      // Staff can update any field. Employee-A can only update listings they submitted.
       allow update: if request.auth != null && 
                     (isStaff(request.auth.uid) || 
                     (getRole(request.auth.uid) == 'employee-a' && resource.data.submittedBy == request.auth.uid));
                     
-      // Only Admins/Managers can delete
       allow delete: if request.auth != null && isStaff(request.auth.uid);
       
-      // Allow any employee to see all cars for internal dashboards
       allow list: if request.auth != null && isEmployee(request.auth.uid);
     }
 
     // Inquiries Collection
     match /inquiries/{inquiryId} {
-        // Any authenticated user can create an inquiry
         allow create: if request.auth != null;
-        
-        // Allow any employee or staff to read/list inquiries
         allow read, list: if request.auth != null && isEmployee(request.auth.uid);
-
-        // Only the assigned employee-b, or a manager/admin can update an inquiry
         allow update: if request.auth != null && 
                            (resource.data.assignedTo == request.auth.uid || isStaff(request.auth.uid));
-                           
-        // Only managers/admins can delete
         allow delete: if request.auth != null && isStaff(request.auth.uid);
+    }
+    
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null && isStaff(request.auth.uid);
+      allow read, list: if request.auth != null;
+      allow delete: if request.auth != null && isStaff(request.auth.uid);
     }
     
     // Config Collection
     match /config/{docId} {
-      // Publicly readable config (e.g., filter options)
       allow get;
-      // Admins or content editors can write to config
       allow write: if request.auth != null && (isStaff(request.auth.uid) || getRole(request.auth.uid) == 'employee-a');
     }
   }

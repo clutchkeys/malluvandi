@@ -765,7 +765,7 @@ export default function AdminPage() {
             )}
 
             {activeView === 'notifications' && user?.role === 'admin' && (
-              <NotificationsPanel allUsers={usersState} />
+              <NotificationsPanel allUsers={usersState} currentUser={user}/>
             )}
 
             {activeView === 'newsletter' && user?.role === 'admin' && (
@@ -1157,20 +1157,30 @@ function AttendanceTracker({ employees }: { employees: User[] }) {
     );
 }
 
-function NotificationsPanel({ allUsers }: { allUsers: User[] }) {
+function NotificationsPanel({ allUsers, currentUser }: { allUsers: User[]; currentUser: User | null }) {
     const { toast } = useToast();
     const [recipient, setRecipient] = useState('all');
     const [message, setMessage] = useState('');
 
-    const handleSend = () => {
-        if (!message.trim()) {
+    const handleSend = async () => {
+        if (!message.trim() || !currentUser) {
             toast({ title: 'Error', description: 'Message cannot be empty.', variant: 'destructive'});
             return;
         }
-        // In a real app, this would trigger a backend function to send notifications
-        console.log(`Sending notification to ${recipient}: ${message}`);
-        toast({ title: 'Notification Sent!', description: `Message sent to: ${recipient}`});
-        setMessage('');
+
+        try {
+            await addDoc(collection(db, 'notifications'), {
+                message: message.trim(),
+                recipientGroup: recipient,
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.id,
+            });
+            toast({ title: 'Notification Sent!', description: `Message sent to: ${recipient}`});
+            setMessage('');
+        } catch (error) {
+            console.error('Error sending notification:', error);
+            toast({ title: 'Error', description: 'Could not send notification.', variant: 'destructive'});
+        }
     }
 
     return (
