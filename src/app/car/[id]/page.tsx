@@ -6,6 +6,12 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarDetailView } from '@/components/car-detail-view';
 import { MOCK_CARS, MOCK_USERS } from '@/lib/mock-data';
+import type { Metadata, ResolvingMetadata } from 'next'
+
+type Props = {
+  params: { id: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
 
 async function getCar(id: string): Promise<Car | null> {
     const car = MOCK_CARS.find(c => c.id === id) || null;
@@ -18,6 +24,25 @@ async function getSeller(userId: string): Promise<User | null> {
     const user = MOCK_USERS.find(u => u.id === userId) || null;
     await new Promise(resolve => setTimeout(resolve, 50));
     return user;
+}
+
+export async function generateMetadata(
+  { params, searchParams }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const id = params.id
+  const car = await getCar(id)
+ 
+  if (!car) {
+    return {
+      title: 'Car Not Found',
+    }
+  }
+ 
+  return {
+    title: `Used ${car.year} ${car.brand} ${car.model} for Sale | Mallu Vandi`,
+    description: `Check out this ${car.color} ${car.brand} ${car.model} with ${car.kmRun} km run. Inquire for the best price at Mallu Vandi, Kerala's trusted used car dealer.`,
+  }
 }
 
 
