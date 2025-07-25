@@ -45,7 +45,8 @@
         
         // Notifications: Read-only for customers. Full access for staff.
         match /notifications/{notificationId} {
-          allow read: if isAuth();
+          allow list: if isAuth();
+          allow get: if isAuth();
           allow write: if isStaff();
         }
 

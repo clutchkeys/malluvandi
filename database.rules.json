@@ -1,66 +1,6 @@
 {
   "rules": {
-    "rules_version": "2",
-    "service cloud.firestore": {
-      "match": "/databases/{database}/documents" {
-        // --- Helper functions ---
-        function isAuth() {
-          return request.auth != null;
-        }
-        function isUser(userId) {
-          return isAuth() && request.auth.uid == userId;
-        }
-        function userRole() {
-          return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        }
-        function isAdmin() {
-          return isAuth() && userRole() == 'admin';
-        }
-        function isStaff() {
-          return isAuth() && userRole() in ['admin', 'manager', 'employee-a', 'employee-b'];
-        }
-
-        // === Collection Rules ===
-
-        // Users: Can read their own data. Staff can read all. Admins can delete.
-        match /users/{userId} {
-          allow read: if isUser(userId) || isStaff();
-          allow create: if isAuth();
-          allow update: if isUser(userId) || isAdmin();
-          allow delete: if isAdmin();
-        }
-
-        // Cars: Public can read approved. Staff can create/update. Admins can delete.
-        match /cars/{carId} {
-          allow read: if resource.data.status == 'approved' || isStaff();
-          allow create, update: if isStaff();
-          allow delete: if isAdmin();
-        }
-
-        // Inquiries: Customers can create. Staff can manage.
-        match /inquiries/{inquiryId} {
-           allow read, update, delete: if isStaff();
-           allow create: if isAuth();
-        }
-        
-        // Notifications: Read-only for customers. Full access for staff.
-        match /notifications/{notificationId} {
-          allow read: if isAuth();
-          allow write: if isStaff();
-        }
-
-        // Brands: Read-only for public. Full access for staff.
-        match /brands/{brandId} {
-            allow read: if true;
-            allow write: if isStaff();
-        }
-        
-        // Config: Read-only for everyone. Writable only by staff.
-        match /config/{configId} {
-          allow read: if true;
-          allow write: if isStaff();
-        }
-      }
-    }
+    ".read": false,
+    ".write": false
   }
 }
