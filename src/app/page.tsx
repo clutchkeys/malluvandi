@@ -217,12 +217,12 @@ export default function Home() {
         <section className="relative bg-card h-[50vh] flex items-center justify-center text-center text-white overflow-hidden">
           <div className="absolute inset-0 bg-black/60 z-10" />
           <Image
-            src="https://placehold.co/1920x1080.png"
-            alt="Hero Banner of a modern car"
+            src="https://ik.imagekit.io/qctc8ch4l/WhatsApp%20Image%202025-07-25%20at%2021.25.04_3699409e.jpg?updatedAt=1753469895495"
+            alt="Mallu Vandi dealership storefront"
             layout="fill"
             objectFit="cover"
             className="z-0"
-            data-ai-hint="car driving sunset"
+            data-ai-hint="dealership exterior"
             priority
           />
           <div className="relative z-20 container mx-auto px-4">
