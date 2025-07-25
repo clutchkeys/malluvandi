@@ -102,11 +102,12 @@ import {
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MOCK_CARS, MOCK_USERS, MOCK_INQUIRIES, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS, MOCK_FILTER_CATEGORIES } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc } from 'firebase/firestore';
 
 
 const userSchema = z.object({
@@ -133,7 +134,7 @@ export default function AdminPage() {
   const [inquiriesState, setInquiriesState] = useState<Inquiry[]>([]);
 
   // Filter options state
-  const [filterCategories, setFilterCategories] = useState(MOCK_FILTER_CATEGORIES);
+  const [filterCategories, setFilterCategories] = useState<{ id: string; name: string; options: string[] }[]>([]);
   const [brandsState, setBrandsState] = useState<string[]>([]);
   const [modelsState, setModelsState] = useState<{[key: string]: string[]}>({});
   const [yearsState, setYearsState] = useState<number[]>([]);
@@ -169,15 +170,42 @@ export default function AdminPage() {
 
   // Fetch all data
   useEffect(() => {
-    setIsLoading({ cars: true, users: true, inquiries: true, filters: true });
-    // Using mock data
-    setCarsState(MOCK_CARS);
-    setUsersState(MOCK_USERS);
-    setInquiriesState(MOCK_INQUIRIES);
-    setBrandsState(MOCK_BRANDS);
-    setModelsState(MOCK_MODELS);
-    setYearsState(MOCK_YEARS);
-    setIsLoading({ cars: false, users: false, inquiries: false, filters: false });
+    setIsLoading(prev => ({...prev, cars: true, users: true, inquiries: true, filters: true }));
+
+    const unsubCars = onSnapshot(collection(db, 'cars'), snapshot => {
+        setCarsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CarType)));
+        setIsLoading(prev => ({...prev, cars: false}));
+    });
+    const unsubUsers = onSnapshot(collection(db, 'users'), snapshot => {
+        setUsersState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        setIsLoading(prev => ({...prev, users: false}));
+    });
+    const unsubInquiries = onSnapshot(collection(db, 'inquiries'), snapshot => {
+        setInquiriesState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Inquiry)));
+        setIsLoading(prev => ({...prev, inquiries: false}));
+    });
+    const unsubFilters = onSnapshot(doc(db, 'config', 'filters'), (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            setBrandsState(data.brands || []);
+            setModelsState(data.models || {});
+            setYearsState(data.years || []);
+            const categories = (data.brands || []).map((brand: string) => ({
+                id: brand.toLowerCase(),
+                name: brand,
+                options: data.models[brand] || []
+            }));
+            setFilterCategories(categories);
+        }
+        setIsLoading(prev => ({...prev, filters: false}));
+    });
+    
+    return () => {
+        unsubCars();
+        unsubUsers();
+        unsubInquiries();
+        unsubFilters();
+    };
   }, []);
 
   useEffect(() => {
@@ -194,12 +222,16 @@ export default function AdminPage() {
 
   // Approval Handlers
   const handleApproval = async (carId: string, status: 'approved' | 'rejected') => {
-    // Mock logic
-    setCarsState(prev => prev.map(car => car.id === carId ? {...car, status} : car));
-    toast({
-      title: `Listing ${status}`,
-      description: `The car listing has been successfully ${status}.`,
-    });
+    const carRef = doc(db, 'cars', carId);
+    try {
+        await updateDoc(carRef, { status });
+        toast({
+          title: `Listing ${status}`,
+          description: `The car listing has been successfully ${status}.`,
+        });
+    } catch(e) {
+         toast({ title: 'Error', description: 'Could not update listing status.', variant: 'destructive'});
+    }
   };
 
   // --- User Management ---
@@ -211,17 +243,28 @@ export default function AdminPage() {
   
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
     if (userToEdit) {
-        setUsersState(currentUsers => currentUsers.map(u => 
-            u.id === userToEdit.id ? { ...u, ...values, role: values.role as Role, performanceScore: u.role.startsWith('employee') ? values.performanceScore : undefined } : u
-        ));
-        toast({ title: 'User Updated' });
+        const userRef = doc(db, 'users', userToEdit.id);
+        try {
+            await updateDoc(userRef, {
+                role: values.role,
+                performanceScore: values.role.startsWith('employee') ? values.performanceScore : undefined
+            });
+            toast({ title: 'User Updated' });
+            setIsUserFormOpen(false);
+        } catch(e) {
+            toast({ title: 'Error', description: 'Could not update user.', variant: 'destructive'});
+        }
     }
-    setIsUserFormOpen(false);
   };
 
-  const handleToggleBan = (userId: string, currentStatus: boolean) => {
-    setUsersState(prev => prev.map(u => u.id === userId ? {...u, banned: !currentStatus} : u));
-    toast({ title: `User ${currentStatus ? 'Unbanned' : 'Banned'}`, description: `The user's account status has been updated.` });
+  const handleToggleBan = async (userId: string, currentStatus: boolean) => {
+    const userRef = doc(db, 'users', userId);
+    try {
+        await updateDoc(userRef, {banned: !currentStatus});
+        toast({ title: `User ${currentStatus ? 'Unbanned' : 'Banned'}`, description: `The user's account status has been updated.` });
+    } catch (e) {
+        toast({ title: 'Error', description: 'Could not update ban status.', variant: 'destructive'});
+    }
   }
   
   // --- Car Management ---
@@ -233,6 +276,8 @@ export default function AdminPage() {
 
   const onCarSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
+
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
@@ -250,31 +295,40 @@ export default function AdminPage() {
         status: formValues.status,
     };
     
-    if (carToEdit) {
-      setCarsState(carsState.map(c => c.id === carToEdit.id ? { ...c, ...carData } : c));
-      toast({ title: 'Car Updated' });
-    } else {
-      const newCarData = {
-        id: `car-${Date.now()}`,
-        ...carData,
-        submittedBy: user!.id,
-        images: ['https://placehold.co/600x400.png'],
-      };
-      setCarsState([...carsState, newCarData as CarType]);
-      toast({ title: 'Car Added' });
+    try {
+        if (carToEdit) {
+          await updateDoc(doc(db, 'cars', carToEdit.id), carData);
+          toast({ title: 'Car Updated' });
+        } else {
+          const newCarData = {
+            ...carData,
+            submittedBy: user.id,
+            images: ['https://placehold.co/600x400.png'], // Placeholder for admin adding car
+          };
+          await addDoc(collection(db, 'cars'), newCarData);
+          toast({ title: 'Car Added' });
+        }
+        setIsCarFormOpen(false);
+    } catch (error) {
+        console.error("Error saving car:", error);
+        toast({ title: 'Save Failed', description: 'Could not save car details.', variant: 'destructive'});
     }
-    setIsCarFormOpen(false);
   }
 
   // --- Inquiry Management ---
-  const handleReassignInquiry = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleReassignInquiry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newAssigneeId = new FormData(e.currentTarget).get('assignee') as string;
     if (inquiryToReassign && newAssigneeId) {
-        setInquiriesState(inquiriesState.map(i => i.id === inquiryToReassign.id ? {...i, assignedTo: newAssigneeId} : i))
-        toast({ title: "Inquiry Reassigned" });
+        const inquiryRef = doc(db, 'inquiries', inquiryToReassign.id);
+        try {
+            await updateDoc(inquiryRef, { assignedTo: newAssigneeId });
+            toast({ title: "Inquiry Reassigned" });
+            setIsReassignInquiryOpen(false);
+        } catch (error) {
+            toast({ title: 'Error', description: 'Could not reassign inquiry.', variant: 'destructive'});
+        }
     }
-    setIsReassignInquiryOpen(false);
   }
 
   // --- Filter Management ---
@@ -289,28 +343,36 @@ export default function AdminPage() {
         const name = formData.get('name') as string;
         const type = isFilterFormOpen.type;
         
-        if (type === 'category') {
-            const id = name.toLowerCase().replace(/\s+/g, '-');
-            if (filterToEdit) {
-                setFilterCategories(cats => cats.map(c => c.id === (filterToEdit.value as any).id ? { ...c, name } : c));
-            } else {
-                setFilterCategories(cats => [...cats, { id, name, options: [] }]);
+        try {
+            const filtersRef = doc(db, 'config', 'filters');
+            const currentDoc = await getDoc(filtersRef);
+            const currentData = currentDoc.exists() ? currentDoc.data() : { brands: [], models: {}, years: [] };
+
+            if (type === 'category') { // Brand management
+                 if (filterToEdit) { // Edit brand
+                    const oldName = (filterToEdit.value as any).name;
+                    currentData.brands = currentData.brands.map((b: string) => b === oldName ? name : b);
+                    currentData.models[name] = currentData.models[oldName];
+                    delete currentData.models[oldName];
+                } else { // Add brand
+                    currentData.brands.push(name);
+                    currentData.models[name] = [];
+                }
+            } else if (type === 'value' && filterToEdit?.categoryId) { // Model management
+                const brandName = filterToEdit.categoryId;
+                if (filterToEdit.value) { // Edit model
+                    currentData.models[brandName] = currentData.models[brandName].map((m: string) => m === filterToEdit.value ? name : m);
+                } else { // Add model
+                    currentData.models[brandName].push(name);
+                }
             }
-        } else if (type === 'value' && filterToEdit?.categoryId) {
-            const categoryId = filterToEdit.categoryId;
-            if (filterToEdit.value) { // Editing existing value
-                setFilterCategories(cats => cats.map(c => 
-                    c.id === categoryId ? { ...c, options: c.options.map(o => o === filterToEdit.value ? name : o) } : c
-                ));
-            } else { // Adding new value
-                 setFilterCategories(cats => cats.map(c => 
-                    c.id === categoryId ? { ...c, options: [...c.options, name] } : c
-                ));
-            }
+            await setDoc(filtersRef, currentData);
+            toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Saved`});
+            setIsFilterFormOpen({ type: 'category', isOpen: false });
+
+        } catch (error) {
+            toast({ title: 'Error', description: 'Could not save filter data.', variant: 'destructive'});
         }
-        
-        toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Saved`});
-        setIsFilterFormOpen({ type: 'category', isOpen: false });
     }
 
 
@@ -319,23 +381,34 @@ export default function AdminPage() {
     if (!itemToDelete) return;
     const { type, id, categoryId } = itemToDelete;
     
-    if (type === 'user') {
-        setUsersState(prev => prev.filter(u => u.id !== id));
-        toast({ title: `User Deleted`, description: "User's record has been removed." });
-    }
-    if (type === 'car') {
-        setCarsState(prev => prev.filter(c => c.id !== id));
-        toast({ title: `Car Deleted` });
-    }
-    if (type === 'filterCategory') {
-        setFilterCategories(cats => cats.filter(c => c.id !== id));
-        toast({ title: 'Filter Category Deleted' });
-    }
-    if (type === 'filterValue' && categoryId) {
-         setFilterCategories(cats => cats.map(c => 
-            c.id === categoryId ? { ...c, options: c.options.filter(o => o !== id) } : c
-        ));
-        toast({ title: 'Filter Option Deleted' });
+    try {
+        if (type === 'user') {
+            await deleteDoc(doc(db, 'users', id));
+            toast({ title: `User Deleted`, description: "User's record has been removed." });
+        }
+        if (type === 'car') {
+            await deleteDoc(doc(db, 'cars', id));
+            toast({ title: `Car Deleted` });
+        }
+        if (type === 'filterCategory' || type === 'filterValue') {
+            const filtersRef = doc(db, 'config', 'filters');
+            const currentDoc = await getDoc(filtersRef);
+            const currentData = currentDoc.data();
+            
+            if (type === 'filterCategory') {
+                delete currentData?.models[id];
+                currentData!.brands = currentData!.brands.filter((b:string) => b !== id);
+            }
+            if (type === 'filterValue' && categoryId) {
+                currentData!.models[categoryId] = currentData!.models[categoryId].filter((m:string) => m !== id);
+            }
+            
+            await setDoc(filtersRef, currentData);
+            toast({ title: 'Filter data updated' });
+        }
+    } catch (error) {
+        console.error("Delete error:", error);
+        toast({ title: 'Delete Failed', variant: 'destructive' });
     }
     
     setItemToDelete(null);
@@ -663,40 +736,40 @@ export default function AdminPage() {
             )}
 
             {activeView === 'filters' && (
-                <Tabs defaultValue="categories" className="w-full">
+                <Tabs defaultValue="brands" className="w-full">
                     <div className="flex justify-between items-center mb-4">
                         <TabsList>
-                            <TabsTrigger value="categories">Categories</TabsTrigger>
-                            <TabsTrigger value="options">Options</TabsTrigger>
+                            <TabsTrigger value="brands">Brands</TabsTrigger>
+                            <TabsTrigger value="models">Models</TabsTrigger>
                         </TabsList>
-                        <Button size="sm" onClick={() => handleOpenFilterForm('category', null)}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Category
+                         <Button size="sm" onClick={() => handleOpenFilterForm('category', null)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Brand
                         </Button>
                     </div>
-                    <TabsContent value="categories">
+                    <TabsContent value="brands">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Filter Categories</CardTitle>
-                                <CardDescription>Add, edit, or delete filter categories.</CardDescription>
+                             <CardHeader>
+                                <CardTitle>Brand Management</CardTitle>
+                                <CardDescription>Add, edit, or delete car brands.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Category Name</TableHead>
-                                            <TableHead>No. of Options</TableHead>
+                                            <TableHead>Brand Name</TableHead>
+                                            <TableHead>No. of Models</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {isLoading.filters ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
-                                            filterCategories.map(cat => (
-                                                <TableRow key={cat.id}>
-                                                    <TableCell className="font-medium">{cat.name}</TableCell>
-                                                    <TableCell>{cat.options.length}</TableCell>
+                                            brandsState.map(brand => (
+                                                <TableRow key={brand}>
+                                                    <TableCell className="font-medium">{brand}</TableCell>
+                                                    <TableCell>{(modelsState[brand] || []).length}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('category', cat)}><Edit size={16} /></Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterCategory', id: cat.id, description: `This will delete the '${cat.name}' filter category and all its options.` })}><Trash2 size={16} /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('category', {name: brand})}><Edit size={16} /></Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterCategory', id: brand, description: `This will delete the '${brand}' and all its models.` })}><Trash2 size={16} /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -705,38 +778,38 @@ export default function AdminPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="options">
+                    <TabsContent value="models">
                          <Card>
                             <CardHeader>
-                                <CardTitle>Filter Options</CardTitle>
-                                <CardDescription>Manage options within each category.</CardDescription>
+                                <CardTitle>Model Management</CardTitle>
+                                <CardDescription>Manage models within each brand.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                {filterCategories.map(cat => (
-                                    <div key={cat.id}>
+                                {brandsState.map(brand => (
+                                    <div key={brand}>
                                         <div className="flex justify-between items-center mb-2">
-                                            <h3 className="font-semibold">{cat.name}</h3>
-                                            <Button size="sm" variant="outline" onClick={() => handleOpenFilterForm('value', null, cat.id)}>
-                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                                            <h3 className="font-semibold">{brand}</h3>
+                                            <Button size="sm" variant="outline" onClick={() => handleOpenFilterForm('value', null, brand)}>
+                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Model
                                             </Button>
                                         </div>
-                                        {cat.options.length > 0 ? (
+                                        {(modelsState[brand] || []).length > 0 ? (
                                             <div className="rounded-lg border">
                                                 <Table>
                                                     <TableBody>
-                                                        {cat.options.map(opt => (
-                                                            <TableRow key={opt}>
-                                                                <TableCell>{opt}</TableCell>
+                                                        {modelsState[brand].map(model => (
+                                                            <TableRow key={model}>
+                                                                <TableCell>{model}</TableCell>
                                                                 <TableCell className="text-right">
-                                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('value', opt, cat.id)}><Edit size={16} /></Button>
-                                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterValue', id: opt, categoryId: cat.id, description: `This will delete the option '${opt}' from '${cat.name}'.`})}><Trash2 size={16} /></Button>
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('value', model, brand)}><Edit size={16} /></Button>
+                                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterValue', id: model, categoryId: brand, description: `This will delete the model '${model}' from '${brand}'.`})}><Trash2 size={16} /></Button>
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>
                                                 </Table>
                                             </div>
-                                        ) : <p className="text-sm text-muted-foreground text-center py-4">No options in this category.</p>}
+                                        ) : <p className="text-sm text-muted-foreground text-center py-4">No models in this brand.</p>}
                                     </div>
                                 ))}
                             </CardContent>
@@ -770,7 +843,7 @@ export default function AdminPage() {
                                 </Select><FormMessage />
                             </FormItem>
                         )}/>
-                        {(form.getValues('role')?.startsWith('employee')) && (
+                        {(form.watch('role')?.startsWith('employee')) && (
                              <FormField control={form.control} name="performanceScore" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Performance Score (out of 10)</FormLabel>
@@ -814,7 +887,7 @@ export default function AdminPage() {
                 <DialogHeader><DialogTitle>{filterToEdit ? 'Edit' : 'Add'} {isFilterFormOpen.type.charAt(0).toUpperCase() + isFilterFormOpen.type.slice(1)}</DialogTitle></DialogHeader>
                  <form className="space-y-4" onSubmit={onFilterSubmit}>
                     <div>
-                        <Label>{isFilterFormOpen.type === 'category' ? 'Category' : 'Option'} Name</Label>
+                        <Label>{isFilterFormOpen.type === 'category' ? 'Brand' : 'Model'} Name</Label>
                         <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || filterToEdit?.value || ''} required />
                     </div>
                     <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>Cancel</Button><Button type="submit">Save</Button></DialogFooter>
@@ -1013,6 +1086,8 @@ function NotificationsPanel({ allUsers }: { allUsers: User[] }) {
             toast({ title: 'Error', description: 'Message cannot be empty.', variant: 'destructive'});
             return;
         }
+        // In a real app, this would trigger a backend function to send notifications
+        console.log(`Sending notification to ${recipient}: ${message}`);
         toast({ title: 'Notification Sent!', description: `Message sent to: ${recipient}`});
         setMessage('');
     }
@@ -1067,6 +1142,8 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
             toast({ title: 'Error', description: 'Subject and body cannot be empty.', variant: 'destructive'});
             return;
         }
+        // In a real app, this would trigger a backend function to send emails
+        console.log(`Sending email to ${subscribers.length} subscribers. Subject: ${subject}`);
         toast({ title: 'Email Sent!', description: `Newsletter sent to ${subscribers.length} subscribers.`});
         setSubject('');
         setBody('');
@@ -1100,3 +1177,4 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
         </Card>
     );
 }
+
