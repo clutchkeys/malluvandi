@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Loader2, MessageSquare, Send, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { publicChat } from '@/ai/flows/public-chat-flow';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 type ChatMessage = {
   role: 'user' | 'model';
@@ -23,7 +23,6 @@ const ChatInterface = ({
     handleSubmit,
     isLoading,
     scrollAreaRef,
-    onClose,
   }: {
     messages: ChatMessage[];
     input: string;
@@ -31,56 +30,50 @@ const ChatInterface = ({
     handleSubmit: (e: React.FormEvent) => void;
     isLoading: boolean;
     scrollAreaRef: React.RefObject<HTMLDivElement>;
-    onClose?: () => void;
   }) => (
-     <Card className="flex flex-col shadow-2xl h-full w-full border-0 md:border md:h-[60vh] md:max-h-[700px] md:rounded-lg">
-        <CardHeader className="flex flex-row items-center justify-between border-b p-4">
-        <div className="flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" />
-            <CardTitle className="text-lg">Mallu Vandi Assistant</CardTitle>
-        </div>
-        {onClose && (
-            <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-5 w-5" />
-            </Button>
-        )}
+     <Card className="flex flex-col shadow-2xl h-full w-full border-0 md:rounded-lg overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between border-b p-4 flex-shrink-0">
+            <div className="flex items-center gap-2">
+                <Bot className="h-6 w-6 text-primary" />
+                <CardTitle className="text-lg">Mallu Vandi Assistant</CardTitle>
+            </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0">
-        <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="p-4 space-y-4">
-            {messages.map((message, index) => (
-                <div
-                key={index}
-                className={cn(
-                    'flex items-end gap-2',
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
-                >
-                {message.role === 'model' && <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />}
-                <div
+            <ScrollArea className="h-full" ref={scrollAreaRef}>
+                <div className="p-4 space-y-4">
+                {messages.map((message, index) => (
+                    <div
+                    key={index}
                     className={cn(
-                    'max-w-[80%] rounded-lg px-3 py-2 text-sm',
-                    message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
+                        'flex items-end gap-2',
+                        message.role === 'user' ? 'justify-end' : 'justify-start'
                     )}
-                >
-                    {message.content}
-                </div>
-                </div>
-            ))}
-            {isLoading && (
-                <div className="flex items-end gap-2 justify-start">
-                    <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />
-                    <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-muted flex items-center">
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                    >
+                    {message.role === 'model' && <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />}
+                    <div
+                        className={cn(
+                        'max-w-[80%] rounded-lg px-3 py-2 text-sm',
+                        message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        )}
+                    >
+                        {message.content}
                     </div>
+                    </div>
+                ))}
+                {isLoading && (
+                    <div className="flex items-end gap-2 justify-start">
+                        <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />
+                        <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-muted flex items-center">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                    </div>
+                )}
                 </div>
-            )}
-            </div>
-        </ScrollArea>
+            </ScrollArea>
         </CardContent>
-        <CardFooter className="p-4 border-t">
+        <CardFooter className="p-4 border-t flex-shrink-0">
         <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
             <Input
             value={input}
@@ -169,19 +162,17 @@ export function AiChatPopup() {
         </Button>
       </div>
 
-      {/* Desktop Chat Popup */}
-      <div className={cn("hidden md:block fixed bottom-24 right-6 z-50 w-full max-w-sm transition-opacity duration-300", !isOpen && "opacity-0 pointer-events-none")}>
-         <ChatInterface {...chatProps} onClose={() => setIsOpen(false)} />
-      </div>
-
-      {/* Mobile Full-Screen Dialog */}
        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="md:hidden w-screen h-screen max-w-full p-0 m-0 border-0">
+          <DialogContent className={cn(
+              "p-0 m-0 border-0",
+              "md:max-w-sm md:h-[70vh] md:max-h-[700px] md:bottom-24 md:right-6 md:left-auto md:top-auto md:fixed",
+              "w-screen h-screen max-w-full"
+          )}>
             <DialogHeader className="sr-only">
               <DialogTitle>AI Chat</DialogTitle>
               <DialogDescription>A chat window with the Mallu Vandi AI assistant.</DialogDescription>
             </DialogHeader>
-             <ChatInterface {...chatProps} onClose={() => setIsOpen(false)}/>
+             <ChatInterface {...chatProps} />
           </DialogContent>
       </Dialog>
     </>

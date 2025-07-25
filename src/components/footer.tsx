@@ -68,13 +68,13 @@ export function Footer() {
         <Separator className="my-8 bg-border" />
         
         <div className="flex flex-col sm:flex-row items-center justify-between gap-y-4 sm:gap-y-0">
-          <div className="text-center sm:text-left text-sm text-muted-foreground flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
-            <span>&copy; {new Date().getFullYear()} Mallu Vandi. Powered by</span>
-            <Link href="https://advalix.com" target="_blank" rel="noopener noreferrer" className="inline-block">
-                <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert" />
-            </Link>
-            <span>and made by Alxvgh.</span>
-          </div>
+          <div className="text-center sm:text-left text-sm text-muted-foreground">
+             <span>&copy; {new Date().getFullYear()} Mallu Vandi. Powered by </span>
+             <Link href="https://advalix.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center align-middle">
+                 <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert" />
+             </Link>
+             <span> and made by Alxvgh.</span>
+           </div>
            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
               <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>

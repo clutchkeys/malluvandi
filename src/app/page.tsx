@@ -22,6 +22,7 @@ import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, getDoc, doc, limit } from 'firebase/firestore';
 import { ALL_BRANDS } from '@/lib/mock-data';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const keralaDistricts = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
@@ -282,9 +283,11 @@ export default function Home() {
                                 <SheetHeader>
                                     <SheetTitle>Filters</SheetTitle>
                                 </SheetHeader>
-                                <div className="py-4">
-                                  <FilterContent />
-                                </div>
+                                <ScrollArea className="h-[calc(100%-4rem)]">
+                                    <div className="py-4 pr-6">
+                                      <FilterContent />
+                                    </div>
+                                </ScrollArea>
                             </SheetContent>
                         </Sheet>
                     </div>
