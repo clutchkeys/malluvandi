@@ -1,46 +1,80 @@
+'use client'
 
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import type { Role } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import type { Role } from "@/lib/types";
 
 const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
   admin: '/admin',
   manager: '/admin',
-  'employee-a': '/employee-a/dashboard',
-  'employee-b': '/employee-b/dashboard',
+  'employee-a': '/employee-a',
+  'employee-b': '/employee-b',
 };
 
-export default function AppIndexPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+export default function MyAccountPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+    const { toast } = useToast();
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        // Customers should be redirected away from the app section
-        if (user.role === 'customer') {
-            router.replace('/');
-        } else {
-            router.replace(roleRedirects[user.role] || '/login');
+    useEffect(() => {
+        if (!loading && user && user.role !== 'customer') {
+            router.replace(roleRedirects[user.role]);
         }
-      } else {
-        router.replace('/login');
-      }
-    }
-  }, [user, loading, router]);
+    }, [user, loading, router]);
 
-  return (
-    <div className="flex h-screen w-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-          </div>
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        toast({
+            title: "Account Saved",
+            description: "Your profile information has been updated.",
+        });
+    };
+
+    // Render a loading state or nothing while redirecting
+    if (loading || (user && user.role !== 'customer')) {
+        return null; // Or a loading spinner
+    }
+
+    return (
+        <div className="space-y-8 max-w-2xl mx-auto">
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight">My Account</h1>
+                <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Profile</CardTitle>
+                    <CardDescription>Update your personal information.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input id="name" defaultValue={user?.name} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" defaultValue={user?.email} disabled />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="password">New Password</Label>
+                            <Input id="password" type="password" placeholder="Enter a new password"/>
+                        </div>
+                        <div className="space-y-2">
+                             <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type="password" placeholder="Confirm your new password" />
+                        </div>
+                        <Button type="submit">Save Changes</Button>
+                    </form>
+                </CardContent>
+            </Card>
         </div>
-    </div>
-  );
+    )
 }
