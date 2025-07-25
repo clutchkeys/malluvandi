@@ -39,16 +39,6 @@ export interface Car {
   badges?: CarBadge[];
 }
 
-export interface Bike {
-  id: string;
-  brand: string;
-  model: string;
-  year: number;
-  kmRun: number;
-  price: number;
-  images: string[];
-}
-
 export interface Inquiry {
   id: string;
   carId: string;

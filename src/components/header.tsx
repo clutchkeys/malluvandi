@@ -34,7 +34,6 @@ export function Header() {
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
-    { href: '/bikes', label: 'Buy Bikes'},
     { href: '/sell', label: 'Sell Your Car'},
     { href: '/about', label: 'About Us'},
     { href: '/contact', label: 'Contact'},

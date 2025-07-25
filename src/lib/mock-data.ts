@@ -1,4 +1,4 @@
-import type { User, Car, Inquiry, Bike } from './types';
+import type { User, Car, Inquiry } from './types';
 
 // Mock Users
 export const MOCK_USERS: User[] = [
@@ -216,56 +216,6 @@ export const MOCK_CARS: Car[] = [
     badges: ['new']
   }
 ];
-
-// Mock Bikes
-export const MOCK_BIKES: Bike[] = [
-  {
-    id: 'bike-01',
-    brand: 'Royal Enfield',
-    model: 'Classic 350',
-    year: 2022,
-    kmRun: 5000,
-    price: 210000,
-    images: ['https://placehold.co/400x300.png'],
-  },
-  {
-    id: 'bike-02',
-    brand: 'Bajaj',
-    model: 'Pulsar NS200',
-    year: 2021,
-    kmRun: 12000,
-    price: 135000,
-    images: ['https://placehold.co/400x300.png'],
-  },
-  {
-    id: 'bike-03',
-    brand: 'TVS',
-    model: 'Apache RTR 160',
-    year: 2023,
-    kmRun: 3000,
-    price: 125000,
-    images: ['https://placehold.co/400x300.png'],
-  },
-  {
-    id: 'bike-04',
-    brand: 'Yamaha',
-    model: 'MT-15',
-    year: 2022,
-    kmRun: 8000,
-    price: 160000,
-    images: ['https://placehold.co/400x300.png'],
-  },
-  {
-    id: 'bike-05',
-    brand: 'KTM',
-    model: 'Duke 250',
-    year: 2021,
-    kmRun: 15000,
-    price: 230000,
-    images: ['https://placehold.co/400x300.png'],
-  },
-];
-
 
 // Mock Inquiries
 export const MOCK_INQUIRIES: Inquiry[] = [
