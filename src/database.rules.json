@@ -36,7 +36,7 @@ service cloud.firestore {
     // Cars Collection
     match /cars/{carId} {
       // Anyone can read approved car listings
-      allow read: if resource.data.status == 'approved';
+      allow read: if resource.data.status == 'approved' || (request.auth != null && isEmployee(request.auth.uid));
       // ANY authenticated user can create a car listing
       allow create: if request.auth != null;
       
