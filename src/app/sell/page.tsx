@@ -5,14 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,15 +21,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Car, ShieldCheck } from 'lucide-react';
-import type { Car as CarType } from '@/lib/types';
+import { Loader2, Car, ShieldCheck, Upload } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { MOCK_BRANDS, MOCK_MODELS } from '@/lib/mock-data';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import Link from 'next/link';
+import { db, storage } from '@/lib/firebase';
+import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 export default function SellCarPage() {
   const { user, loading } = useAuth();
@@ -47,7 +41,7 @@ export default function SellCarPage() {
   // Form state
   const [selectedBrand, setSelectedBrand] = useState('');
   const [imagesToUpload, setImagesToUpload] = useState<FileList | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -62,50 +56,98 @@ export default function SellCarPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    setCarBrands(MOCK_BRANDS);
-    setCarModels(MOCK_MODELS);
+    const fetchFilters = async () => {
+        const configRef = doc(db, "config", "filters");
+        const configSnap = await getDoc(configRef);
+        if (configSnap.exists()) {
+            const configData = configSnap.data();
+            setCarBrands(configData.brands || []);
+            setCarModels(configData.models || {});
+        }
+    };
+    fetchFilters();
   }, []);
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (!imagesToUpload || imagesToUpload.length === 0) return [];
+
+    const urls: string[] = [];
+    const uploadPromises: Promise<void>[] = [];
+    let totalUploaded = 0;
+
+    Array.from(imagesToUpload).forEach(file => {
+      const storageRef = ref(storage, `car-images/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      const promise = new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            // Individual progress can be tracked here if needed
+          },
+          (error) => {
+            console.error("Upload failed", error);
+            reject(error);
+          },
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            urls.push(downloadURL);
+            totalUploaded++;
+            setUploadProgress((totalUploaded / imagesToUpload.length) * 100);
+            resolve();
+          }
+        );
+      });
+      uploadPromises.push(promise);
+    });
+
+    await Promise.all(uploadPromises);
+    return urls;
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !imagesToUpload) return;
     setIsSubmitting(true);
+    setUploadProgress(0);
 
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
-
-    const carData = {
-        brand: selectedBrand,
-        model: formValues.model,
-        year: parseInt(formValues.year),
-        price: parseInt(formValues.price),
-        kmRun: parseInt(formValues.kmRun),
-        color: formValues.color,
-        ownership: parseInt(formValues.ownership),
-        insurance: formValues.insurance,
-        challans: formValues.challans,
-        additionalDetails: formValues.details,
-        status: 'pending' as const,
-        submittedBy: user.id,
-    };
-
+    
     try {
-      // Mock logic for creating a car
-      console.log("Submitting car for approval:", carData);
-      setUploadProgress(0);
-      await new Promise(res => setTimeout(res, 500));
-      setUploadProgress(50);
-      await new Promise(res => setTimeout(res, 500));
-      setUploadProgress(100);
-      await new Promise(res => setTimeout(res, 300));
+      toast({ title: 'Uploading Images...', description: 'Please wait while we upload your car photos.'});
+      const imageUrls = await uploadImages();
+      
+      if (imageUrls.length === 0) {
+        throw new Error("Image upload failed.");
+      }
+
+      const carData = {
+          brand: selectedBrand,
+          model: formValues.model,
+          year: parseInt(formValues.year),
+          price: parseInt(formValues.price),
+          kmRun: parseInt(formValues.kmRun),
+          color: formValues.color,
+          ownership: parseInt(formValues.ownership),
+          insurance: formValues.insurance,
+          challans: formValues.challans,
+          additionalDetails: formValues.details,
+          images: imageUrls,
+          status: 'pending' as const,
+          submittedBy: user.id,
+      };
+
+      await addDoc(collection(db, 'cars'), carData);
       
       toast({ title: 'Listing Submitted!', description: 'Your car listing has been sent for admin approval.' });
       setIsSuccess(true);
     } catch (error) {
       console.error("Error submitting car:", error);
       toast({ title: 'Submission Failed', description: 'There was an error submitting your listing.', variant: 'destructive' });
+    } finally {
       setIsSubmitting(false);
-      setUploadProgress(null);
+      setUploadProgress(0);
     }
   };
   
@@ -215,19 +257,19 @@ export default function SellCarPage() {
                         <Label htmlFor="images">Upload Images (select multiple)</Label>
                         <Input id="images" type="file" multiple onChange={(e) => setImagesToUpload(e.target.files)} required accept="image/*" />
                     </div>
-                    {uploadProgress !== null && (
+                    {isSubmitting && (
                       <div>
                         <Progress value={uploadProgress} className="h-2"/>
                         <p className="text-sm text-center mt-1 text-muted-foreground">Uploading...</p>
                       </div>
                     )}
                   </div>
-                  <DialogFooter className="mt-6">
+                  <CardFooter className="mt-6">
                     <Button type="submit" disabled={isSubmitting} size="lg">
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Submit for Approval
                     </Button>
-                  </DialogFooter>
+                  </CardFooter>
                 </form>
             </CardContent>
         </Card>

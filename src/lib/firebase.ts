@@ -3,7 +3,6 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
-// import { MOCK_USERS } from "./mock-data";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,64 +20,5 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const storage = getStorage(app);
-
-// NOTE: The following logic is for populating a new Firebase project with mock data.
-// It should only be run once.
-/*
-import { collection, doc, setDoc, writeBatch } from "firebase/firestore"; 
-import { MOCK_CARS, MOCK_USERS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from './mock-data';
-import { createUserWithEmailAndPassword } from "firebase/auth";
-
-const populateFirestore = async () => {
-    console.log("Populating Firestore with mock data...");
-    try {
-        const batch = writeBatch(db);
-
-        // Add users to Firestore and Auth
-        for (const user of MOCK_USERS) {
-            try {
-                // IMPORTANT: Use a real password for creation, or handle this securely.
-                // This is a placeholder and will fail if run directly.
-                const userCredential = await createUserWithEmailAndPassword(auth, user.email, "defaultPassword123");
-                const uid = userCredential.user.uid;
-                
-                const { id, ...userData } = user;
-                const userRef = doc(db, "users", uid);
-
-                // Use the new UID from Auth instead of the mock ID
-                batch.set(userRef, { ...userData, id: uid });
-                 console.log(`User ${user.name} created with UID: ${uid}`);
-            } catch (authError) {
-                console.error(`Error creating auth user for ${user.email}:`, authError);
-            }
-        }
-
-        // Add cars
-        MOCK_CARS.forEach(car => {
-            const { id, ...carData } = car;
-            const carRef = doc(db, "cars", id);
-            batch.set(carRef, carData);
-        });
-        
-        // Add filters config
-        const filtersRef = doc(db, "config", "filters");
-        batch.set(filtersRef, {
-            brands: MOCK_BRANDS,
-            models: MOCK_MODELS,
-            years: MOCK_YEARS
-        });
-
-        await batch.commit();
-        console.log("Firestore populated successfully!");
-    } catch(e) {
-        console.error("Error populating Firestore: ", e);
-    }
-}
-// Run this function from a browser console or a temporary script if you need to seed your database.
-//
-// window.populateFirestore = populateFirestore;
-//
-*/
-
 
 export { app, auth, db, rtdb, storage };

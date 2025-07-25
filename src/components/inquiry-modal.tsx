@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Car, Inquiry } from '@/lib/types';
+import type { Car, Inquiry, User } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -15,7 +16,8 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { MOCK_USERS } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 
 
 interface InquiryModalProps {
@@ -63,11 +65,14 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
     
     try {
       // Find an available sales person (Employee B)
-      const salesPeople = MOCK_USERS.filter(u => u.role === 'employee-b');
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('role', '==', 'employee-b'));
+      const querySnapshot = await getDocs(q);
+      const salesPeople = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 
       let assignedTo = 'unassigned';
       if (salesPeople.length > 0) {
-        // Simple random assignment
+        // Simple random assignment for now
         assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)].id;
       }
       
@@ -83,8 +88,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         privateNotes: ''
       }
       
-      console.log("New Inquiry (Mock):", newInquiry);
-      await new Promise(res => setTimeout(res, 1000)); // Simulate API call
+      await addDoc(collection(db, 'inquiries'), newInquiry);
 
       toast({
         title: 'Inquiry Sent!',

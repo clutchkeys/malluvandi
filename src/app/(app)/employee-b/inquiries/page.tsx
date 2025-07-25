@@ -3,7 +3,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -35,7 +34,8 @@ import type { Inquiry, Car } from '@/lib/types';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { answerCarQueries } from '@/ai/flows/answer-car-queries';
 import { useToast } from '@/hooks/use-toast';
-import { MOCK_INQUIRIES, MOCK_CARS } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
 const InquiryListItem = ({ inquiry, onSelect, isSelected }: { inquiry: Inquiry, onSelect: (id: string) => void, isSelected: boolean }) => {
@@ -62,30 +62,33 @@ export default function EmployeeBInquiriesPage() {
   const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const userInquiries = useMemo(() => {
-    if (!user) return [];
-    return inquiries.filter(inq => inq.assignedTo === user.id);
-  }, [inquiries, user]);
-
   useEffect(() => {
-    setIsLoading(true);
-    // Using mock data
-    const sortedInquiries = MOCK_INQUIRIES.sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-    setInquiries(sortedInquiries);
-    setIsLoading(false);
-  }, []);
+    if (user) {
+        setIsLoading(true);
+        const inquiriesRef = collection(db, 'inquiries');
+        const q = query(
+            inquiriesRef, 
+            where("assignedTo", "==", user.id), 
+        );
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const userInquiries = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Inquiry));
+            const sortedInquiries = userInquiries.sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+            setInquiries(sortedInquiries);
 
-  useEffect(() => {
-    if (userInquiries.length > 0 && !selectedInquiryId) {
-      setSelectedInquiryId(userInquiries[0].id);
-    } else if (userInquiries.length === 0) {
-      setSelectedInquiryId(null);
+            if (sortedInquiries.length > 0 && !selectedInquiryId) {
+                setSelectedInquiryId(sortedInquiries[0].id);
+            }
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
     }
-  }, [userInquiries, selectedInquiryId]);
+  }, [user, selectedInquiryId]);
   
   const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
   
-  const updateInquiry = (inquiryId: string, updates: Partial<Inquiry>) => {
+  const updateInquiryInState = (inquiryId: string, updates: Partial<Inquiry>) => {
     setInquiries(prev => prev.map(inq => inq.id === inquiryId ? {...inq, ...updates} : inq));
   };
 
@@ -94,7 +97,7 @@ export default function EmployeeBInquiriesPage() {
         <ResizablePanel defaultSize={30} minSize={25}>
           <div className="flex flex-col h-full">
             <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">My Inquiries ({userInquiries.length})</h2>
+              <h2 className="text-lg font-semibold">My Inquiries ({inquiries.length})</h2>
             </div>
             <ScrollArea className="flex-1">
                 {isLoading ? (
@@ -103,7 +106,7 @@ export default function EmployeeBInquiriesPage() {
                     <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-16 w-full" />
                   </div>
-                ) : userInquiries.map(inquiry => (
+                ) : inquiries.map(inquiry => (
                   <InquiryListItem 
                     key={inquiry.id}
                     inquiry={inquiry}
@@ -117,7 +120,7 @@ export default function EmployeeBInquiriesPage() {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
           <ScrollArea className="h-[calc(100vh-theme(spacing.24))]">
-            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiry} /> : <div className="p-8 text-center text-muted-foreground h-full flex items-center justify-center">Select an inquiry to view details</div>}
+            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiryInState} /> : <div className="p-8 text-center text-muted-foreground h-full flex items-center justify-center">Select an inquiry to view details</div>}
           </ScrollArea>
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -146,10 +149,13 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
 
         const fetchCarDetails = async () => {
             if (!inquiry.carId) return;
-            setIsSummaryLoading(true);
-            const carData = MOCK_CARS.find(c => c.id === inquiry.carId) || null;
-            setCar(carData);
-            if (carData) {
+            
+            const carDocRef = doc(db, 'cars', inquiry.carId);
+            const carDoc = await getDoc(carDocRef);
+            if(carDoc.exists()){
+                const carData = { id: carDoc.id, ...carDoc.data() } as Car;
+                setCar(carData);
+                setIsSummaryLoading(true);
                 summarizeCarDetails(carData).then(result => {
                     setSummary(result.summary);
                 }).catch(err => {
@@ -159,7 +165,9 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                     setIsSummaryLoading(false);
                 });
             } else {
-                setIsSummaryLoading(false);
+                 setCar(null);
+                 setSummary("Car details not found.");
+                 setIsSummaryLoading(false);
             }
         };
 
@@ -184,22 +192,18 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         }
     };
     
-    const handleSaveRemarks = () => {
-        onUpdate(inquiry.id, { remarks });
-        toast({ title: 'Remarks Saved' });
+    const handleSave = async (field: 'remarks' | 'privateNotes' | 'status', value: string) => {
+        const inquiryRef = doc(db, 'inquiries', inquiry.id);
+        try {
+            await updateDoc(inquiryRef, { [field]: value });
+            onUpdate(inquiry.id, { [field]: value });
+            toast({ title: `${field.charAt(0).toUpperCase() + field.slice(1)} Updated` });
+        } catch (error) {
+            toast({ title: 'Update Failed', variant: 'destructive' });
+        }
     }
     
-    const handleSaveNotes = () => {
-        onUpdate(inquiry.id, { privateNotes });
-        toast({ title: 'Notes Saved' });
-    }
-    
-    const handleStatusChange = (newStatus: 'new' | 'contacted' | 'closed') => {
-      onUpdate(inquiry.id, { status: newStatus });
-      toast({ title: 'Status Updated', description: `Inquiry status changed to ${newStatus}.` });
-    }
-
-    if (!car) return <div className="p-6">Loading car details or car not found...</div>;
+    if (!car && !isSummaryLoading) return <div className="p-6">Loading car details or car not found...</div>;
 
     return (
         <div className="p-6 space-y-6">
@@ -208,10 +212,10 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle>Customer: {inquiry.customerName}</CardTitle>
-                            <CardDescription>Phone: {inquiry.customerPhone} | Inquiring about: {car.brand} {car.model}</CardDescription>
+                            <CardDescription>Phone: {inquiry.customerPhone} | Inquiring about: {car?.brand} {car?.model}</CardDescription>
                         </div>
                         <div className="flex items-center gap-4">
-                            <Select onValueChange={(value) => handleStatusChange(value as 'new' | 'contacted' | 'closed')} defaultValue={inquiry.status}>
+                            <Select onValueChange={(value) => handleSave('status', value)} defaultValue={inquiry.status}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Update status" />
                                 </SelectTrigger>
@@ -240,12 +244,12 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                  <Card>
                     <CardHeader><CardTitle>Call Remarks</CardTitle><CardDescription>Visible to admins and managers.</CardDescription></CardHeader>
                     <CardContent><Textarea value={remarks || ''} onChange={e => setRemarks(e.target.value)} placeholder="Log call outcomes, customer feedback..." /></CardContent>
-                    <CardFooter><Button size="sm" onClick={handleSaveRemarks}>Save Remarks</Button></CardFooter>
+                    <CardFooter><Button size="sm" onClick={() => handleSave('remarks', remarks || '')}>Save Remarks</Button></CardFooter>
                 </Card>
                  <Card>
                     <CardHeader><CardTitle>Private Notes</CardTitle><CardDescription>Only visible to you.</CardDescription></CardHeader>
                     <CardContent><Textarea value={privateNotes || ''} onChange={e => setPrivateNotes(e.target.value)} placeholder="Personal reminders, follow-up actions..." /></CardContent>
-                     <CardFooter><Button size="sm" onClick={handleSaveNotes}>Save Notes</Button></CardFooter>
+                     <CardFooter><Button size="sm" onClick={() => handleSave('privateNotes', privateNotes || '')}>Save Notes</Button></CardFooter>
                 </Card>
             </div>
            
@@ -263,10 +267,11 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
                                 <p className="text-sm bg-muted p-2 rounded-md">AI: {chat.ai}</p>
                             </div>
                         ))}
+                         {isAiAnswering && <div className="flex items-center gap-2"><Loader2 className="animate-spin" /><span>Thinking...</span></div>}
                     </ScrollArea>
                     <form onSubmit={handleQuerySubmit} className="flex gap-2">
-                        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g., What is the mileage? or Can I get a loan for this?" disabled={isAiAnswering}/>
-                        <Button type="submit" disabled={isAiAnswering}>
+                        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="e.g., What is the mileage? or Can I get a loan for this?" disabled={isAiAnswering || !car}/>
+                        <Button type="submit" disabled={isAiAnswering || !car}>
                             {isAiAnswering ? <Loader2 className="animate-spin" /> : <Send />}
                         </Button>
                     </form>

@@ -18,27 +18,14 @@ import { Label } from '@/components/ui/label';
 import type { Car } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
-import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS, ALL_BRANDS } from '@/lib/mock-data';
 import { BrandMarquee } from '@/components/brand-marquee';
-
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where, getDoc, doc, limit } from 'firebase/firestore';
+import { ALL_BRANDS } from '@/lib/mock-data';
 
 const keralaDistricts = [
-  "Thiruvananthapuram",
-  "Kollam",
-  "Pathanamthitta",
-  "Alappuzha",
-  "Kottayam",
-  "Idukki",
-  "Ernakulam",
-  "Thrissur",
-  "Palakkad",
-  "Malappuram",
-  "Kozhikode",
-  "Wayanad",
-  "Kannur",
-  "Kasaragod"
+  "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
 ];
-
 
 export default function Home() {
   const [allCars, setAllCars] = useState<Car[]>([]);
@@ -63,40 +50,58 @@ export default function Home() {
   const [kmRange, setKmRange] = useState([0, 200000]);
 
    useEffect(() => {
-    setIsLoading(true);
-    // Set default location
-    setUserLocation('Ernakulam');
-    setTempLocation('Ernakulam');
-    // Using mock data
-    const approvedCars = MOCK_CARS.filter(c => c.status === 'approved');
-    setAllCars(approvedCars);
-    setBrands(MOCK_BRANDS);
-    setModels(MOCK_MODELS);
-    setYears(MOCK_YEARS);
-    
-    // Recommendation logic
-    try {
-      const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
-      if (viewedCarIds.length > 0) {
-        const lastViewedId = viewedCarIds[0];
-        const lastViewedCar = MOCK_CARS.find(c => c.id === lastViewedId);
+    const fetchData = async () => {
+        setIsLoading(true);
+        setUserLocation('Ernakulam');
+        setTempLocation('Ernakulam');
+        
+        // Fetch cars
+        const carsRef = collection(db, 'cars');
+        const q = query(carsRef, where('status', '==', 'approved'));
+        const querySnapshot = await getDocs(q);
+        const carsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
+        setAllCars(carsData);
 
-        if (lastViewedCar) {
-            const recommendations = MOCK_CARS.filter(c => 
-                c.status === 'approved' &&
-                c.id !== lastViewedId && // Don't recommend the same car
-                !viewedCarIds.includes(c.id) && // Don't recommend other already viewed cars
-                c.brand === lastViewedCar.brand // Simple logic: recommend same brand
-            ).slice(0, 4);
-            setRecommendedCars(recommendations);
+        // Fetch filter configs
+        const configRef = doc(db, "config", "filters");
+        const configSnap = await getDoc(configRef);
+        if (configSnap.exists()) {
+            const configData = configSnap.data();
+            setBrands(configData.brands || []);
+            setModels(configData.models || {});
+            setYears(configData.years || []);
         }
-      }
-    } catch (error) {
-        console.error("Could not get recommendations from localStorage", error);
-    }
 
+        // Recommendation logic
+        try {
+            const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
+            if (viewedCarIds.length > 0) {
+                const lastViewedId = viewedCarIds[0];
+                const lastViewedCarDoc = await getDoc(doc(db, 'cars', lastViewedId));
 
-    setIsLoading(false);
+                if (lastViewedCarDoc.exists()) {
+                    const lastViewedCar = { id: lastViewedCarDoc.id, ...lastViewedCarDoc.data() } as Car;
+                    const recommendationsQuery = query(
+                        carsRef,
+                        where('status', '==', 'approved'),
+                        where('brand', '==', lastViewedCar.brand),
+                        limit(5) // Fetch 5 potential matches
+                    );
+                    const recommendationsSnapshot = await getDocs(recommendationsQuery);
+                    const recommendationsData = recommendationsSnapshot.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() } as Car))
+                        .filter(c => c.id !== lastViewedId && !viewedCarIds.includes(c.id)) // Filter out already seen
+                        .slice(0, 4); // Take the first 4 unique ones
+                    setRecommendedCars(recommendationsData);
+                }
+            }
+        } catch (error) {
+            console.error("Could not get recommendations:", error);
+        }
+
+        setIsLoading(false);
+    };
+    fetchData();
   }, []);
 
   const handleBrandChange = (brand: string) => {
@@ -130,7 +135,6 @@ export default function Home() {
   const handleLocationSave = () => {
     setUserLocation(tempLocation);
     setIsLocationModalOpen(false);
-    // Future enhancement: You could re-fetch or re-filter nearbyCars here based on the new location.
   }
 
   const filteredCars = useMemo(() => {
@@ -142,8 +146,6 @@ export default function Home() {
       const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
       const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
       const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
-
-      // Note: Body type is not in car data, so this filter won't work without updating Car type and data
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
@@ -290,7 +292,6 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-                {/* Filters Sidebar */}
                 <aside className="hidden lg:block lg:col-span-1 lg:sticky lg:top-24">
                     <Card className="shadow-lg">
                         <CardContent className="p-6">
@@ -299,7 +300,6 @@ export default function Home() {
                     </Card>
                 </aside>
                 
-                {/* Listings */}
                 <section className="lg:col-span-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                         {isLoading ? (
@@ -324,7 +324,6 @@ export default function Home() {
             </div>
         </div>
       
-        {/* Brand Marquee */}
         <section className="py-16 bg-secondary">
           <div className="container mx-auto px-4">
               <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>

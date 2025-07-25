@@ -11,8 +11,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MOCK_CARS, MOCK_INQUIRIES } from '@/lib/mock-data';
 import { CheckCircle, FileText, Loader2, MessageSquare } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 export default function EmployeeADashboardPage() {
   const { user, loading } = useAuth();
@@ -20,9 +21,16 @@ export default function EmployeeADashboardPage() {
 
   useEffect(() => {
     if (user) {
-      const userCars = MOCK_CARS.filter(c => c.submittedBy === user.id);
-      const approvedCars = userCars.filter(c => c.status === 'approved').length;
-      setStats({ submitted: userCars.length, approved: approvedCars });
+      const carsRef = collection(db, 'cars');
+      const q = query(carsRef, where("submittedBy", "==", user.id));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userCars = querySnapshot.docs.map(doc => doc.data());
+        const approvedCars = userCars.filter(c => c.status === 'approved').length;
+        setStats({ submitted: userCars.length, approved: approvedCars });
+      });
+
+      return () => unsubscribe();
     }
   }, [user]);
 

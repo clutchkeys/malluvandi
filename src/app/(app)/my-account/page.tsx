@@ -16,6 +16,8 @@ export default function MyAccountPage() {
     useEffect(() => {
         if (!loading && user) {
             router.replace('/my-account/saved-cars');
+        } else if (!loading && !user) {
+            router.replace('/login');
         }
     }, [user, loading, router]);
     

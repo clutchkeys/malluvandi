@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -11,7 +11,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getDatabase, ref, set, onValue, off } from "firebase/database";
 
 interface AuthContextType {
   user: User | null;
@@ -27,24 +28,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, get their details from Firestore
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
+        
+        const rtdb = getDatabase();
+        const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
+
         if (userDoc.exists()) {
           const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
           setUser(userData);
+
+          if(userData.role !== 'customer') {
+            await set(statusRef, 'Online');
+            onValue(ref(rtdb, '.info/connected'), (snap) => {
+                if (snap.val() === true) {
+                    set(statusRef, 'Online');
+                }
+            });
+          }
+          
         } else {
-          // This case might happen if a user is in Auth but not Firestore.
-          // For now, we log them out.
           await signOut(auth);
           setUser(null);
         }
       } else {
-        // User is signed out
         setUser(null);
       }
       setLoading(false);
@@ -64,16 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userDoc.exists()) {
         const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+        if (userData.banned) {
+          await signOut(auth);
+          throw new Error("This account has been banned.");
+        }
         setUser(userData);
-        setLoading(false);
         return userData;
       } else {
          throw new Error("User data not found in Firestore.");
       }
     } catch (error) {
-      setLoading(false);
       console.error("Login Error:", error);
-      return null;
+      throw error;
+    } finally {
+        setLoading(false);
     }
   };
   
@@ -86,27 +102,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        const newUser: Omit<User, 'id'> = {
           name,
           email,
-          role: 'customer'
+          role: 'customer',
+          newsletterSubscribed: false,
+          banned: false,
        };
 
-       // Create a document in Firestore for the new user
        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
        
        const userWithId = { id: firebaseUser.uid, ...newUser } as User;
        setUser(userWithId);
-       setLoading(false);
        return userWithId;
      } catch (error: any) {
-        setLoading(false);
         console.error("Registration Error:", error);
         if (error.code === 'auth/email-already-in-use') {
             throw new Error("An account with this email already exists.");
         }
         throw new Error("Registration failed. Please try again.");
+     } finally {
+        setLoading(false);
      }
   }
 
   const logout = async () => {
+    if (user && user.role !== 'customer') {
+        const rtdb = getDatabase();
+        const statusRef = ref(rtdb, `users/${user.id}/status`);
+        await set(statusRef, 'Offline');
+    }
     await signOut(auth);
     setUser(null);
     router.push('/');

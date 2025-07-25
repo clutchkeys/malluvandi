@@ -6,18 +6,19 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { Loader2, Bookmark } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MOCK_CARS } from '@/lib/mock-data';
 import { CarCard } from '@/components/car-card';
 import type { Car } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function SavedCarsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [savedCars, setSavedCars] = useState<Car[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [isCarsLoading, setIsCarsLoading] = useState(true);
 
   useEffect(() => {
-    // Ensure this runs only on the client
     setIsClient(true);
   }, []);
 
@@ -29,18 +30,28 @@ export default function SavedCarsPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    if (isClient) {
-      try {
-        const savedCarIds = JSON.parse(localStorage.getItem('savedCars') || '[]') as string[];
-        const cars = MOCK_CARS.filter(car => savedCarIds.includes(car.id));
-        setSavedCars(cars);
-      } catch (error) {
-        console.error("Error fetching saved cars from localStorage", error);
-      }
-    }
+    const fetchSavedCars = async () => {
+        if (isClient) {
+            setIsCarsLoading(true);
+            try {
+                const savedCarIds = JSON.parse(localStorage.getItem('savedCars') || '[]') as string[];
+                const carPromises = savedCarIds.map(id => getDoc(doc(db, 'cars', id)));
+                const carDocs = await Promise.all(carPromises);
+                const cars = carDocs
+                    .filter(doc => doc.exists())
+                    .map(doc => ({ id: doc.id, ...doc.data() } as Car));
+                setSavedCars(cars);
+            } catch (error) {
+                console.error("Error fetching saved cars from localStorage or Firestore", error);
+            } finally {
+                setIsCarsLoading(false);
+            }
+        }
+    };
+    fetchSavedCars();
   }, [isClient]);
 
-  if (loading || !user || !isClient) {
+  if (loading || !user || !isClient || isCarsLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

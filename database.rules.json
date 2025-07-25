@@ -1,22 +1,38 @@
 {
   "rules": {
+    "users": {
+      "$uid": {
+        // Users can read their own data.
+        // Admins/Managers can read any user's data.
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager')",
+        // Users can only write to their own data.
+        // Admins can write to any user's data (for role changes etc.)
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "cars": {
+      // Anyone can read approved car listings.
+      ".read": "auth != null || data.child('status').val() === 'approved'",
+      "$carId": {
+        // Authenticated users can write (create/update) car listings.
+        // The rules below will add more specific constraints.
+        ".write": "auth != null",
+        // Validation for creating a new car
+        ".validate": "newData.hasChildren(['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'insurance', 'challans', 'additionalDetails', 'images', 'status', 'submittedBy', 'price']) && newData.child('submittedBy').val() === auth.uid && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected')"
+      }
+    },
     "inquiries": {
-      // Inquiries can be read by authenticated staff members only.
+      // Authenticated users with specific roles can read inquiries.
       ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager' || root.child('users').child(auth.uid).child('role').val() === 'employee-b')",
-      // Anyone can create an inquiry, but they cannot read it back.
-      // Existing inquiries can only be updated by authenticated staff.
-      ".write": "(!data.exists() && newData.exists()) || (auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager' || root.child('users').child(auth.uid).child('role').val() === 'employee-b'))",
-      // Add indexing for performance on the dashboards
+      // Any authenticated user can create an inquiry.
+      // Staff can update existing inquiries.
+      ".write": "(auth != null && !data.exists() && newData.exists()) || (auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager' || root.child('users').child(auth.uid).child('role').val() === 'employee-b'))",
       ".indexOn": ["assignedTo", "status"]
     },
-    // IMPORTANT: For the inquiry rules to work, you MUST copy user roles
-    // to this path in the Realtime Database upon user creation/update.
-    // e.g. /users/{uid}/role = "admin"
-    "users": {
-       "$uid": {
-         ".read": "auth != null && auth.uid === $uid",
-         ".write": "auth != null && auth.uid === $uid"
-       }
+     "config": {
+      // Publicly readable config data
+      ".read": true,
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     }
   }
 }

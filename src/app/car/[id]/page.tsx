@@ -5,7 +5,8 @@ import type { Car, User } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarDetailView } from '@/components/car-detail-view';
-import { MOCK_CARS, MOCK_USERS } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import type { Metadata, ResolvingMetadata } from 'next'
 
 type Props = {
@@ -14,20 +15,29 @@ type Props = {
 }
 
 async function getCar(id: string): Promise<Car | null> {
-    const car = MOCK_CARS.find(c => c.id === id) || null;
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 50));
-    return car;
+    const carDocRef = doc(db, 'cars', id);
+    const carDoc = await getDoc(carDocRef);
+    if (!carDoc.exists()) {
+        return null;
+    }
+    const carData = carDoc.data();
+    if (carData.status !== 'approved') {
+      return null; // Don't show non-approved cars on public pages
+    }
+    return { id: carDoc.id, ...carData } as Car;
 }
 
 async function getSeller(userId: string): Promise<User | null> {
-    const user = MOCK_USERS.find(u => u.id === userId) || null;
-    await new Promise(resolve => setTimeout(resolve, 50));
-    return user;
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+        return null;
+    }
+    return { id: userDoc.id, ...userDoc.data() } as User;
 }
 
 export async function generateMetadata(
-  { params, searchParams }: Props,
+  { params }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id

@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,10 +43,12 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Loader2 } from 'lucide-react';
 import type { Car } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
-import { MOCK_CARS, MOCK_BRANDS, MOCK_MODELS } from '@/lib/mock-data';
+import { db, storage } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 export default function EmployeeAListingsPage() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [cars, setCars] = useState<Car[]>([]);
@@ -58,24 +59,37 @@ export default function EmployeeAListingsPage() {
   // Form state
   const [selectedBrand, setSelectedBrand] = useState('');
   const [imagesToUpload, setImagesToUpload] = useState<FileList | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filter options from mock
+  // Filter options
   const [carBrands, setCarBrands] = useState<string[]>([]);
   const [carModels, setCarModels] = useState<{[key: string]: string[]}>({});
 
   useEffect(() => {
-    setCarBrands(MOCK_BRANDS);
-    setCarModels(MOCK_MODELS);
+    const fetchFilters = async () => {
+        const configRef = doc(db, "config", "filters");
+        const configSnap = await getDoc(configRef);
+        if (configSnap.exists()) {
+            const configData = configSnap.data();
+            setCarBrands(configData.brands || []);
+            setCarModels(configData.models || {});
+        }
+    };
+    fetchFilters();
   }, []);
 
   useEffect(() => {
     if (user) {
         setIsLoading(true);
-        const userCars = MOCK_CARS.filter(c => c.submittedBy === user.id);
-        setCars(userCars);
-        setIsLoading(false);
+        const carsRef = collection(db, 'cars');
+        const q = query(carsRef, where("submittedBy", "==", user.id));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const userCars = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
+            setCars(userCars);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
     }
   }, [user]);
 
@@ -104,52 +118,73 @@ export default function EmployeeAListingsPage() {
     setIsFormOpen(false);
     setCarToEdit(null);
     setImagesToUpload(null);
-    setUploadProgress(null);
+    setUploadProgress(0);
     setIsSubmitting(false);
   }
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (!imagesToUpload || imagesToUpload.length === 0) return [];
+    toast({ title: 'Uploading Images...', description: 'Please wait.' });
+
+    const urls: string[] = [];
+    const uploadPromises = Array.from(imagesToUpload).map(file => {
+      const storageRef = ref(storage, `car-images/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      return new Promise<string>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          snapshot => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => prev + progress / imagesToUpload.length);
+          },
+          error => reject(error),
+          () => getDownloadURL(uploadTask.snapshot.ref).then(resolve)
+        );
+      });
+    });
+
+    return await Promise.all(uploadPromises);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
     setIsSubmitting(true);
+    setUploadProgress(0);
 
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
-
-    const carData = {
-        brand: selectedBrand,
-        model: formValues.model,
-        year: parseInt(formValues.year),
-        price: parseInt(formValues.price),
-        kmRun: parseInt(formValues.kmRun),
-        color: formValues.color,
-        ownership: parseInt(formValues.ownership),
-        insurance: formValues.insurance,
-        challans: formValues.challans,
-        additionalDetails: formValues.details,
-        status: 'pending' as const,
-        submittedBy: user.id,
-    };
-
+    
     try {
-      // Mock logic
-      setUploadProgress(0);
-      await new Promise(res => setTimeout(res, 500));
-      setUploadProgress(50);
-      await new Promise(res => setTimeout(res, 500));
-      setUploadProgress(100);
-      await new Promise(res => setTimeout(res, 300));
+      const carData: Omit<Car, 'id'> = {
+          brand: selectedBrand,
+          model: formValues.model,
+          year: parseInt(formValues.year),
+          price: parseInt(formValues.price),
+          kmRun: parseInt(formValues.kmRun),
+          color: formValues.color,
+          ownership: parseInt(formValues.ownership),
+          insurance: formValues.insurance,
+          challans: formValues.challans,
+          additionalDetails: formValues.details,
+          status: 'pending' as const,
+          submittedBy: user.id,
+          images: carToEdit?.images || [], // Keep old images if editing
+      };
+
+      if (imagesToUpload && imagesToUpload.length > 0) {
+        const newImageUrls = await uploadImages();
+        carData.images = [...carData.images, ...newImageUrls]; // Add new images
+      }
       
       if (carToEdit) {
-        setCars(cars.map(c => c.id === carToEdit.id ? { ...c, ...carData, status: 'pending' } : c));
+        const carRef = doc(db, 'cars', carToEdit.id);
+        await updateDoc(carRef, { ...carData, status: 'pending' });
         toast({ title: 'Listing Updated', description: 'Your car listing has been sent for re-approval.' });
       } else {
-        const newCar: Car = { 
-            id: `car-${Date.now()}`,
-            ...carData,
-            images: ["https://placehold.co/600x400.png"]
-        };
-        setCars(prevCars => [...prevCars, newCar]);
+        if (carData.images.length === 0) throw new Error("Please upload at least one image.");
+        await addDoc(collection(db, 'cars'), carData);
         toast({ title: 'Listing Submitted', description: 'Your car listing has been sent for admin approval.' });
       }
       handleCloseDialog();
@@ -177,26 +212,18 @@ export default function EmployeeAListingsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
-                <div className="grid grid-cols-4 items-center gap-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="brand" className="text-right">Brand</Label>
                   <Select name="brand" onValueChange={setSelectedBrand} defaultValue={carToEdit?.brand} required>
-                      <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-                      </SelectContent>
+                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a brand" /></SelectTrigger>
+                      <SelectContent>{carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="model" className="text-right">Model</Label>
                   <Select name="model" disabled={!selectedBrand} defaultValue={carToEdit?.model} required>
-                      <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                      </SelectContent>
+                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a model" /></SelectTrigger>
+                      <SelectContent>{selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -231,13 +258,11 @@ export default function EmployeeAListingsPage() {
                   <Label htmlFor="details" className="text-right">Details</Label>
                   <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} required />
                 </div>
-                {!carToEdit && (
-                  <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="images" className="text-right">Images</Label>
-                    <Input id="images" type="file" multiple className="col-span-3" onChange={(e) => setImagesToUpload(e.target.files)} required accept="image/*" />
-                  </div>
-                )}
-                {uploadProgress !== null && (
+                    <Input id="images" type="file" multiple className="col-span-3" onChange={(e) => setImagesToUpload(e.target.files)} accept="image/*" required={!carToEdit} />
+                </div>
+                {isSubmitting && uploadProgress > 0 && (
                   <div className="col-span-4">
                     <Progress value={uploadProgress} />
                     <p className="text-sm text-center mt-1">Uploading...</p>

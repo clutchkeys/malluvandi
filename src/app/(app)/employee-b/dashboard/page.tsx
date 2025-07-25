@@ -11,8 +11,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MOCK_INQUIRIES } from '@/lib/mock-data';
 import { CheckCircle, Loader2, MessageSquare } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 
 export default function EmployeeBDashboardPage() {
   const { user, loading } = useAuth();
@@ -20,9 +22,16 @@ export default function EmployeeBDashboardPage() {
 
   useEffect(() => {
     if (user) {
-      const userInquiries = MOCK_INQUIRIES.filter(inq => inq.assignedTo === user.id);
-      const closedInquiries = userInquiries.filter(inq => inq.status === 'closed').length;
-      setStats({ assigned: userInquiries.length, closed: closedInquiries });
+      const inquiriesRef = collection(db, 'inquiries');
+      const q = query(inquiriesRef, where("assignedTo", "==", user.id));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const userInquiries = querySnapshot.docs.map(doc => doc.data());
+          const closedInquiries = userInquiries.filter(inq => inq.status === 'closed').length;
+          setStats({ assigned: userInquiries.length, closed: closedInquiries });
+      });
+
+      return () => unsubscribe();
     }
   }, [user]);
 
