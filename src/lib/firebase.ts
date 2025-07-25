@@ -27,18 +27,31 @@ const storage = getStorage(app);
 /*
 import { collection, doc, setDoc, writeBatch } from "firebase/firestore"; 
 import { MOCK_CARS, MOCK_USERS, MOCK_BRANDS, MOCK_MODELS, MOCK_YEARS } from './mock-data';
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const populateFirestore = async () => {
     console.log("Populating Firestore with mock data...");
     try {
         const batch = writeBatch(db);
 
-        // Add users
-        MOCK_USERS.forEach(user => {
-            const { id, ...userData } = user;
-            const userRef = doc(db, "users", id);
-            batch.set(userRef, userData);
-        });
+        // Add users to Firestore and Auth
+        for (const user of MOCK_USERS) {
+            try {
+                // IMPORTANT: Use a real password for creation, or handle this securely.
+                // This is a placeholder and will fail if run directly.
+                const userCredential = await createUserWithEmailAndPassword(auth, user.email, "defaultPassword123");
+                const uid = userCredential.user.uid;
+                
+                const { id, ...userData } = user;
+                const userRef = doc(db, "users", uid);
+
+                // Use the new UID from Auth instead of the mock ID
+                batch.set(userRef, { ...userData, id: uid });
+                 console.log(`User ${user.name} created with UID: ${uid}`);
+            } catch (authError) {
+                console.error(`Error creating auth user for ${user.email}:`, authError);
+            }
+        }
 
         // Add cars
         MOCK_CARS.forEach(car => {

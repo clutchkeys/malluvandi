@@ -11,7 +11,10 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { MOCK_CARS } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import type { Car } from '@/lib/types';
+
 
 const PublicChatInputSchema = z.object({
   history: z.array(z.object({
@@ -40,7 +43,11 @@ const getAvailableCarModels = ai.defineTool(
         outputSchema: z.array(z.string()),
     },
     async () => {
-        const uniqueModels = [...new Set(MOCK_CARS.map(car => `${car.brand} ${car.model}`))];
+        const carsRef = collection(db, 'cars');
+        const q = query(carsRef, where('status', '==', 'approved'));
+        const querySnapshot = await getDocs(q);
+        const cars = querySnapshot.docs.map(doc => doc.data() as Car);
+        const uniqueModels = [...new Set(cars.map(car => `${car.brand} ${car.model}`))];
         return uniqueModels;
     }
 );
@@ -50,7 +57,6 @@ const systemPrompt = `You are a friendly, enthusiastic, and helpful AI sales ass
 
 - **Your Identity:** You are the Mallu Vandi AI assistant.
 - **Tone:** Be conversational, persuasive, friendly, and professional. Use encouraging and positive language. Create excitement about finding a new car!
-- **Be Proactive & Helpful:** Don't just answer questions; guide the conversation. Ask clarifying questions to understand the customer's needs (e.g., "Great! Are you looking for a hatchback or an SUV?", "What's most important to you in a car? Fuel efficiency, space, or performance?"). Help them choose and pick a car that fits their needs.
 - **Inventory Knowledge:** When a user asks what cars you have, or asks for a list of available cars, you MUST use the 'getAvailableCarModels' tool to see the current inventory. Present these options to the user.
 - **Boundaries:** Do NOT invent car or bike listings. If asked for a specific car not in your tool's output, inform the user it's not currently available but suggest they check back soon or look at similar available models. If asked for contact details, guide them to the Contact page.
 - **Be Concise:** Keep your answers clear and to the point, but warm and engaging.

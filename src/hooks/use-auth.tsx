@@ -4,7 +4,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { MOCK_USERS } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -22,63 +29,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate checking for a logged-in user in session storage
-    const storedUser = sessionStorage.getItem('mallu-vandi-user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in, get their details from Firestore
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+          setUser(userData);
+        } else {
+          // This case might happen if a user is in Auth but not Firestore.
+          // For now, we log them out.
+          await signOut(auth);
+          setUser(null);
+        }
+      } else {
+        // User is signed out
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, pass: string): Promise<User | null> => {
     setLoading(true);
-    // This is a mock login. In a real app, you'd call Firebase here.
-    // The password is not checked in this mock implementation.
-    const foundUser = MOCK_USERS.find(u => u.email === email);
-    
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const firebaseUser = userCredential.user;
+      
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
 
-    if (foundUser) {
-        const userWithStatus = {...foundUser, status: 'Online' as const};
-        setUser(userWithStatus);
-        sessionStorage.setItem('mallu-vandi-user', JSON.stringify(userWithStatus));
+      if (userDoc.exists()) {
+        const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+        setUser(userData);
         setLoading(false);
-        return userWithStatus;
+        return userData;
+      } else {
+         throw new Error("User data not found in Firestore.");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.error("Login Error:", error);
+      return null;
     }
-    
-    setLoading(false);
-    return null;
   };
   
   const register = async (name: string, email: string, pass: string): Promise<User | null> => {
      setLoading(true);
-     await new Promise(resolve => setTimeout(resolve, 500));
-     
-     if (MOCK_USERS.some(u => u.email === email)) {
-        setLoading(false);
-        throw new Error("An account with this email already exists.");
-     }
+     try {
+       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+       const firebaseUser = userCredential.user;
+       
+       const newUser: Omit<User, 'id'> = {
+          name,
+          email,
+          role: 'customer'
+       };
 
-     const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role: 'customer'
-     };
-     
-     // In a real app, you would add this user to your DB.
-     // For this mock, we won't permanently add them to the MOCK_USERS array.
-     setUser(newUser);
-     sessionStorage.setItem('mallu-vandi-user', JSON.stringify(newUser));
-     setLoading(false);
-     return newUser;
+       // Create a document in Firestore for the new user
+       await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+       
+       const userWithId = { id: firebaseUser.uid, ...newUser } as User;
+       setUser(userWithId);
+       setLoading(false);
+       return userWithId;
+     } catch (error: any) {
+        setLoading(false);
+        console.error("Registration Error:", error);
+        if (error.code === 'auth/email-already-in-use') {
+            throw new Error("An account with this email already exists.");
+        }
+        throw new Error("Registration failed. Please try again.");
+     }
   }
 
   const logout = async () => {
-    // In a real app, you'd make a call to your backend to set status to 'Offline'.
-    // Here we just clear the session.
+    await signOut(auth);
     setUser(null);
-    sessionStorage.removeItem('mallu-vandi-user');
     router.push('/');
   };
 
