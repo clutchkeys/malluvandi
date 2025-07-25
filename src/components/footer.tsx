@@ -1,12 +1,51 @@
 
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Twitter, Instagram, Linkedin, Phone, MapPin, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Phone, MapPin, Youtube, Loader2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
 export function Footer() {
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubscribe = async () => {
+    if (!email) {
+      toast({ title: 'Email required', description: 'Please enter your email address.', variant: 'destructive' });
+      return;
+    }
+    setIsSubscribing(true);
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({ title: 'No Account Found', description: 'No user account found with that email. Please register to subscribe.', variant: 'destructive' });
+      } else {
+        const userDoc = querySnapshot.docs[0];
+        await updateDoc(doc(db, 'users', userDoc.id), {
+          newsletterSubscribed: true
+        });
+        toast({ title: 'Subscribed!', description: 'Thank you for subscribing to our newsletter.' });
+        setEmail('');
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast({ title: 'Error', description: 'Could not process your subscription.', variant: 'destructive' });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   return (
     <footer className="bg-card text-card-foreground border-t">
       <div className="container mx-auto px-4 pt-16 pb-8">
@@ -58,8 +97,10 @@ export function Footer() {
               <h3 className="font-semibold mb-4 text-base">Subscribe to our Newsletter</h3>
               <p className="text-sm text-muted-foreground">Get the latest listings and offers delivered right to your inbox.</p>
               <div className="flex w-full max-w-sm items-center space-x-2">
-                  <Input type="email" placeholder="Email" />
-                  <Button type="submit">Subscribe</Button>
+                  <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubscribing} />
+                  <Button type="button" onClick={handleSubscribe} disabled={isSubscribing}>
+                    {isSubscribing ? <Loader2 className="animate-spin" /> : 'Subscribe'}
+                  </Button>
               </div>
           </div>
 
@@ -84,5 +125,3 @@ export function Footer() {
     </footer>
   );
 }
-
-    

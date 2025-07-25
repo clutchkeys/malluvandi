@@ -14,7 +14,7 @@ export interface User {
   id: string; // Firebase Auth UID or mock ID
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: Role;
   status?: 'Online' | 'Offline';
   attendance?: AttendanceRecord[];
@@ -29,9 +29,9 @@ export interface Car {
   model: string;
   year: number;
   price: number;
-  engineCC: number;
-  fuel: 'Petrol' | 'Diesel' | 'Electric';
-  transmission: 'Automatic' | 'Manual';
+  engineCC?: number;
+  fuel?: 'Petrol' | 'Diesel' | 'Electric';
+  transmission?: 'Automatic' | 'Manual';
   color: string;
   kmRun: number;
   ownership: number;
