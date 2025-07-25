@@ -10,6 +10,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
@@ -19,7 +22,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<User | null>;
   logout: () => Promise<void>;
-  register: (name: string, email: string, pass: string) => Promise<User | null>;
+  register: (name: string, email: string, pass: string, phone: string, subscribe: boolean) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           
         } else {
+          // This case can happen if a user is deleted from Firestore but not from Auth
           await signOut(auth);
           setUser(null);
         }
@@ -68,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, pass: string): Promise<User | null> => {
     setLoading(true);
     try {
+      // Use local persistence to keep the user logged in across sessions
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
       
@@ -93,17 +99,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  const register = async (name: string, email: string, pass: string): Promise<User | null> => {
+  const register = async (name: string, email: string, pass: string, phone: string, subscribe: boolean): Promise<User | null> => {
      setLoading(true);
      try {
+       await setPersistence(auth, browserLocalPersistence);
        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
        const firebaseUser = userCredential.user;
        
        const newUser: Omit<User, 'id'> = {
           name,
           email,
+          phone,
           role: 'customer',
-          newsletterSubscribed: false,
+          newsletterSubscribed: subscribe,
           banned: false,
        };
 

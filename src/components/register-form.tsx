@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,11 +11,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
+import { Checkbox } from './ui/checkbox';
 
 export function RegisterForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [subscribe, setSubscribe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { register } = useAuth();
@@ -29,7 +33,7 @@ export function RegisterForm() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const user = await register(name, email, password);
+      const user = await register(name, email, password, phone, subscribe);
       if (user) {
         toast({ title: 'Registration Successful', description: `Welcome, ${user.name}!` });
         router.push('/');
@@ -82,8 +86,21 @@ export function RegisterForm() {
           <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
+          <Label htmlFor="phone">Phone</Label>
+          <Input id="phone" type="tel" placeholder="e.g. 9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <div className="flex items-center space-x-2">
+            <Checkbox id="subscribe" checked={subscribe} onCheckedChange={(checked) => setSubscribe(!!checked)} />
+            <label
+            htmlFor="subscribe"
+            className="text-sm font-medium leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+            Subscribe to our newsletter for updates
+            </label>
         </div>
       </CardContent>
       <CardFooter>
