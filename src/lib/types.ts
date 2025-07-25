@@ -1,4 +1,5 @@
 
+
 export type Role = 'admin' | 'manager' | 'employee-a' | 'employee-b' | 'customer';
 
 export type CarBadge = 'price_drop' | 'new' | 'featured';
@@ -39,7 +40,7 @@ export interface Car {
   images: string[];
   status: 'pending' | 'approved' | 'rejected';
   submittedBy: string; // User ID
-  badges?: CarBadge[];
+  badges?: string[];
 }
 
 export interface Inquiry {
@@ -61,4 +62,10 @@ export interface Notification {
   recipientGroup: 'all' | 'all-staff' | 'all-customers' | 'employee-a' | 'employee-b';
   createdAt: string; // ISO 8601 date string
   createdBy: string; // User ID
+}
+
+export interface Brand {
+    id: string;
+    name: string;
+    logoUrl: string;
 }

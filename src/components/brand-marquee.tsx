@@ -2,39 +2,36 @@
 'use client';
 import Image from 'next/image';
 import { Button } from './ui/button';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+import type { Brand } from '@/lib/types';
+import React, { useState, useEffect } from 'react';
 
 interface BrandMarqueeProps {
-  brands: string[];
   onBrandClick: (brand: string) => void;
 }
 
-export function BrandMarquee({ brands, onBrandClick }: BrandMarqueeProps) {
-  const brandLogos: { [key: string]: string } = {
-    Toyota: 'https://cdn.worldvectorlogo.com/logos/toyota-1.svg',
-    BMW: 'https://cdn.worldvectorlogo.com/logos/bmw-logo.svg',
-    Mercedes: 'https://cdn.worldvectorlogo.com/logos/mercedes-benz-6.svg',
-    Maruti: 'https://cdn.worldvectorlogo.com/logos/maruti-suzuki-7.svg',
-    Kia: 'https://cdn.worldvectorlogo.com/logos/kia-2021.svg',
-    Hyundai: 'https://cdn.worldvectorlogo.com/logos/hyundai-motor-company-1.svg',
-    Honda: 'https://cdn.worldvectorlogo.com/logos/honda-9.svg',
-    MG: 'https://cdn.worldvectorlogo.com/logos/mg-motor-01.svg',
-    Skoda: 'https://cdn.worldvectorlogo.com/logos/skoda-4.svg',
-    Volkswagen: 'https://cdn.worldvectorlogo.com/logos/volkswagen-3.svg',
-    Nissan: 'https://cdn.worldvectorlogo.com/logos/nissan-5.svg',
-    Audi: 'https://cdn.worldvectorlogo.com/logos/audi-1.svg',
-  };
+export function BrandMarquee({ onBrandClick }: BrandMarqueeProps) {
+    const [brands, setBrands] = useState<Brand[]>([]);
+
+    useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'brands'), (snapshot) => {
+            setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand)));
+        });
+        return () => unsub();
+    }, []);
 
   const marqueeContent = brands.map((brand) => (
     <Button
-      key={brand}
+      key={brand.id}
       variant="ghost"
       className="flex-shrink-0 w-48 h-24 mx-4 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300"
-      onClick={() => onBrandClick(brand)}
+      onClick={() => onBrandClick(brand.name)}
     >
       <div className="relative w-32 h-16">
         <Image
-          src={brandLogos[brand] || `https://placehold.co/128x64.png?text=${brand}`}
-          alt={`${brand} logo`}
+          src={brand.logoUrl || `https://placehold.co/128x64.png?text=${brand.name}`}
+          alt={`${brand.name} logo`}
           fill
           style={{ objectFit: 'contain' }}
         />

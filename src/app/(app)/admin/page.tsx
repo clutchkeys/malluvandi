@@ -98,9 +98,10 @@ import {
   Bell,
   Ban,
   CircleOff,
-  Menu
+  Menu,
+  Image as ImageIcon
 } from 'lucide-react';
-import type { User, Role, Car as CarType, Inquiry, AttendanceRecord } from '@/lib/types';
+import type { User, Role, Car as CarType, Inquiry, AttendanceRecord, Brand } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -126,13 +127,14 @@ export default function AdminPage() {
 
   const [activeView, setActiveView] = useState('dashboard');
   const [isLoading, setIsLoading] = useState({
-      cars: true, users: true, inquiries: true, filters: true
+      cars: true, users: true, inquiries: true, filters: true, brands: true
   });
   
   // Data states
   const [carsState, setCarsState] = useState<CarType[]>([]);
   const [usersState, setUsersState] = useState<User[]>([]);
   const [inquiriesState, setInquiriesState] = useState<Inquiry[]>([]);
+  const [brandsData, setBrandsData] = useState<Brand[]>([]);
 
   // Filter options state
   const [filterCategories, setFilterCategories] = useState<{ id: string; name: string; options: string[] }[]>([]);
@@ -146,6 +148,7 @@ export default function AdminPage() {
   const [isFilterFormOpen, setIsFilterFormOpen] = useState<{type: 'category' | 'value' | 'year', isOpen: boolean}>({type: 'category', isOpen: false});
   const [isReassignInquiryOpen, setIsReassignInquiryOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string | number, description: string, categoryId?: string } | null>(null);
+  const [isBrandFormOpen, setIsBrandFormOpen] = useState(false);
 
 
   // States for editing specific items
@@ -154,6 +157,8 @@ export default function AdminPage() {
   const [filterToEdit, setFilterToEdit] = useState<{type: 'category' | 'value' | 'year', value: any, categoryId?: string} | null>(null);
   const [inquiryToReassign, setInquiryToReassign] = useState<Inquiry | null>(null);
   const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
+  const [brandToEdit, setBrandToEdit] = useState<Brand | null>(null);
+
   
   // Misc states
   const [selectedBrandForModel, setSelectedBrandForModel] = useState('');
@@ -161,7 +166,7 @@ export default function AdminPage() {
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', role: 'employee-a' },
+    defaultValues: { name: '', email: '', role: 'employee-a', performanceScore: 0 },
   });
   
   useEffect(() => {
@@ -172,7 +177,7 @@ export default function AdminPage() {
 
   // Fetch all data
   useEffect(() => {
-    setIsLoading(prev => ({...prev, cars: true, users: true, inquiries: true, filters: true }));
+    setIsLoading(prev => ({...prev, cars: true, users: true, inquiries: true, filters: true, brands: true }));
 
     const unsubCars = onSnapshot(collection(db, 'cars'), snapshot => {
         setCarsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CarType)));
@@ -201,12 +206,18 @@ export default function AdminPage() {
         }
         setIsLoading(prev => ({...prev, filters: false}));
     });
+    const unsubBrands = onSnapshot(collection(db, 'brands'), snapshot => {
+        setBrandsData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand)));
+        setIsLoading(prev => ({...prev, brands: false}));
+    });
+
     
     return () => {
         unsubCars();
         unsubUsers();
         unsubInquiries();
         unsubFilters();
+        unsubBrands();
     };
   }, []);
 
@@ -283,7 +294,7 @@ export default function AdminPage() {
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
-    const carData = {
+    const carData: Partial<CarType> = {
         brand: formValues.brand,
         model: formValues.model,
         year: parseInt(formValues.year),
@@ -296,6 +307,7 @@ export default function AdminPage() {
         ownership: parseInt(formValues.ownership),
         additionalDetails: formValues.details,
         status: formValues.status,
+        badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
     };
     
     try {
@@ -316,7 +328,7 @@ export default function AdminPage() {
         const filtersSnap = await getDoc(filtersRef);
         if (filtersSnap.exists()) {
             const filtersData = filtersSnap.data();
-            if (filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
+            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
                 filtersData.models[carData.brand].push(carData.model);
                 await updateDoc(filtersRef, { models: filtersData.models });
             }
@@ -408,6 +420,34 @@ export default function AdminPage() {
         }
     }
 
+  // Brand Management
+  const handleOpenBrandForm = (brand: Brand | null) => {
+    setBrandToEdit(brand);
+    setIsBrandFormOpen(true);
+  }
+
+  const onBrandSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const brandData = {
+        name: formData.get('name') as string,
+        logoUrl: formData.get('logoUrl') as string,
+    }
+
+    try {
+        if (brandToEdit) {
+            await updateDoc(doc(db, 'brands', brandToEdit.id), brandData);
+            toast({ title: 'Brand Updated' });
+        } else {
+            // In a real app, you might want to prevent adding duplicate brand names
+            await addDoc(collection(db, 'brands'), brandData);
+            toast({ title: 'Brand Added'});
+        }
+        setIsBrandFormOpen(false);
+    } catch(e) {
+        toast({ title: 'Error', description: 'Could not save brand.', variant: 'destructive'});
+    }
+  }
 
   // --- Generic Delete Handler ---
   const handleDelete = async () => {
@@ -422,6 +462,10 @@ export default function AdminPage() {
         if (type === 'car') {
             await deleteDoc(doc(db, 'cars', id as string));
             toast({ title: `Car Deleted` });
+        }
+        if (type === 'brand') {
+            await deleteDoc(doc(db, 'brands', id as string));
+            toast({ title: 'Brand Deleted' });
         }
         if (type === 'filterCategory' || type === 'filterValue' || type === 'filterYear') {
             const filtersRef = doc(db, 'config', 'filters');
@@ -468,6 +512,7 @@ export default function AdminPage() {
     { id: 'listings', label: 'Car Listings', icon: List },
     { id: 'inquiries', label: 'Inquiries', icon: MessageSquare },
     { id: 'users', label: 'User Management', icon: Users, managerOnly: false },
+    { id: 'brands', label: 'Brand Management', icon: ImageIcon },
     { id: 'attendance', label: 'Attendance', icon: CalendarDays, adminOnly: true },
     { id: 'employees', label: 'Employees', icon: Users, adminOnly: true },
     { id: 'notifications', label: 'Notifications', icon: Bell, adminOnly: true },
@@ -605,13 +650,18 @@ export default function AdminPage() {
                     <CardHeader className="flex-row justify-between items-center"><CardTitle>All Car Listings</CardTitle><Button onClick={() => handleOpenCarForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Car</Button></CardHeader>
                     <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Badges</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                         <TableBody>
-                        {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                        {isLoading.cars ? <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
                         carsState.map(car => (
                             <TableRow key={car.id}>
                             <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
                             <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>
+                                <div className='flex gap-1'>
+                                    {car.badges?.map(badge => <Badge key={badge} variant="secondary">{badge}</Badge>)}
+                                </div>
+                            </TableCell>
                             <TableCell><Badge variant={car.status === 'approved' ? 'default' : car.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{car.status}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenCarForm(car)}><Edit size={16}/></Button>
@@ -717,6 +767,41 @@ export default function AdminPage() {
                                 </Table>
                             </TabsContent>
                         </Tabs>
+                    </CardContent>
+                </Card>
+            )}
+
+             {activeView === 'brands' && (
+                <Card>
+                    <CardHeader className="flex-row justify-between items-center">
+                        <CardTitle>Brand Management</CardTitle>
+                        <Button onClick={() => handleOpenBrandForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Brand</Button>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Logo</TableHead>
+                                    <TableHead>Brand Name</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading.brands ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                brandsData.map(brand => (
+                                    <TableRow key={brand.id}>
+                                        <TableCell>
+                                            <Image src={brand.logoUrl || 'https://placehold.co/64x32.png'} alt={`${brand.name} logo`} width={64} height={32} className="object-contain"/>
+                                        </TableCell>
+                                        <TableCell className="font-medium">{brand.name}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenBrandForm(brand)}><Edit size={16}/></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'brand', id: brand.id, description: `This will permanently delete the brand '${brand.name}'.`})}><Trash2 size={16}/></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             )}
@@ -948,11 +1033,34 @@ export default function AdminPage() {
                     <FormFieldItem label="Ownership" name="ownership" type="number" required defaultValue={carToEdit?.ownership} />
                 </div>
                 <FormFieldItem label="Additional Details" name="details" as="textarea" placeholder="Include insurance details, challans, etc." defaultValue={carToEdit?.additionalDetails} />
+                <FormFieldItem label="Badges" name="badges" placeholder="e.g. Featured, Price Drop" defaultValue={carToEdit?.badges?.join(', ')} />
                 <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} required />
               </div>
               <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCarFormOpen(false)}>Cancel</Button><Button type="submit">Save Car</Button></DialogFooter>
             </form>
           </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isBrandFormOpen} onOpenChange={setIsBrandFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{brandToEdit ? 'Edit Brand' : 'Add Brand'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={onBrandSubmit} className="space-y-4">
+                    <div>
+                        <Label htmlFor="name">Brand Name</Label>
+                        <Input id="name" name="name" defaultValue={brandToEdit?.name} required />
+                    </div>
+                    <div>
+                        <Label htmlFor="logoUrl">Logo URL</Label>
+                        <Input id="logoUrl" name="logoUrl" defaultValue={brandToEdit?.logoUrl} required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsBrandFormOpen(false)}>Cancel</Button>
+                        <Button type="submit">Save Brand</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
         </Dialog>
 
          <Dialog open={isFilterFormOpen.isOpen} onOpenChange={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>

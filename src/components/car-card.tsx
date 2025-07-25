@@ -16,10 +16,10 @@ interface CarCardProps {
   car: Car;
 }
 
-const badgeIcons = {
-  price_drop: <TrendingDown size={14} className="mr-1"/>,
-  new: <Sparkles size={14} className="mr-1"/>,
-  featured: <Star size={14} className="mr-1"/>,
+const badgeIcons: Record<string, React.ReactNode> = {
+  'price drop': <TrendingDown size={14} className="mr-1"/>,
+  'new': <Sparkles size={14} className="mr-1"/>,
+  'featured': <Star size={14} className="mr-1"/>,
 }
 
 export function CarCard({ car }: CarCardProps) {
@@ -88,8 +88,8 @@ export function CarCard({ car }: CarCardProps) {
                 <div className="absolute top-2 left-2 flex flex-col gap-2">
                   {car.badges.map(badge => (
                     <Badge key={badge} variant="default" className="capitalize text-xs flex items-center bg-black/70 backdrop-blur-sm border-white/20">
-                      {badgeIcons[badge]}
-                      {badge.replace('_', ' ')}
+                      {badgeIcons[badge.toLowerCase()] || <Star size={14} className="mr-1"/>}
+                      {badge}
                     </Badge>
                   ))}
                 </div>

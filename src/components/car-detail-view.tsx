@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import type { Car, CarBadge } from '@/lib/types';
+import type { Car } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,10 +15,10 @@ import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sp
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 
-const badgeIcons: Record<CarBadge, React.ReactNode> = {
-  price_drop: <TrendingDown size={14} className="mr-1"/>,
-  new: <Sparkles size={14} className="mr-1"/>,
-  featured: <Star size={14} className="mr-1"/>,
+const badgeIcons: Record<string, React.ReactNode> = {
+  'price drop': <TrendingDown size={14} className="mr-1"/>,
+  'new': <Sparkles size={14} className="mr-1"/>,
+  'featured': <Star size={14} className="mr-1"/>,
 }
 
 export function CarDetailView({ car, sellerName }: { car: Car, sellerName: string }) {
@@ -49,8 +49,6 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
           color: car.color,
           kmRun: car.kmRun,
           ownership: car.ownership,
-          // Since insurance and challans are now in additional details, we can pass it here
-          // This might need adjustment based on how you want the summary to work
           insurance: car.additionalDetails, 
           challans: '',
           additionalDetails: car.additionalDetails
@@ -127,8 +125,8 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
               <div className="flex gap-2 mb-2">
                {car.badges && car.badges.map(badge => (
                   <Badge key={badge} variant="secondary" className="capitalize text-xs flex items-center">
-                    {badgeIcons[badge]}
-                    {badge.replace('_', ' ')}
+                    {badgeIcons[badge.toLowerCase()] || <Star size={14} className="mr-1"/>}
+                    {badge}
                   </Badge>
                 ))}
               </div>
