@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -30,15 +31,14 @@ export default function PrivacyPolicyPage() {
             <p>We may collect personal information from you such as your name, email address, and phone number when you register for an account or submit an inquiry. We also collect non-personal information, such as browser type and operating system, to improve our services.</p>
 
             <h2 className="text-xl font-semibold text-foreground pt-4">3. Use of Your Information</h2>
-            <p>We may use the information we collect to:
-              <ul className="list-disc pl-6 space-y-1 mt-2">
-                <li>Create and manage your account.</li>
-                <li>Facilitate the purchase and sale of vehicles.</li>
-                <li>Respond to your inquiries and offer support.</li>
-                <li>Send you promotional materials and updates.</li>
-                <li>Improve our website and services.</li>
-              </ul>
-            </p>
+            <p>We may use the information we collect to:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Create and manage your account.</li>
+              <li>Facilitate the purchase and sale of vehicles.</li>
+              <li>Respond to your inquiries and offer support.</li>
+              <li>Send you promotional materials and updates.</li>
+              <li>Improve our website and services.</li>
+            </ul>
 
             <h2 className="text-xl font-semibold text-foreground pt-4">4. Disclosure of Your Information</h2>
             <p>We do not sell, trade, or otherwise transfer to outside parties your Personally Identifiable Information unless we provide users with advance notice. This does not include website hosting partners and other parties who assist us in operating our website, so long as those parties agree to keep this information confidential.</p>
