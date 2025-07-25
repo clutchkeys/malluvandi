@@ -36,8 +36,9 @@ service cloud.firestore {
     
     // Cars Collection
     match /cars/{carId} {
-      // Any authenticated user can read any car listing
-      allow read, list: if request.auth != null;
+      // PUBLIC ACCESS: Anyone can read/list approved car listings
+      allow get, list: if resource.data.status == 'approved';
+      
       // ANY authenticated user can create a car listing
       allow create: if request.auth != null;
       
@@ -48,6 +49,9 @@ service cloud.firestore {
                     
       // Only Admins/Managers can delete
       allow delete: if request.auth != null && isStaff(request.auth.uid);
+      
+      // Allow any employee to see all cars for internal dashboards
+      allow list: if request.auth != null && isEmployee(request.auth.uid);
     }
 
     // Inquiries Collection
