@@ -15,10 +15,10 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Role } from '@/lib/types';
-import { Skeleton } from './ui/skeleton';
-import { Separator } from './ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
-import { ThemeToggle } from './theme-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 
 export function Header() {
