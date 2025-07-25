@@ -12,7 +12,6 @@ import {
   signOut,
   setPersistence,
   browserSessionPersistence,
-  browserLocalPersistence
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
@@ -43,6 +42,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (userDoc.exists()) {
                 const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
                 setUser(userData);
+                 // Defer presence system setup to after user state is set
+                if (userData.role !== 'customer') {
+                    const rtdb = getDatabase();
+                    const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
+                    onValue(ref(rtdb, '.info/connected'), (snap) => {
+                        if (snap.val() === true) {
+                            set(statusRef, 'Online');
+                        }
+                    });
+                }
             } else {
                 setUser(null);
             }
@@ -58,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, pass: string): Promise<User | null> => {
     setLoading(true);
     try {
-      // Use session persistence to log user out on session end
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
@@ -73,17 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("This account has been banned.");
         }
         
-        const rtdb = getDatabase();
-        const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
-        if(userData.role !== 'customer') {
-            await set(statusRef, 'Online');
-             onValue(ref(rtdb, '.info/connected'), (snap) => {
-                if (snap.val() === true) {
-                    set(statusRef, 'Online');
-                }
-            });
-        }
         setUser(userData);
+        // Presence update is now handled by the onAuthStateChanged listener
         return userData;
       } else {
          throw new Error("User data not found in Firestore.");
