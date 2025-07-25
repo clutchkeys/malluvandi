@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -46,10 +47,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!loading) {
         if(!user) {
             router.push('/login');
-        } else if (user.role !== 'customer' && pathname === '/my-account') {
-             router.push(roleRedirects[user.role as keyof typeof roleRedirects]);
         } else if (user.role === 'customer' && (pathname.startsWith('/employee-a') || pathname.startsWith('/employee-b') || pathname.startsWith('/admin'))) {
-            router.push('/my-account');
+            router.push('/');
         }
     }
   }, [user, loading, router, pathname]);
@@ -126,7 +125,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild><Link href="/">Public Website</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href="/my-account"><User className="mr-2 h-4 w-4" />My Account</Link></DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={logout}>
                             <LogOut className="mr-2 h-4 w-4" />
@@ -238,7 +236,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link href="/">Public Website</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/my-account"><User className="mr-2 h-4 w-4" />My Account</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />

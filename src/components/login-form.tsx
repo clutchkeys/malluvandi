@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,7 +40,7 @@ export function LoginForm() {
       const user = await login(email, password);
       if (user) {
         toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-        const redirectPath = user.role === 'customer' ? '/my-account' : roleRedirects[user.role as Exclude<Role, 'customer'>];
+        const redirectPath = user.role === 'customer' ? '/' : roleRedirects[user.role as Exclude<Role, 'customer'>];
         router.push(redirectPath);
         router.refresh(); // Force a refresh to update header state
       } else {

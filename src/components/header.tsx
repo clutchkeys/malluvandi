@@ -1,3 +1,4 @@
+
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -91,9 +92,6 @@ export function Header() {
                            <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}>Dashboard</Link>
                         </DropdownMenuItem>
                      )}
-                      <DropdownMenuItem asChild>
-                           <Link href="/my-account">My Account</Link>
-                        </DropdownMenuItem>
                      <DropdownMenuItem onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
