@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -1248,4 +1249,3 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
         </Card>
     );
 }
-
