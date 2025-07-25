@@ -30,7 +30,7 @@ service cloud.firestore {
       // Any authenticated user can create their own user document (on sign up)
       allow create: if request.auth != null && request.auth.uid == userId;
       // Users can only read or update their own data
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));
       // Only admins can delete users
       allow delete: if request.auth != null && getRole(request.auth.uid) == 'admin';
       
@@ -43,10 +43,10 @@ service cloud.firestore {
       // Anyone can read approved car listings
       allow read: if resource.data.status == 'approved';
       // Authenticated users (customers or employee-a) can create new listings
-      allow create: if request.auth != null && (getRole(request.auth.uid) == 'customer' || isEmployeeA(request.auth.uid));
+      allow create: if request.auth != null && (getRole(request.auth.uid) == 'customer' || isEmployeeA(request.auth.uid) || isStaff(request.auth.uid));
       
       // Admins/Managers can update any field
-      // Employee-A can only update listings they submitted, and only if it's not approved yet.
+      // Employee-A can only update listings they submitted
       allow update: if request.auth != null && 
                     (isStaff(request.auth.uid) || 
                     (isEmployeeA(request.auth.uid) && resource.data.submittedBy == request.auth.uid));
@@ -80,8 +80,8 @@ service cloud.firestore {
     match /config/{docId} {
       // Publicly readable config (e.g., filter options)
       allow get;
-      // Only admins can write to config
-      allow write: if request.auth != null && getRole(request.auth.uid) == 'admin';
+      // Only admins or content editors can write to config
+      allow write: if request.auth != null && (getRole(request.auth.uid) == 'admin' || isEmployeeA(request.auth.uid));
     }
   }
 }
