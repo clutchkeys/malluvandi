@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import type { Car, User } from '@/lib/types';
+import type { Car } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarDetailView } from '@/components/car-detail-view';
@@ -25,15 +25,6 @@ async function getCar(id: string): Promise<Car | null> {
       return null; // Don't show non-approved cars on public pages
     }
     return { id: carDoc.id, ...carData } as Car;
-}
-
-async function getSeller(userId: string): Promise<User | null> {
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-        return null;
-    }
-    return { id: userDoc.id, ...userDoc.data() } as User;
 }
 
 export async function generateMetadata(
@@ -63,8 +54,7 @@ export default async function CarDetailPage({ params }: { params: { id: string }
     notFound();
   }
 
-  const seller = car.submittedBy ? await getSeller(car.submittedBy) : null;
-  const sellerName = seller && seller.role !== 'customer' ? seller.name : "Mallu Vandi";
+  const sellerName = "Mallu Vandi";
 
   return (
     <div className="flex flex-col min-h-screen bg-secondary/30">
