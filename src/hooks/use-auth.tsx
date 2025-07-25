@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
+import { useToast } from './use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -61,19 +63,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
         }
       } else {
+        if(user) { // If there was a user before, but now there isn't (e.g. on refresh)
+            toast({
+                title: "Session Expired",
+                description: "For your security, you have been logged out. Please log in again.",
+            });
+        }
         setUser(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, pass: string): Promise<User | null> => {
     setLoading(true);
     try {
-      // Use local persistence to keep the user logged in across sessions
-      await setPersistence(auth, browserLocalPersistence);
+      // Use session persistence to log user out on session end
+      await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
       
@@ -102,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, pass: string, phone: string, subscribe: boolean): Promise<User | null> => {
      setLoading(true);
      try {
-       await setPersistence(auth, browserLocalPersistence);
+       await setPersistence(auth, browserSessionPersistence);
        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
        const firebaseUser = userCredential.user;
        
