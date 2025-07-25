@@ -11,6 +11,9 @@ import { AiChatPopup } from '@/components/ai-chat-popup';
 export const metadata: Metadata = {
   title: 'Mallu Vandi - AI-Powered Used Car Sales',
   description: 'Buy and sell pre-owned cars with Mallu Vandi.',
+  icons: {
+    icon: 'https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078',
+  },
 };
 
 export default function RootLayout({
