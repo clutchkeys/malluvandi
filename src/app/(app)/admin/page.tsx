@@ -294,6 +294,11 @@ export default function AdminPage() {
         additionalDetails: formValues.details,
         status: formValues.status,
     };
+
+    if (!carData.model) {
+      toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
+      return;
+    }
     
     try {
         if (carToEdit) {
@@ -864,7 +869,7 @@ export default function AdminPage() {
               <DialogHeader><DialogTitle>{carToEdit ? 'Edit Car' : 'Add Car'}</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
-                    <FormFieldItem label="Brand" name="brand" defaultValue={carToEdit?.brand} as="select" options={brandsState} onChange={e => setSelectedBrandForModel(e.target.value)} />
+                    <FormFieldItem label="Brand" name="brand" defaultValue={carToEdit?.brand} as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} />
                     <FormFieldItem label="Model" name="model" defaultValue={carToEdit?.model} as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} />
                     <FormFieldItem label="Year" name="year" type="number" defaultValue={carToEdit?.year} />
                     <FormFieldItem label="Price (₹)" name="price" type="number" defaultValue={carToEdit?.price} />
@@ -957,13 +962,22 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
     const commonProps = {id: name, name, className: "col-span-3", ...props};
     const renderField = () => {
         if (as === 'textarea') return <Textarea {...commonProps} />;
-        if (as === 'select') return (
-            <Select name={name} defaultValue={props.defaultValue as string} onValueChange={(props as any).onValueChange} disabled={props.disabled}>
+        if (as === 'select') {
+          const selectProps = props as React.SelectHTMLAttributes<HTMLSelectElement>;
+          return (
+            <Select name={name} value={selectProps.value} defaultValue={selectProps.defaultValue} onValueChange={(value) => {
+              if (selectProps.onChange) {
+                  // Create a synthetic event for compatibility if needed
+                  const event = { target: { value: value, name: name } } as React.ChangeEvent<HTMLSelectElement>;
+                  selectProps.onChange(event);
+              }
+            }} disabled={props.disabled}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>{(options || []).map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
             </Select>
         );
-        return <Input {...commonProps} />;
+      }
+      return <Input {...commonProps} />;
     };
     return (
         <div className="grid grid-cols-4 items-center gap-4">
