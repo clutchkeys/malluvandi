@@ -142,14 +142,15 @@ export default function AdminPage() {
   // Dialog/Alert states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isCarFormOpen, setIsCarFormOpen] = useState(false);
-  const [isFilterFormOpen, setIsFilterFormOpen] = useState<{type: 'category' | 'value', isOpen: boolean}>({type: 'category', isOpen: false});
+  const [isFilterFormOpen, setIsFilterFormOpen] = useState<{type: 'category' | 'value' | 'year', isOpen: boolean}>({type: 'category', isOpen: false});
   const [isReassignInquiryOpen, setIsReassignInquiryOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string, description: string, categoryId?: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string | number, description: string, categoryId?: string } | null>(null);
+
 
   // States for editing specific items
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [carToEdit, setCarToEdit] = useState<CarType | null>(null);
-  const [filterToEdit, setFilterToEdit] = useState<{type: 'category' | 'value', value: any, categoryId?: string} | null>(null);
+  const [filterToEdit, setFilterToEdit] = useState<{type: 'category' | 'value' | 'year', value: any, categoryId?: string} | null>(null);
   const [inquiryToReassign, setInquiryToReassign] = useState<Inquiry | null>(null);
   const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
   
@@ -189,7 +190,7 @@ export default function AdminPage() {
             const data = doc.data();
             setBrandsState(data.brands || []);
             setModelsState(data.models || {});
-            setYearsState(data.years || []);
+            setYearsState((data.years || []).sort((a: number, b: number) => b - a));
             const categories = (data.brands || []).map((brand: string) => ({
                 id: brand.toLowerCase(),
                 name: brand,
@@ -281,6 +282,11 @@ export default function AdminPage() {
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
+    if (!formValues.model) {
+      toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
+      return;
+    }
+
     const carData = {
         brand: formValues.brand,
         model: formValues.model,
@@ -294,11 +300,6 @@ export default function AdminPage() {
         additionalDetails: formValues.details,
         status: formValues.status,
     };
-
-    if (!carData.model) {
-      toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
-      return;
-    }
     
     try {
         if (carToEdit) {
@@ -337,7 +338,7 @@ export default function AdminPage() {
   }
 
   // --- Filter Management ---
-    const handleOpenFilterForm = (type: 'category' | 'value', value: any | null, categoryId?: string) => {
+    const handleOpenFilterForm = (type: 'category' | 'value' | 'year', value: any | null, categoryId?: string) => {
         setFilterToEdit(value ? { type, value, categoryId } : null);
         setIsFilterFormOpen({ type, isOpen: true });
     }
@@ -357,25 +358,42 @@ export default function AdminPage() {
                  if (filterToEdit) { // Edit brand
                     const oldName = (filterToEdit.value as any).name;
                     currentData.brands = currentData.brands.map((b: string) => b === oldName ? name : b);
-                    currentData.models[name] = currentData.models[oldName];
-                    delete currentData.models[oldName];
+                    if (currentData.models[oldName]) {
+                        currentData.models[name] = currentData.models[oldName];
+                        delete currentData.models[oldName];
+                    }
                 } else { // Add brand
-                    currentData.brands.push(name);
-                    currentData.models[name] = [];
+                    if (!currentData.brands.includes(name)) {
+                        currentData.brands.push(name);
+                        currentData.models[name] = [];
+                    }
                 }
             } else if (type === 'value' && filterToEdit?.categoryId) { // Model management
                 const brandName = filterToEdit.categoryId;
+                if (!currentData.models[brandName]) currentData.models[brandName] = [];
                 if (filterToEdit.value) { // Edit model
                     currentData.models[brandName] = currentData.models[brandName].map((m: string) => m === filterToEdit.value ? name : m);
                 } else { // Add model
-                    currentData.models[brandName].push(name);
+                    if (!currentData.models[brandName].includes(name)) {
+                        currentData.models[brandName].push(name);
+                    }
+                }
+            } else if (type === 'year') { // Year management
+                const yearValue = parseInt(name);
+                if (!isNaN(yearValue)) {
+                    if (!currentData.years) currentData.years = [];
+                    if (!currentData.years.includes(yearValue)) {
+                        currentData.years.push(yearValue);
+                        currentData.years.sort((a: number, b: number) => b - a);
+                    }
                 }
             }
-            await setDoc(filtersRef, currentData);
+            await setDoc(filtersRef, currentData, { merge: true });
             toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Saved`});
             setIsFilterFormOpen({ type: 'category', isOpen: false });
 
         } catch (error) {
+            console.error("Filter submit error:", error);
             toast({ title: 'Error', description: 'Could not save filter data.', variant: 'destructive'});
         }
     }
@@ -388,24 +406,28 @@ export default function AdminPage() {
     
     try {
         if (type === 'user') {
-            await deleteDoc(doc(db, 'users', id));
+            await deleteDoc(doc(db, 'users', id as string));
             toast({ title: `User Deleted`, description: "User's record has been removed." });
         }
         if (type === 'car') {
-            await deleteDoc(doc(db, 'cars', id));
+            await deleteDoc(doc(db, 'cars', id as string));
             toast({ title: `Car Deleted` });
         }
-        if (type === 'filterCategory' || type === 'filterValue') {
+        if (type === 'filterCategory' || type === 'filterValue' || type === 'filterYear') {
             const filtersRef = doc(db, 'config', 'filters');
             const currentDoc = await getDoc(filtersRef);
+            if (!currentDoc.exists()) return;
             const currentData = currentDoc.data();
             
             if (type === 'filterCategory') {
-                delete currentData?.models[id];
-                currentData!.brands = currentData!.brands.filter((b:string) => b !== id);
+                delete currentData.models[id as string];
+                currentData.brands = currentData.brands.filter((b:string) => b !== id);
             }
             if (type === 'filterValue' && categoryId) {
-                currentData!.models[categoryId] = currentData!.models[categoryId].filter((m:string) => m !== id);
+                currentData.models[categoryId] = currentData.models[categoryId].filter((m:string) => m !== id);
+            }
+            if (type === 'filterYear') {
+                currentData.years = currentData.years.filter((y: number) => y !== id);
             }
             
             await setDoc(filtersRef, currentData);
@@ -746,6 +768,7 @@ export default function AdminPage() {
                         <TabsList>
                             <TabsTrigger value="brands">Brands</TabsTrigger>
                             <TabsTrigger value="models">Models</TabsTrigger>
+                            <TabsTrigger value="years">Years</TabsTrigger>
                         </TabsList>
                          <Button size="sm" onClick={() => handleOpenFilterForm('category', null)}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Brand
@@ -774,7 +797,7 @@ export default function AdminPage() {
                                                     <TableCell>{(modelsState[brand] || []).length}</TableCell>
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" onClick={() => handleOpenFilterForm('category', {name: brand})}><Edit size={16} /></Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterCategory', id: brand, description: `This will delete the '${brand}' and all its models.` })}><Trash2 size={16} /></Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterCategory', id: brand, description: `This will delete the '${brand}' brand and all its models.` })}><Trash2 size={16} /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -790,7 +813,7 @@ export default function AdminPage() {
                                 <CardDescription>Manage models within each brand.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                {brandsState.map(brand => (
+                                {isLoading.filters ? <div className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div> : brandsState.map(brand => (
                                     <div key={brand}>
                                         <div className="flex justify-between items-center mb-2">
                                             <h3 className="font-semibold">{brand}</h3>
@@ -814,9 +837,43 @@ export default function AdminPage() {
                                                     </TableBody>
                                                 </Table>
                                             </div>
-                                        ) : <p className="text-sm text-muted-foreground text-center py-4">No models in this brand.</p>}
+                                        ) : <p className="text-sm text-muted-foreground text-center py-4">No models added for this brand yet.</p>}
                                     </div>
                                 ))}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                     <TabsContent value="years">
+                        <Card>
+                            <CardHeader className="flex flex-row justify-between items-center">
+                                <div>
+                                    <CardTitle>Year Management</CardTitle>
+                                    <CardDescription>Add or remove manufacturing years.</CardDescription>
+                                </div>
+                                 <Button size="sm" onClick={() => handleOpenFilterForm('year', null)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Year
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Year</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isLoading.filters ? <TableRow><TableCell colSpan={2} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
+                                            yearsState.map(year => (
+                                                <TableRow key={year}>
+                                                    <TableCell className="font-medium">{year}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({ type: 'filterYear', id: year, description: `This will delete the year '${year}'.` })}><Trash2 size={16} /></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                    </TableBody>
+                                </Table>
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -869,18 +926,18 @@ export default function AdminPage() {
               <DialogHeader><DialogTitle>{carToEdit ? 'Edit Car' : 'Add Car'}</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
-                    <FormFieldItem label="Brand" name="brand" defaultValue={carToEdit?.brand} as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} />
-                    <FormFieldItem label="Model" name="model" defaultValue={carToEdit?.model} as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} />
-                    <FormFieldItem label="Year" name="year" type="number" defaultValue={carToEdit?.year} />
-                    <FormFieldItem label="Price (₹)" name="price" type="number" defaultValue={carToEdit?.price} />
-                    <FormFieldItem label="KM Run" name="kmRun" type="number" defaultValue={carToEdit?.kmRun} />
-                    <FormFieldItem label="Color" name="color" defaultValue={carToEdit?.color} />
-                    <FormFieldItem label="Ownership" name="ownership" type="number" defaultValue={carToEdit?.ownership} />
-                    <FormFieldItem label="Insurance" name="insurance" defaultValue={carToEdit?.insurance} />
+                    <FormFieldItem label="Brand" name="brand" as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} required defaultValue={carToEdit?.brand} />
+                    <FormFieldItem label="Model" name="model" as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} required defaultValue={carToEdit?.model} />
+                    <FormFieldItem label="Year" name="year" type="number" required defaultValue={carToEdit?.year} />
+                    <FormFieldItem label="Price (₹)" name="price" type="number" required defaultValue={carToEdit?.price} />
+                    <FormFieldItem label="KM Run" name="kmRun" type="number" required defaultValue={carToEdit?.kmRun} />
+                    <FormFieldItem label="Color" name="color" required defaultValue={carToEdit?.color} />
+                    <FormFieldItem label="Ownership" name="ownership" type="number" required defaultValue={carToEdit?.ownership} />
+                    <FormFieldItem label="Insurance" name="insurance" required defaultValue={carToEdit?.insurance} />
                 </div>
-                 <FormFieldItem label="Challans" name="challans" defaultValue={carToEdit?.challans} />
-                <FormFieldItem label="Details" name="details" as="textarea" defaultValue={carToEdit?.additionalDetails} />
-                <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} />
+                 <FormFieldItem label="Challans" name="challans" required defaultValue={carToEdit?.challans} />
+                <FormFieldItem label="Details" name="details" as="textarea" required defaultValue={carToEdit?.additionalDetails} />
+                <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} required />
               </div>
               <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCarFormOpen(false)}>Cancel</Button><Button type="submit">Save Car</Button></DialogFooter>
             </form>
@@ -892,8 +949,8 @@ export default function AdminPage() {
                 <DialogHeader><DialogTitle>{filterToEdit ? 'Edit' : 'Add'} {isFilterFormOpen.type.charAt(0).toUpperCase() + isFilterFormOpen.type.slice(1)}</DialogTitle></DialogHeader>
                  <form className="space-y-4" onSubmit={onFilterSubmit}>
                     <div>
-                        <Label>{isFilterFormOpen.type === 'category' ? 'Brand' : 'Model'} Name</Label>
-                        <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || filterToEdit?.value || ''} required />
+                        <Label>{isFilterFormOpen.type === 'category' ? 'Brand' : isFilterFormOpen.type === 'model' ? 'Model' : 'Year'} Name</Label>
+                        <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || filterToEdit?.value || ''} required type={isFilterFormOpen.type === 'year' ? 'number' : 'text'}/>
                     </div>
                     <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>Cancel</Button><Button type="submit">Save</Button></DialogFooter>
                 </form>
@@ -961,7 +1018,7 @@ export default function AdminPage() {
 const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: string, name: string, as?: 'input' | 'textarea' | 'select', options?: any[]} & React.InputHTMLAttributes<HTMLInputElement> & React.TextareaHTMLAttributes<HTMLTextAreaElement> & React.SelectHTMLAttributes<HTMLSelectElement>) => {
     const commonProps = {id: name, name, className: "col-span-3", ...props};
     const renderField = () => {
-        if (as === 'textarea') return <Textarea {...commonProps} />;
+        if (as === 'textarea') return <Textarea {...commonProps} required />;
         if (as === 'select') {
           const selectProps = props as React.SelectHTMLAttributes<HTMLSelectElement>;
           return (
@@ -971,13 +1028,13 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
                   const event = { target: { value: value, name: name } } as React.ChangeEvent<HTMLSelectElement>;
                   selectProps.onChange(event);
               }
-            }} disabled={props.disabled}>
+            }} disabled={props.disabled} required>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>{(options || []).map(o => <SelectItem key={o} value={o}>{o.toString().charAt(0).toUpperCase() + o.toString().slice(1)}</SelectItem>)}</SelectContent>
             </Select>
         );
       }
-      return <Input {...commonProps} />;
+      return <Input {...commonProps} required />;
     };
     return (
         <div className="grid grid-cols-4 items-center gap-4">

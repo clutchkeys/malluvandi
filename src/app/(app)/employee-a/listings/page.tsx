@@ -156,6 +156,12 @@ export default function EmployeeAListingsPage() {
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
+    if (!formValues.model) {
+        toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
+        setIsSubmitting(false);
+        return;
+    }
+
     try {
       const carData: Omit<Car, 'id'> = {
           brand: selectedBrand,
