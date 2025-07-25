@@ -41,10 +41,114 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Loader2, Trash2 } from 'lucide-react';
-import type { Car } from '@/lib/types';
+import { PlusCircle, Edit, Loader2, Trash2, Upload } from 'lucide-react';
+import type { Car, User } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
+import Papa from 'papaparse';
+
+
+function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: boolean; onClose: () => void; currentUser: User | null}) {
+    const { toast } = useToast();
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+        }
+    };
+
+    const handleImport = () => {
+        if (!file || !currentUser) {
+            toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
+            return;
+        }
+        setIsProcessing(true);
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const requiredHeaders = ['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'images'];
+                const headers = results.meta.fields || [];
+                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+                if (missingHeaders.length > 0) {
+                    toast({ title: "Invalid CSV Format", description: `Missing required columns: ${missingHeaders.join(', ')}`, variant: "destructive" });
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                let count = 0;
+
+                for (const row of results.data as any[]) {
+                    try {
+                        const newCar: Omit<Car, 'id'> = {
+                            brand: row.brand,
+                            model: row.model,
+                            year: parseInt(row.year),
+                            price: parseInt(row.price),
+                            engineCC: row.engineCC ? parseInt(row.engineCC) : 0,
+                            fuel: row.fuel || 'Petrol',
+                            transmission: row.transmission || 'Manual',
+                            kmRun: parseInt(row.kmRun),
+                            color: row.color,
+                            ownership: parseInt(row.ownership),
+                            additionalDetails: row.additionalDetails || '',
+                            images: row.images.split(',').map((img: string) => img.trim()),
+                            status: 'pending',
+                            submittedBy: currentUser.id,
+                            badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
+                        };
+                        const carRef = doc(collection(db, 'cars'));
+                        batch.set(carRef, newCar);
+                        count++;
+                    } catch (e) {
+                         toast({ title: `Error in row ${count+1}`, description: `Skipping row due to invalid data.`, variant: 'destructive' });
+                    }
+                }
+                
+                try {
+                    await batch.commit();
+                    toast({ title: `Import Successful`, description: `${count} cars have been added for approval.` });
+                    onClose();
+                } catch (error) {
+                    toast({ title: `Import Failed`, description: `Could not save cars to the database.`, variant: 'destructive' });
+                }
+
+                setIsProcessing(false);
+            },
+            error: (error: any) => {
+                toast({ title: "Parsing Error", description: error.message, variant: "destructive" });
+                setIsProcessing(false);
+            }
+        });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Import Cars from CSV</DialogTitle>
+                    <DialogDescription>Upload a CSV file with car data. The file must contain the following headers: `brand,model,year,price,kmRun,color,ownership,images,engineCC,fuel,transmission,additionalDetails,badges`.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <Label htmlFor="csv-file">CSV File</Label>
+                    <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                    <Button onClick={handleImport} disabled={isProcessing}>
+                        {isProcessing ? <Loader2 className="animate-spin mr-2"/> : <Upload className="mr-2"/>}
+                        Import
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export default function EmployeeAListingsPage() {
   const { user } = useAuth();
@@ -54,6 +158,7 @@ export default function EmployeeAListingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [carToEdit, setCarToEdit] = useState<Car | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Form state
   const [selectedBrand, setSelectedBrand] = useState('');
@@ -145,7 +250,7 @@ export default function EmployeeAListingsPage() {
         throw new Error("Please add at least one image URL.");
       }
       
-      const carData = {
+      const carData: Omit<Car, 'id'> = {
           brand: selectedBrand,
           model: formValues.model,
           year: parseInt(formValues.year),
@@ -160,6 +265,7 @@ export default function EmployeeAListingsPage() {
           status: 'pending' as const,
           submittedBy: user.id,
           images: imageUrls,
+          badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
       };
 
       if (carToEdit) {
@@ -195,10 +301,13 @@ export default function EmployeeAListingsPage() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Listings</h1>
-        <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
-          <DialogTrigger asChild>
+        <div className="flex gap-2">
+            <Button onClick={() => setIsImportModalOpen(true)} variant="outline"><Upload className="mr-2 h-4 w-4"/> Import CSV</Button>
             <Button onClick={handleAddNewClick}><PlusCircle className="mr-2 h-4 w-4" /> Add New Car</Button>
-          </DialogTrigger>
+        </div>
+      </div>
+
+      <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
           <DialogContent className="sm:max-w-[625px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
@@ -268,6 +377,10 @@ export default function EmployeeAListingsPage() {
                   <Label htmlFor="details" className="text-right">Details</Label>
                   <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} placeholder="Include insurance details, challans, etc."/>
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="badges" className="text-right">Badges</Label>
+                    <Input id="badges" name="badges" className="col-span-3" defaultValue={carToEdit?.badges?.join(', ')} placeholder="e.g. Featured, Price Drop"/>
+                </div>
                 <div className="grid grid-cols-4 gap-4 items-start">
                     <Label htmlFor="images" className="text-right pt-2">Image URLs</Label>
                     <div className="col-span-3 space-y-2">
@@ -296,7 +409,7 @@ export default function EmployeeAListingsPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+
 
       <Card className="mt-4">
         <CardHeader>
@@ -344,6 +457,7 @@ export default function EmployeeAListingsPage() {
           </Table>
         </CardContent>
       </Card>
+      <ImportCarsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} currentUser={user}/>
     </>
   );
 }

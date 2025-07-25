@@ -99,7 +99,8 @@ import {
   Ban,
   CircleOff,
   Menu,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord, Brand } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -109,7 +110,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, writeBatch } from 'firebase/firestore';
+import Papa from 'papaparse';
 
 
 const userSchema = z.object({
@@ -149,6 +151,7 @@ export default function AdminPage() {
   const [isReassignInquiryOpen, setIsReassignInquiryOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string | number, description: string, categoryId?: string } | null>(null);
   const [isBrandFormOpen, setIsBrandFormOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
 
   // States for editing specific items
@@ -327,6 +330,7 @@ export default function AdminPage() {
           const newCarData = {
             ...carData,
             submittedBy: user.id,
+            status: carData.status || 'pending',
           };
           await addDoc(collection(db, 'cars'), newCarData);
           toast({ title: 'Car Added' });
@@ -667,7 +671,13 @@ export default function AdminPage() {
 
             {activeView === 'listings' && (
                 <Card>
-                    <CardHeader className="flex-row justify-between items-center"><CardTitle>All Car Listings</CardTitle><Button onClick={() => handleOpenCarForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Car</Button></CardHeader>
+                    <CardHeader className="flex-row justify-between items-center">
+                        <CardTitle>All Car Listings</CardTitle>
+                        <div className="flex gap-2">
+                           <Button onClick={() => setIsImportModalOpen(true)} variant="outline"><Upload className="mr-2 h-4 w-4"/> Import CSV</Button>
+                           <Button onClick={() => handleOpenCarForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add Car</Button>
+                        </div>
+                    </CardHeader>
                     <CardContent>
                     <Table>
                         <TableHeader><TableRow><TableHead>Car</TableHead><TableHead>Price</TableHead><TableHead>Badges</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
@@ -1165,6 +1175,7 @@ export default function AdminPage() {
                 <AlertDialogFooter><AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        <ImportCarsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} currentUser={user}/>
     </div>
   );
 }
@@ -1412,6 +1423,107 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
     );
 }
 
+function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: boolean; onClose: () => void; currentUser: User | null}) {
+    const { toast } = useToast();
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+        }
+    };
+
+    const handleImport = () => {
+        if (!file || !currentUser) {
+            toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
+            return;
+        }
+        setIsProcessing(true);
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const requiredHeaders = ['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'images'];
+                const headers = results.meta.fields || [];
+                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+                if (missingHeaders.length > 0) {
+                    toast({ title: "Invalid CSV Format", description: `Missing required columns: ${missingHeaders.join(', ')}`, variant: "destructive" });
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                let count = 0;
+
+                for (const row of results.data as any[]) {
+                    try {
+                        const newCar: Omit<CarType, 'id'> = {
+                            brand: row.brand,
+                            model: row.model,
+                            year: parseInt(row.year),
+                            price: parseInt(row.price),
+                            engineCC: row.engineCC ? parseInt(row.engineCC) : 0,
+                            fuel: row.fuel || 'Petrol',
+                            transmission: row.transmission || 'Manual',
+                            kmRun: parseInt(row.kmRun),
+                            color: row.color,
+                            ownership: parseInt(row.ownership),
+                            additionalDetails: row.additionalDetails || '',
+                            images: row.images.split(',').map((img: string) => img.trim()),
+                            status: 'pending',
+                            submittedBy: currentUser.id,
+                            badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
+                        };
+                        const carRef = doc(collection(db, 'cars'));
+                        batch.set(carRef, newCar);
+                        count++;
+                    } catch (e) {
+                         toast({ title: `Error in row ${count+1}`, description: `Skipping row due to invalid data.`, variant: 'destructive' });
+                    }
+                }
+                
+                try {
+                    await batch.commit();
+                    toast({ title: `Import Successful`, description: `${count} cars have been added for approval.` });
+                    onClose();
+                } catch (error) {
+                    toast({ title: `Import Failed`, description: `Could not save cars to the database.`, variant: 'destructive' });
+                }
+
+                setIsProcessing(false);
+            },
+            error: (error: any) => {
+                toast({ title: "Parsing Error", description: error.message, variant: "destructive" });
+                setIsProcessing(false);
+            }
+        });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Import Cars from CSV</DialogTitle>
+                    <DialogDescription>Upload a CSV file with car data. The file must contain the following headers: `brand,model,year,price,kmRun,color,ownership,images,engineCC,fuel,transmission,additionalDetails,badges`.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <Label htmlFor="csv-file">CSV File</Label>
+                    <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                    <Button onClick={handleImport} disabled={isProcessing}>
+                        {isProcessing ? <Loader2 className="animate-spin mr-2"/> : <Upload className="mr-2"/>}
+                        Import
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
     
 
     
