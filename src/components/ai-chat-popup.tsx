@@ -35,7 +35,7 @@ const ChatInterface = ({
     isMobile?: boolean;
     onClose?: () => void;
   }) => (
-     <Card className="flex flex-col shadow-2xl h-full w-full border-0 md:rounded-lg overflow-hidden">
+     <Card className="flex flex-col shadow-2xl h-full w-full border-0 md:border md:rounded-lg overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between border-b p-4 flex-shrink-0">
             <div className="flex items-center gap-2">
                 <Bot className="h-6 w-6 text-primary" />
@@ -198,5 +198,3 @@ export function AiChatPopup() {
     </>
   );
 }
-
-    
