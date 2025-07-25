@@ -163,6 +163,8 @@ export default function AdminPage() {
   // Misc states
   const [selectedBrandForModel, setSelectedBrandForModel] = useState('');
   const [formattedInquiryDate, setFormattedInquiryDate] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
@@ -284,6 +286,7 @@ export default function AdminPage() {
   const handleOpenCarForm = (car: CarType | null) => {
     setCarToEdit(car);
     setSelectedBrandForModel(car?.brand || '');
+    setImageUrls(car?.images || []);
     setIsCarFormOpen(true);
   }
 
@@ -308,7 +311,13 @@ export default function AdminPage() {
         additionalDetails: formValues.details,
         status: formValues.status,
         badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
+        images: imageUrls,
     };
+
+    if (carData.images?.length === 0) {
+        toast({ title: "Validation Error", description: "Please add at least one image URL.", variant: "destructive" });
+        return;
+    }
     
     try {
         if (carToEdit) {
@@ -318,7 +327,6 @@ export default function AdminPage() {
           const newCarData = {
             ...carData,
             submittedBy: user.id,
-            images: ['https://placehold.co/600x400.png'], // Placeholder for admin adding car
           };
           await addDoc(collection(db, 'cars'), newCarData);
           toast({ title: 'Car Added' });
@@ -328,8 +336,8 @@ export default function AdminPage() {
         const filtersSnap = await getDoc(filtersRef);
         if (filtersSnap.exists()) {
             const filtersData = filtersSnap.data();
-            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
-                filtersData.models[carData.brand].push(carData.model);
+            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model!)) {
+                filtersData.models[carData.brand].push(carData.model!);
                 await updateDoc(filtersRef, { models: filtersData.models });
             }
         }
@@ -339,6 +347,18 @@ export default function AdminPage() {
         toast({ title: 'Save Failed', description: 'Could not save car details.', variant: 'destructive'});
     }
   }
+
+  const handleAddImageUrl = () => {
+    if (imageUrl && !imageUrls.includes(imageUrl)) {
+        setImageUrls([...imageUrls, imageUrl]);
+        setImageUrl('');
+    }
+  };
+
+  const handleRemoveImageUrl = (urlToRemove: string) => {
+    setImageUrls(imageUrls.filter(url => url !== urlToRemove));
+  };
+
 
   // --- Inquiry Management ---
   const handleReassignInquiry = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1035,6 +1055,21 @@ export default function AdminPage() {
                 <FormFieldItem label="Additional Details" name="details" as="textarea" placeholder="Include insurance details, challans, etc." defaultValue={carToEdit?.additionalDetails} />
                 <FormFieldItem label="Badges" name="badges" placeholder="e.g. Featured, Price Drop" defaultValue={carToEdit?.badges?.join(', ')} />
                 <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} required />
+                <div className="space-y-2">
+                  <Label>Image URLs</Label>
+                  <div className="flex gap-2">
+                    <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.png" />
+                    <Button type="button" onClick={handleAddImageUrl}>Add</Button>
+                  </div>
+                  <div className="space-y-2">
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2 text-xs">
+                        <Input value={url} readOnly className="flex-1" />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveImageUrl(url)}><Trash2 size={16}/></Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCarFormOpen(false)}>Cancel</Button><Button type="submit">Save Car</Button></DialogFooter>
             </form>
@@ -1376,5 +1411,7 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
         </Card>
     );
 }
+
+    
 
     

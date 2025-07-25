@@ -41,12 +41,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Loader2, Trash2 } from 'lucide-react';
 import type { Car } from '@/lib/types';
-import { Progress } from '@/components/ui/progress';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 export default function EmployeeAListingsPage() {
   const { user } = useAuth();
@@ -59,9 +57,9 @@ export default function EmployeeAListingsPage() {
 
   // Form state
   const [selectedBrand, setSelectedBrand] = useState('');
-  const [imagesToUpload, setImagesToUpload] = useState<FileList | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   // Filter options
   const [carBrands, setCarBrands] = useState<string[]>([]);
@@ -106,58 +104,47 @@ export default function EmployeeAListingsPage() {
   const handleEditClick = (car: Car) => {
     setCarToEdit(car);
     setSelectedBrand(car.brand);
+    setImageUrls(car.images || []);
     setIsFormOpen(true);
   };
   
   const handleAddNewClick = () => {
     setCarToEdit(null);
     setSelectedBrand('');
+    setImageUrls([]);
     setIsFormOpen(true);
   }
 
   const handleCloseDialog = () => {
     setIsFormOpen(false);
     setCarToEdit(null);
-    setImagesToUpload(null);
-    setUploadProgress(0);
     setIsSubmitting(false);
   }
 
-  const uploadImages = async (): Promise<string[]> => {
-    if (!imagesToUpload || imagesToUpload.length === 0) return [];
-    toast({ title: 'Uploading Images...', description: 'Please wait.' });
+  const handleAddImageUrl = () => {
+    if (imageUrl && !imageUrls.includes(imageUrl)) {
+        setImageUrls([...imageUrls, imageUrl]);
+        setImageUrl('');
+    }
+  };
 
-    const urls: string[] = [];
-    const uploadPromises = Array.from(imagesToUpload).map(file => {
-      const storageRef = ref(storage, `car-images/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      return new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          snapshot => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => prev + progress / imagesToUpload.length);
-          },
-          error => reject(error),
-          () => getDownloadURL(uploadTask.snapshot.ref).then(resolve)
-        );
-      });
-    });
-
-    return await Promise.all(uploadPromises);
+  const handleRemoveImageUrl = (urlToRemove: string) => {
+    setImageUrls(imageUrls.filter(url => url !== urlToRemove));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
     setIsSubmitting(true);
-    setUploadProgress(0);
 
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
     try {
+      if (imageUrls.length === 0) {
+        throw new Error("Please add at least one image URL.");
+      }
+      
       const carData = {
           brand: selectedBrand,
           model: formValues.model,
@@ -172,20 +159,14 @@ export default function EmployeeAListingsPage() {
           additionalDetails: formValues.details,
           status: 'pending' as const,
           submittedBy: user.id,
-          images: carToEdit?.images || [], // Keep old images if editing
+          images: imageUrls,
       };
 
-      if (imagesToUpload && imagesToUpload.length > 0) {
-        const newImageUrls = await uploadImages();
-        carData.images = [...carData.images, ...newImageUrls]; // Add new images
-      }
-      
       if (carToEdit) {
         const carRef = doc(db, 'cars', carToEdit.id);
         await updateDoc(carRef, { ...carData, status: 'pending' });
         toast({ title: 'Listing Updated', description: 'Your car listing has been sent for re-approval.' });
       } else {
-        if (carData.images.length === 0) throw new Error("Please upload at least one image.");
         await addDoc(collection(db, 'cars'), carData);
         toast({ title: 'Listing Submitted', description: 'Your car listing has been sent for admin approval.' });
       }
@@ -202,10 +183,11 @@ export default function EmployeeAListingsPage() {
         }
       
       handleCloseDialog();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting car:", error);
-      toast({ title: 'Submission Failed', description: 'There was an error submitting your listing.', variant: 'destructive' });
-      setIsSubmitting(false);
+      toast({ title: 'Submission Failed', description: error.message || 'There was an error submitting your listing.', variant: 'destructive' });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -286,16 +268,23 @@ export default function EmployeeAListingsPage() {
                   <Label htmlFor="details" className="text-right">Details</Label>
                   <Textarea id="details" name="details" className="col-span-3" defaultValue={carToEdit?.additionalDetails} placeholder="Include insurance details, challans, etc."/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="images" className="text-right">Images</Label>
-                    <Input id="images" type="file" multiple className="col-span-3" onChange={(e) => setImagesToUpload(e.target.files)} accept="image/*" required={!carToEdit} />
+                <div className="grid grid-cols-4 gap-4 items-start">
+                    <Label htmlFor="images" className="text-right pt-2">Image URLs</Label>
+                    <div className="col-span-3 space-y-2">
+                        <div className="flex gap-2">
+                            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.png" />
+                            <Button type="button" onClick={handleAddImageUrl}>Add</Button>
+                        </div>
+                         <div className="space-y-2">
+                            {imageUrls.map((url, index) => (
+                            <div key={index} className="flex items-center gap-2 text-xs">
+                                <Input value={url} readOnly className="flex-1" />
+                                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveImageUrl(url)}><Trash2 size={16}/></Button>
+                            </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                {isSubmitting && uploadProgress > 0 && (
-                  <div className="col-span-4">
-                    <Progress value={uploadProgress} />
-                    <p className="text-sm text-center mt-1">Uploading...</p>
-                  </div>
-                )}
               </div>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={handleCloseDialog} disabled={isSubmitting}>Cancel</Button>
@@ -358,5 +347,7 @@ export default function EmployeeAListingsPage() {
     </>
   );
 }
+
+    
 
     
