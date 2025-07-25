@@ -71,7 +71,7 @@ export function Footer() {
           <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-1.5">
             &copy; {new Date().getFullYear()} Mallu Vandi. Powered by 
             <Link href="https://advalix.com" target="_blank" rel="noopener noreferrer" className="inline-block">
-                <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain" />
+                <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert" />
             </Link>
             and made by Alxvgh.
           </div>
