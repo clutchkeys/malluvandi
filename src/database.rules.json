@@ -24,19 +24,20 @@ service cloud.firestore {
     match /users/{userId} {
       // Any authenticated user can create their own user document (on sign up)
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Users can read/update their own data. Staff can update any user.
+      // Allow authenticated users to read any user doc (to get names, etc.)
+      // Allow users to update their own data, or staff to update any user.
       allow read, update: if request.auth != null && (request.auth.uid == userId || isStaff(request.auth.uid));
       // Only admins can delete users
       allow delete: if request.auth != null && getRole(request.auth.uid) == 'admin';
       
-      // Allow staff to list all users
-      allow list: if request.auth != null && isStaff(request.auth.uid);
+      // Allow any authenticated user to list users
+      allow list: if request.auth != null;
     }
     
     // Cars Collection
     match /cars/{carId} {
-      // Anyone can read approved car listings
-      allow read: if resource.data.status == 'approved' || (request.auth != null && isEmployee(request.auth.uid));
+      // Any authenticated user can read any car listing
+      allow read, list: if request.auth != null;
       // ANY authenticated user can create a car listing
       allow create: if request.auth != null;
       
@@ -47,9 +48,6 @@ service cloud.firestore {
                     
       // Only Admins/Managers can delete
       allow delete: if request.auth != null && isStaff(request.auth.uid);
-      
-      // Any employee can list all cars (for admin panels)
-      allow list: if request.auth != null && isEmployee(request.auth.uid);
     }
 
     // Inquiries Collection
@@ -57,17 +55,15 @@ service cloud.firestore {
         // Any authenticated user can create an inquiry
         allow create: if request.auth != null;
         
-        // Only the assigned employee-b, or a manager/admin can read/update an inquiry
-        allow read, update: if request.auth != null && 
+        // Allow any employee or staff to read/list inquiries
+        allow read, list: if request.auth != null && isEmployee(request.auth.uid);
+
+        // Only the assigned employee-b, or a manager/admin can update an inquiry
+        allow update: if request.auth != null && 
                            (resource.data.assignedTo == request.auth.uid || isStaff(request.auth.uid));
                            
         // Only managers/admins can delete
         allow delete: if request.auth != null && isStaff(request.auth.uid);
-        
-        // Employee-B can list inquiries assigned to them
-        // Admins/Managers can list all inquiries
-        allow list: if request.auth != null && 
-                    (getRole(request.auth.uid) == 'employee-b' || isStaff(request.auth.uid));
     }
     
     // Config Collection
