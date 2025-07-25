@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu,
   User,
-  Bell
+  Bell,
+  Bookmark
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -54,8 +55,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, loading, router, pathname]);
   
    useEffect(() => {
-    const currentPath = pathname.split('/').pop();
-    setActiveView(currentPath || '');
+    const pathSegments = pathname.split('/');
+    setActiveView(pathSegments[pathSegments.length - 1] || '');
   }, [pathname]);
 
   if (loading || !user) {
@@ -72,8 +73,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return <>{children}</>;
     }
   }
-
-  const navItems = {
+  
+  const employeeNavItems = {
     'employee-a': [
       { id: 'dashboard', href: '/employee-a/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
       { id: 'listings', href: '/employee-a/listings', icon: List, label: 'My Listings' },
@@ -84,63 +85,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       { id: 'inquiries', href: '/employee-b/inquiries', icon: Mail, label: 'Inquiries' },
       { id: 'notifications', href: '/employee-b/notifications', icon: Bell, label: 'Notifications' },
     ],
-     customer: [], // No sidebar for customers
   };
-
-  const currentNavItems = navItems[user.role] || [];
-
-  // If user is a customer, render a simpler layout without the sidebar
-  if (user.role === 'customer') {
-      return (
-        <>
-            <header className="flex h-16 items-center border-b px-4">
-                 <Link href="/" className="flex items-center gap-4">
-                    <Image
-                    src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
-                    alt="Mallu Vandi Logo"
-                    width={140}
-                    height={35}
-                    />
-                </Link>
-                <div className="ml-auto flex items-center gap-4">
-                     <ThemeToggle />
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button variant="secondary" size="icon" className="rounded-full">
-                            <Avatar className="h-8 w-8">
-                            <AvatarImage src={`https://i.pravatar.cc/40?u=${user?.id}`} />
-                            <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="sr-only">Toggle user menu</span>
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                        <DropdownMenuLabel className="font-normal">
-                            <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">{user.name}</p>
-                                <p className="text-xs leading-none text-muted-foreground">
-                                {user.email}
-                                </p>
-                            </div>
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild><Link href="/">Public Website</Link></DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={logout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>Logout</span>
-                        </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
-                {children}
-            </main>
-        </>
-      )
-  }
   
+  const customerNavItems = [
+    { id: 'saved-cars', href: '/my-account/saved-cars', icon: Bookmark, label: 'Saved Cars' },
+  ]
+
+  const currentNavItems = user.role === 'customer' 
+    ? customerNavItems 
+    : employeeNavItems[user.role as keyof typeof employeeNavItems] || [];
+
+
   const SideNav = () => (
      <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
         {currentNavItems.map(item => (

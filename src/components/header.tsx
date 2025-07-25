@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu, User as UserIcon, LogIn, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { LogOut, Menu, User as UserIcon, LogIn, ChevronRight, LayoutDashboard, Bookmark } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import {
   DropdownMenu,
@@ -87,11 +87,18 @@ export function Header() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                     <DropdownMenuItem asChild>
+                       <Link href="/my-account/saved-cars"><Bookmark className="mr-2 h-4 w-4" />Saved Cars</Link>
+                    </DropdownMenuItem>
                      {user.role !== 'customer' && (
-                        <DropdownMenuItem asChild>
-                           <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}>Dashboard</Link>
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]}><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link>
+                          </DropdownMenuItem>
+                        </>
                      )}
+                     <DropdownMenuSeparator />
                      <DropdownMenuItem onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
@@ -159,6 +166,9 @@ export function Header() {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-2">
+                              <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
+                                <Link href="/my-account/saved-cars" className="flex items-center justify-center gap-2"><Bookmark />Saved Cars</Link>
+                              </Button>
                             {user.role !== 'customer' && (
                                 <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
                                     <Link href={roleRedirects[user.role as Exclude<Role, 'customer'>]} className="flex items-center justify-center gap-2"><LayoutDashboard />Dashboard</Link>
