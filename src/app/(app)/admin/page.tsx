@@ -283,11 +283,6 @@ export default function AdminPage() {
     const formData = new FormData(e.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
-    if (!formValues.model) {
-      toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
-      return;
-    }
-
     const carData = {
         brand: formValues.brand,
         model: formValues.model,
@@ -315,6 +310,16 @@ export default function AdminPage() {
           };
           await addDoc(collection(db, 'cars'), newCarData);
           toast({ title: 'Car Added' });
+        }
+        // Dynamically add model to filters if it doesn't exist
+        const filtersRef = doc(db, 'config', 'filters');
+        const filtersSnap = await getDoc(filtersRef);
+        if (filtersSnap.exists()) {
+            const filtersData = filtersSnap.data();
+            if (filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
+                filtersData.models[carData.brand].push(carData.model);
+                await updateDoc(filtersRef, { models: filtersData.models });
+            }
         }
         setIsCarFormOpen(false);
     } catch (error) {
@@ -373,11 +378,14 @@ export default function AdminPage() {
             } else if (type === 'value' && filterToEdit?.categoryId) { // Model management
                 const brandName = filterToEdit.categoryId;
                 if (!currentData.models[brandName]) currentData.models[brandName] = [];
-                if (filterToEdit.value) { // Edit model
-                    currentData.models[brandName] = currentData.models[brandName].map((m: string) => m === filterToEdit.value ? name : m);
-                } else { // Add model
-                    if (!currentData.models[brandName].includes(name)) {
-                        currentData.models[brandName].push(name);
+                const modelValue = name.trim();
+                if(modelValue) {
+                   if (filterToEdit.value) { // Edit model
+                        currentData.models[brandName] = currentData.models[brandName].map((m: string) => m === filterToEdit.value ? modelValue : m);
+                    } else { // Add model
+                        if (!currentData.models[brandName].includes(modelValue)) {
+                            currentData.models[brandName].push(modelValue);
+                        }
                     }
                 }
             } else if (type === 'year') { // Year management
@@ -812,7 +820,7 @@ export default function AdminPage() {
                          <Card>
                             <CardHeader>
                                 <CardTitle>Model Management</CardTitle>
-                                <CardDescription>Manage models within each brand.</CardDescription>
+                                <CardDescription>Manage models within each brand. New models are added automatically when a new car is created.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {isLoading.filters ? <div className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div> : brandsState.map(brand => (
@@ -929,7 +937,7 @@ export default function AdminPage() {
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
                     <FormFieldItem label="Brand" name="brand" as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} required defaultValue={carToEdit?.brand} />
-                    <FormFieldItem label="Model" name="model" as="select" options={modelsState[selectedBrandForModel || carToEdit?.brand || ''] || []} disabled={!selectedBrandForModel && !carToEdit} required defaultValue={carToEdit?.model} />
+                    <FormFieldItem label="Model" name="model" required defaultValue={carToEdit?.model} />
                     <FormFieldItem label="Manufactured Year" name="year" type="number" required defaultValue={carToEdit?.year} />
                     <FormFieldItem label="Expected Price (₹)" name="price" type="number" required defaultValue={carToEdit?.price} />
                     <FormFieldItem label="Engine CC" name="engineCC" type="number" required defaultValue={carToEdit?.engineCC} />
@@ -952,7 +960,7 @@ export default function AdminPage() {
                 <DialogHeader><DialogTitle>{filterToEdit ? 'Edit' : 'Add'} {isFilterFormOpen.type.charAt(0).toUpperCase() + isFilterFormOpen.type.slice(1)}</DialogTitle></DialogHeader>
                  <form className="space-y-4" onSubmit={onFilterSubmit}>
                     <div>
-                        <Label>{isFilterFormOpen.type === 'category' ? 'Brand' : isFilterFormOpen.type === 'model' ? 'Model' : 'Year'} Name</Label>
+                        <Label>{isFilterFormOpen.type === 'category' ? 'Brand Name' : isFilterFormOpen.type === 'value' ? 'Model Name' : 'Year'}</Label>
                         <Input name="name" defaultValue={(filterToEdit?.value as any)?.name || filterToEdit?.value || ''} required type={isFilterFormOpen.type === 'year' ? 'number' : 'text'}/>
                     </div>
                     <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsFilterFormOpen({type: 'category', isOpen: false})}>Cancel</Button><Button type="submit">Save</Button></DialogFooter>
@@ -1027,7 +1035,6 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
           return (
             <Select name={name} value={selectProps.value} defaultValue={selectProps.defaultValue} onValueChange={(value) => {
               if (selectProps.onChange) {
-                  // Create a synthetic event for compatibility if needed
                   const event = { target: { value: value, name: name } } as React.ChangeEvent<HTMLSelectElement>;
                   selectProps.onChange(event);
               }
@@ -1251,3 +1258,5 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
         </Card>
     );
 }
+
+    

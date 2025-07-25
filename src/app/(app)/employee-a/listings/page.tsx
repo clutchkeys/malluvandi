@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -156,14 +157,8 @@ export default function EmployeeAListingsPage() {
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
-    if (!formValues.model) {
-        toast({ title: 'Error', description: 'Please select a car model.', variant: 'destructive'});
-        setIsSubmitting(false);
-        return;
-    }
-
     try {
-      const carData: Omit<Car, 'id'> = {
+      const carData = {
           brand: selectedBrand,
           model: formValues.model,
           year: parseInt(formValues.year),
@@ -194,6 +189,18 @@ export default function EmployeeAListingsPage() {
         await addDoc(collection(db, 'cars'), carData);
         toast({ title: 'Listing Submitted', description: 'Your car listing has been sent for admin approval.' });
       }
+      
+        // Dynamically add model to filters if it doesn't exist
+        const filtersRef = doc(db, 'config', 'filters');
+        const filtersSnap = await getDoc(filtersRef);
+        if (filtersSnap.exists()) {
+            const filtersData = filtersSnap.data();
+            if (filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
+                filtersData.models[carData.brand].push(carData.model);
+                await updateDoc(filtersRef, { models: filtersData.models });
+            }
+        }
+      
       handleCloseDialog();
     } catch (error) {
       console.error("Error submitting car:", error);
@@ -228,10 +235,7 @@ export default function EmployeeAListingsPage() {
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="model" className="text-right">Model</Label>
-                  <Select name="model" disabled={!selectedBrand} defaultValue={carToEdit?.model} required>
-                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a model" /></SelectTrigger>
-                      <SelectContent>{selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Input id="model" name="model" className="col-span-3" defaultValue={carToEdit?.model} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="year" className="text-right">Year</Label>
@@ -354,3 +358,5 @@ export default function EmployeeAListingsPage() {
     </>
   );
 }
+
+    
