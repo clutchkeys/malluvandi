@@ -68,8 +68,12 @@ export function Footer() {
         <Separator className="my-8 bg-border" />
         
         <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-          <div className="text-center text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Mallu Vandi. Powered by Advalix and made by Alxvgh.
+          <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-1.5">
+            &copy; {new Date().getFullYear()} Mallu Vandi. Powered by 
+            <Link href="https://advalix.com" target="_blank" rel="noopener noreferrer" className="inline-block">
+                <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain" />
+            </Link>
+            and made by Alxvgh.
           </div>
            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
@@ -80,5 +84,3 @@ export function Footer() {
     </footer>
   );
 }
-
-    
