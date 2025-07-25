@@ -40,14 +40,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const roleRedirects = {
       'admin': '/admin',
       'manager': '/admin',
-      'employee-a': '/employee-a',
-      'employee-b': '/employee-b',
-  }
+      'employee-a': '/employee-a/dashboard',
+      'employee-b': '/employee-b/dashboard',
+      'customer': '/my-account/saved-cars'
+  };
 
   useEffect(() => {
     if (!loading) {
         if(!user) {
             router.push('/login');
+        } else if (pathname === '/employee-a' || pathname === '/employee-b' || pathname === '/my-account') {
+             const redirectPath = roleRedirects[user.role as keyof typeof roleRedirects] || '/';
+             router.push(redirectPath);
         } else if (user.role === 'customer' && (pathname.startsWith('/employee-a') || pathname.startsWith('/employee-b') || pathname.startsWith('/admin'))) {
             router.push('/');
         }

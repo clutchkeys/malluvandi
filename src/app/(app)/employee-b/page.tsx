@@ -11,10 +11,12 @@ export default function EmployeeBPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user?.role !== 'employee-b') {
-      router.push('/');
-    } else if (!loading && user) {
+    if (!loading) {
+      if (user?.role !== 'employee-b') {
+        router.push('/');
+      } else {
         router.push('/employee-b/dashboard');
+      }
     }
   }, [user, loading, router]);
 
