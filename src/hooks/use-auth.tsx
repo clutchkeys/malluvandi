@@ -38,38 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        const rtdb = getDatabase();
-        const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
-
-        if (userDoc.exists()) {
-          const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
-          setUser(userData);
-
-          if(userData.role !== 'customer') {
-            await set(statusRef, 'Online');
-            onValue(ref(rtdb, '.info/connected'), (snap) => {
-                if (snap.val() === true) {
-                    set(statusRef, 'Online');
-                }
-            });
-          }
-          
-        } else {
-          // This case can happen if a user is deleted from Firestore but not from Auth
-          await signOut(auth);
-          setUser(null);
-        }
-      } else {
-        if(user) { // If there was a user before, but now there isn't (e.g. on refresh)
-            toast({
-                title: "Session Expired",
-                description: "For your security, you have been logged out. Please log in again.",
-            });
-        }
+        // If a user is logged in on page load, log them out for security.
+        await signOut(auth);
         setUser(null);
+        toast({
+            title: "Session Expired",
+            description: "For your security, you have been logged out. Please log in again.",
+        });
       }
       setLoading(false);
     });
@@ -94,6 +69,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userData.banned) {
           await signOut(auth);
           throw new Error("This account has been banned.");
+        }
+        
+        const rtdb = getDatabase();
+        const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
+        if(userData.role !== 'customer') {
+            await set(statusRef, 'Online');
+             onValue(ref(rtdb, '.info/connected'), (snap) => {
+                if (snap.val() === true) {
+                    set(statusRef, 'Online');
+                }
+            });
         }
         setUser(userData);
         return userData;
