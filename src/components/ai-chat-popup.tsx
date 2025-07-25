@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Loader2, MessageSquare, Send, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { publicChat } from '@/ai/flows/public-chat-flow';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ChatMessage = {
   role: 'user' | 'model';
@@ -177,6 +177,10 @@ export function AiChatPopup() {
       {/* Mobile Full-Screen Dialog */}
        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent className="md:hidden w-screen h-screen max-w-full p-0 m-0 border-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>AI Chat</DialogTitle>
+              <DialogDescription>A chat window with the Mallu Vandi AI assistant.</DialogDescription>
+            </DialogHeader>
              <ChatInterface {...chatProps} onClose={() => setIsOpen(false)}/>
           </DialogContent>
       </Dialog>
