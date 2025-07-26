@@ -1,69 +1,53 @@
 
-import React from 'react';
-import { notFound } from 'next/navigation';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { notFound, useParams } from 'next/navigation';
 import type { Car } from '@/lib/types';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarDetailView } from '@/components/car-detail-view';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import type { Metadata, ResolvingMetadata } from 'next'
+import { CarDetailSkeleton } from '@/components/car-detail-skeleton';
 
-export const dynamic = 'force-dynamic';
+export default function CarDetailPage() {
+  const [car, setCar] = useState<Car | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const params = useParams();
+  const id = params.id as string;
 
-type Props = {
-  params: { id: string }
-  searchParams: { [key: string]: string | string[] | undefined }
-}
+  useEffect(() => {
+    if (!id) {
+        setLoading(false);
+        setError(true);
+        return;
+    };
 
-async function getCar(id: string): Promise<Car | null> {
-    try {
+    const fetchCar = async () => {
+      try {
+        setLoading(true);
         const carDocRef = doc(db, 'cars', id);
         const carDoc = await getDoc(carDocRef);
 
-        if (!carDoc.exists()) {
-            return null;
+        if (!carDoc.exists() || carDoc.data().status !== 'approved') {
+          setError(true);
+        } else {
+          setCar({ id: carDoc.id, ...carDoc.data() } as Car);
         }
+      } catch (err) {
+        console.error("Error fetching car:", err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        const carData = carDoc.data();
-        // Ensure only approved cars are shown on public-facing pages
-        if (carData.status !== 'approved') {
-            return null;
-        }
-        return { id: carDoc.id, ...carData } as Car;
-    } catch (error) {
-        console.error("Failed to fetch car data during build:", error);
-        // Return null if there's an error (e.g., during build when env vars might be missing)
-        // This allows the build to succeed, and the page will be rendered dynamically on request.
-        return null;
-    }
-}
+    fetchCar();
+  }, [id]);
 
-export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const id = params.id
-  const car = await getCar(id)
- 
-  if (!car) {
-    return {
-      title: 'Car Not Found | Mallu Vandi',
-      description: 'The car you are looking for is not available or could not be found.',
-    }
-  }
- 
-  return {
-    title: `Used ${car.year} ${car.brand} ${car.model} for Sale | Mallu Vandi`,
-    description: `Check out this ${car.color} ${car.brand} ${car.model} with ${car.kmRun} km run. Inquire for the best price at Mallu Vandi, Kerala's trusted used car dealer.`,
-  }
-}
-
-
-export default async function CarDetailPage({ params }: { params: { id: string } }) {
-  const car = await getCar(params.id);
-
-  if (!car) {
+  if (error) {
     notFound();
   }
 
@@ -73,10 +57,13 @@ export default async function CarDetailPage({ params }: { params: { id: string }
     <div className="flex flex-col min-h-screen bg-secondary/30">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <CarDetailView car={car} sellerName={sellerName} />
+        {loading ? (
+            <CarDetailSkeleton />
+        ) : car ? (
+            <CarDetailView car={car} sellerName={sellerName} />
+        ) : null}
       </main>
       <Footer />
     </div>
   );
 }
-

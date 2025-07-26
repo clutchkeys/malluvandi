@@ -13,7 +13,6 @@ import { InquiryModal } from '@/components/inquiry-modal';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench, Instagram } from 'lucide-react';
-import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import Link from 'next/link';
 
@@ -24,12 +23,15 @@ const badgeIcons: Record<string, React.ReactNode> = {
 }
 
 const DetailItem = ({ icon, label, value }: {icon: React.ElementType, label: string, value: string | number | undefined | null }) => {
-    if (!value) return null;
+    if (!value && value !== 0) return null;
     const Icon = icon;
     return (
         <div className="flex items-start gap-3">
-            <Icon className="text-muted-foreground" size={20}/>
-            <p><span className="font-medium">{label}</span><br/>{value}{label === 'Kilometers' ? ' km' : ''}</p>
+            <Icon className="text-muted-foreground mt-0.5" size={18}/>
+            <div>
+                <p className="font-medium text-sm">{label}</p>
+                <p className="text-muted-foreground text-sm">{value}{label === 'Kilometers' ? ' km' : ''}</p>
+            </div>
         </div>
     );
 }
@@ -38,13 +40,11 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAdOpen, setIsAdOpen] = useState(false);
 
   useEffect(() => {
     // Track viewed car in localStorage
     try {
       const viewedCars = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
-      // Keep the list to a reasonable size, e.g., last 10 viewed
       const updatedViewedCars = [car.id, ...viewedCars.filter(id => id !== car.id)].slice(0, 10);
       localStorage.setItem('viewedCars', JSON.stringify(updatedViewedCars));
     } catch (error) {
@@ -104,8 +104,8 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                           )
                         }
                       </CarouselContent>
-                      <CarouselPrevious />
-                      <CarouselNext />
+                      <CarouselPrevious className="left-4" />
+                      <CarouselNext className="right-4" />
                   </Carousel>
               </CardContent>
           </Card>
@@ -114,7 +114,7 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
               <CardHeader>
                   <CardTitle>Specifications</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
+              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
                   <DetailItem icon={Calendar} label="Year" value={car.year} />
                   <DetailItem icon={Gauge} label="Kilometers" value={car.kmRun?.toLocaleString('en-IN')} />
                   <DetailItem icon={PaintBucket} label="Color" value={car.color} />
@@ -131,7 +131,7 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                     <CardTitle className="flex items-center gap-2"><Info /> Additional Details</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground">{car.additionalDetails}</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{car.additionalDetails}</p>
                 </CardContent>
             </Card>
           )}
