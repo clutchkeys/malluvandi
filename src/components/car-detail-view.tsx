@@ -12,9 +12,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench } from 'lucide-react';
+import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench, Instagram } from 'lucide-react';
 import { FullScreenAd } from '@/components/full-screen-ad';
 import { AdPlaceholder } from '@/components/ad-placeholder';
+import Link from 'next/link';
 
 const badgeIcons: Record<string, React.ReactNode> = {
   'price drop': <TrendingDown size={14} className="mr-1"/>,
@@ -150,10 +151,17 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
               <h1 className="font-headline text-2xl">{car.brand} {car.model}</h1>
               {car.price && <p className="text-3xl font-bold text-primary pt-1">₹{car.price.toLocaleString('en-IN')}</p>}
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-2">
                <Button className="w-full" size="lg" onClick={handleInquireClick}>
                   <Phone className="mr-2"/> Inquire Now
                </Button>
+                {car.instagramReelUrl && (
+                  <Button asChild className="w-full" size="lg" variant="outline">
+                    <Link href={car.instagramReelUrl} target="_blank" rel="noopener noreferrer">
+                      <Instagram className="mr-2" /> Watch Reel
+                    </Link>
+                  </Button>
+               )}
                {sellerName && <p className="text-xs text-center text-muted-foreground mt-2">Seller: {sellerName}</p>}
             </CardContent>
           </Card>

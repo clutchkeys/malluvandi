@@ -41,6 +41,7 @@ export interface Car {
   status: 'pending' | 'approved' | 'rejected';
   submittedBy: string; // User ID
   badges?: string[];
+  instagramReelUrl?: string;
 }
 
 export interface Inquiry {

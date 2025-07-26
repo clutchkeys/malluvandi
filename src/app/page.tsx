@@ -201,7 +201,7 @@ export default function Home() {
   const filteredCars = useMemo(() => {
     return allCars.filter(car => {
       const searchMatch = searchQuery
-        ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
+        ? `${car.brand} ${car.model} ${car.year} ${car.color} ${car.instagramReelUrl || ''}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
@@ -293,7 +293,7 @@ export default function Home() {
             <div className="mt-8 max-w-2xl mx-auto">
                 <div className="relative">
                     <Input
-                        placeholder="Search by make, model, or keyword..."
+                        placeholder="Search by make, model, or paste an IG Reel link..."
                         className="w-full text-base h-14 pl-12 pr-4 bg-white/90 text-foreground"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}

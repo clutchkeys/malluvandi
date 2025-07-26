@@ -70,6 +70,7 @@ export default function SellCarPage() {
           color: formValues.color || undefined,
           ownership: formValues.ownership ? parseInt(formValues.ownership) : undefined,
           additionalDetails: formValues.details || undefined,
+          instagramReelUrl: formValues.instagramReelUrl || undefined,
           images: [], // No images from customer
           status: 'pending' as const,
           submittedBy: user.id,
@@ -185,6 +186,10 @@ export default function SellCarPage() {
                         <div className="space-y-2">
                           <Label htmlFor="ownership">No. of Owners</Label>
                           <Input id="ownership" name="ownership" type="number" placeholder="e.g., 1" />
+                        </div>
+                         <div className="space-y-2">
+                          <Label htmlFor="instagramReelUrl">Instagram Reel URL (Optional)</Label>
+                          <Input id="instagramReelUrl" name="instagramReelUrl" placeholder="https://www.instagram.com/reel/..." />
                         </div>
                     </div>
 

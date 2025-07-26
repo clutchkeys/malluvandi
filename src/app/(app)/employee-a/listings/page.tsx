@@ -162,6 +162,7 @@ export default function EmployeeAListingsPage() {
           submittedBy: user.id,
           images: imageUrls,
           badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
+          instagramReelUrl: formValues.instagramReelUrl || undefined,
       };
 
       if (carToEdit) {
@@ -270,6 +271,10 @@ export default function EmployeeAListingsPage() {
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="badges" className="text-right">Badges</Label>
                     <Input id="badges" name="badges" className="col-span-3" defaultValue={carToEdit?.badges?.join(', ')} placeholder="e.g. Featured, Price Drop"/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="instagramReelUrl" className="text-right">Reel URL</Label>
+                    <Input id="instagramReelUrl" name="instagramReelUrl" className="col-span-3" defaultValue={carToEdit?.instagramReelUrl} placeholder="https://www.instagram.com/reel/..."/>
                 </div>
                 <div className="grid grid-cols-4 gap-4 items-start">
                     <Label htmlFor="images" className="text-right pt-2">Image URLs</Label>

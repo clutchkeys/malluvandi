@@ -314,6 +314,7 @@ export default function AdminPage() {
         additionalDetails: formValues.details,
         status: formValues.status,
         badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
+        instagramReelUrl: formValues.instagramReelUrl,
         images: imageUrls,
     };
     
@@ -1065,6 +1066,7 @@ export default function AdminPage() {
                 </div>
                 <FormFieldItem label="Additional Details" name="details" as="textarea" placeholder="Include insurance details, challans, etc." defaultValue={carToEdit?.additionalDetails} />
                 <FormFieldItem label="Badges" name="badges" placeholder="e.g. Featured, Price Drop" defaultValue={carToEdit?.badges?.join(', ')} />
+                <FormFieldItem label="Instagram Reel URL" name="instagramReelUrl" placeholder="https://www.instagram.com/reel/..." defaultValue={carToEdit?.instagramReelUrl} />
                 <FormFieldItem label="Status" name="status" as="select" defaultValue={carToEdit?.status || 'pending'} options={['pending', 'approved', 'rejected']} required />
                 <div className="space-y-2">
                   <Label>Image URLs</Label>

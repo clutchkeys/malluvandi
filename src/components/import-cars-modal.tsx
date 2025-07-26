@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,7 @@ export function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: bool
                             status: 'pending',
                             submittedBy: currentUser.id,
                             badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
+                            instagramReelUrl: row.instagramReelUrl || undefined,
                         };
 
                         if (!newCar.brand || !newCar.model) {
@@ -105,7 +107,7 @@ export function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: bool
                     <DialogTitle>Import Cars from CSV</DialogTitle>
                     <DialogDescription>
                         Upload a CSV file with car data. Required headers are `brand` and `model`. 
-                        Optional headers: `year,price,engineCC,fuel,transmission,kmRun,color,ownership,additionalDetails,images,badges`.
+                        Optional headers: `year,price,engineCC,fuel,transmission,kmRun,color,ownership,additionalDetails,images,badges,instagramReelUrl`.
                         The `images` and `badges` columns should be comma-separated values.
                     </DialogDescription>
                 </DialogHeader>
