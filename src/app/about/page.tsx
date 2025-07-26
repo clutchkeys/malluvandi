@@ -17,9 +17,8 @@ export default function AboutPage() {
               <Image 
                 src="https://placehold.co/800x400.png" 
                 alt="Our team" 
-                layout="fill" 
-                objectFit="cover" 
-                className="rounded-lg"
+                fill
+                className="rounded-lg object-cover"
                 data-ai-hint="dealership interior"
               />
             </div>

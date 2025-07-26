@@ -302,9 +302,8 @@ export default function Home() {
           <Image
             src="https://ik.imagekit.io/qctc8ch4l/WhatsApp%20Image%202025-07-25%20at%2021.25.04_3699409e.jpg?updatedAt=1753469895495"
             alt="Mallu Vandi dealership storefront"
-            layout="fill"
-            objectFit="cover"
-            className="z-0"
+            fill
+            className="z-0 object-cover"
             data-ai-hint="dealership exterior"
             priority
           />

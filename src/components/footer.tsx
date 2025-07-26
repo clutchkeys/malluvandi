@@ -120,7 +120,7 @@ export function Footer() {
           <div className="text-center sm:text-left text-sm text-muted-foreground">
              <span>&copy; {new Date().getFullYear()} Mallu Vandi. Powered by </span>
              <Link href="https://advalixcorp.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center align-middle hover:text-primary">
-                 <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert" />
+                 <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert h-auto" />
              </Link>
              <span> and made by <Link href="https://www.instagram.com/itsalxinsta/" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">Alxvgh</Link>.</span>
            </div>
