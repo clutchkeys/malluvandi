@@ -28,15 +28,15 @@ export interface Car {
   id: string;
   brand: string;
   model: string;
-  year: number;
-  price: number;
+  year?: number;
+  price?: number;
   engineCC?: number;
   fuel?: 'Petrol' | 'Diesel' | 'Electric';
   transmission?: 'Automatic' | 'Manual';
-  color: string;
-  kmRun: number;
-  ownership: number;
-  additionalDetails: string;
+  color?: string;
+  kmRun?: number;
+  ownership?: number;
+  additionalDetails?: string;
   images: string[];
   status: 'pending' | 'approved' | 'rejected';
   submittedBy: string; // User ID

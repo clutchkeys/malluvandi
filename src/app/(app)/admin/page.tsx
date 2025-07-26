@@ -111,7 +111,7 @@ import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMo
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, writeBatch } from 'firebase/firestore';
-import Papa from 'papaparse';
+import { ImportCarsModal } from '@/components/import-cars-modal';
 
 
 const userSchema = z.object({
@@ -303,26 +303,26 @@ export default function AdminPage() {
     const carData: Partial<CarType> = {
         brand: formValues.brand,
         model: formValues.model,
-        year: parseInt(formValues.year),
-        price: parseInt(formValues.price),
-        engineCC: parseInt(formValues.engineCC),
+        year: formValues.year ? parseInt(formValues.year) : undefined,
+        price: formValues.price ? parseInt(formValues.price) : undefined,
+        engineCC: formValues.engineCC ? parseInt(formValues.engineCC) : undefined,
         fuel: formValues.fuel,
         transmission: formValues.transmission,
-        kmRun: parseInt(formValues.kmRun),
+        kmRun: formValues.kmRun ? parseInt(formValues.kmRun) : undefined,
         color: formValues.color,
-        ownership: parseInt(formValues.ownership),
+        ownership: formValues.ownership ? parseInt(formValues.ownership) : undefined,
         additionalDetails: formValues.details,
         status: formValues.status,
         badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
         images: imageUrls,
     };
-
-    if (carData.images?.length === 0) {
-        toast({ title: "Validation Error", description: "Please add at least one image URL.", variant: "destructive" });
-        return;
-    }
     
     try {
+        if (!carData.brand || !carData.model) {
+            toast({ title: "Validation Error", description: "Brand and Model are required.", variant: "destructive" });
+            return;
+        }
+
         if (carToEdit) {
           await updateDoc(doc(db, 'cars', carToEdit.id), carData);
           toast({ title: 'Car Updated' });
@@ -335,13 +335,14 @@ export default function AdminPage() {
           await addDoc(collection(db, 'cars'), newCarData);
           toast({ title: 'Car Added' });
         }
+
         // Dynamically add model to filters if it doesn't exist
         const filtersRef = doc(db, 'config', 'filters');
         const filtersSnap = await getDoc(filtersRef);
         if (filtersSnap.exists()) {
             const filtersData = filtersSnap.data();
-            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model!)) {
-                filtersData.models[carData.brand].push(carData.model!);
+            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && carData.model && !filtersData.models[carData.brand].includes(carData.model)) {
+                filtersData.models[carData.brand].push(carData.model);
                 await updateDoc(filtersRef, { models: filtersData.models });
             }
         }
@@ -654,9 +655,9 @@ export default function AdminPage() {
                         {isLoading.cars ? <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow> :
                         pendingCars.length > 0 ? pendingCars.map(car => (
                             <TableRow key={car.id}>
-                            <TableCell className="font-medium"><div className="flex items-center gap-4"><Image src={car.images[0]} alt={car.model} width={64} height={48} className="rounded-md object-cover" data-ai-hint="car exterior"/><div>{car.brand} {car.model} ({car.year})<div className="text-xs text-muted-foreground">{car.color}</div></div></div></TableCell>
+                            <TableCell className="font-medium"><div className="flex items-center gap-4"><Image src={car.images[0] || 'https://placehold.co/64x48.png'} alt={car.model || 'car'} width={64} height={48} className="rounded-md object-cover" data-ai-hint="car exterior"/><div>{car.brand} {car.model} ({car.year})<div className="text-xs text-muted-foreground">{car.color}</div></div></div></TableCell>
                             <TableCell>{usersState.find(u => u.id === car.submittedBy)?.name || car.submittedBy.substring(0,5)}</TableCell>
-                            <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>{car.price ? `₹${car.price.toLocaleString('en-IN')}` : 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleApproval(car.id, 'approved')}><CheckCircle2 size={20} /></Button>
                                 <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleApproval(car.id, 'rejected')}><XCircle size={20} /></Button>
@@ -686,7 +687,7 @@ export default function AdminPage() {
                         carsState.map(car => (
                             <TableRow key={car.id}>
                             <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
-                            <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>{car.price ? `₹${car.price.toLocaleString('en-IN')}` : 'N/A'}</TableCell>
                             <TableCell>
                                 <div className='flex gap-1'>
                                     {car.badges?.map(badge => <Badge key={badge} variant="secondary">{badge}</Badge>)}
@@ -1052,15 +1053,15 @@ export default function AdminPage() {
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
                     <FormFieldItem label="Brand" name="brand" as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} required defaultValue={carToEdit?.brand} />
-                    <FormFieldItem label="Model" name="model" required defaultValue={carToEdit?.model} />
-                    <FormFieldItem label="Manufactured Year" name="year" type="number" required defaultValue={carToEdit?.year} />
-                    <FormFieldItem label="Expected Price (₹)" name="price" type="number" required defaultValue={carToEdit?.price} />
-                    <FormFieldItem label="Engine CC" name="engineCC" type="number" required defaultValue={carToEdit?.engineCC} />
-                    <FormFieldItem label="Fuel" name="fuel" as="select" options={['Petrol', 'Diesel', 'Electric']} required defaultValue={carToEdit?.fuel} />
-                    <FormFieldItem label="Transmission" name="transmission" as="select" options={['Automatic', 'Manual']} required defaultValue={carToEdit?.transmission} />
-                    <FormFieldItem label="KM Driven" name="kmRun" type="number" required defaultValue={carToEdit?.kmRun} />
-                    <FormFieldItem label="Colour" name="color" required defaultValue={carToEdit?.color} />
-                    <FormFieldItem label="Ownership" name="ownership" type="number" required defaultValue={carToEdit?.ownership} />
+                    <FormFieldItem label="Model" name="model" required as="select" options={modelsState[selectedBrandForModel] || []} defaultValue={carToEdit?.model} />
+                    <FormFieldItem label="Manufactured Year" name="year" type="number" defaultValue={carToEdit?.year} />
+                    <FormFieldItem label="Expected Price (₹)" name="price" type="number" defaultValue={carToEdit?.price} />
+                    <FormFieldItem label="Engine CC" name="engineCC" type="number" defaultValue={carToEdit?.engineCC} />
+                    <FormFieldItem label="Fuel" name="fuel" as="select" options={['Petrol', 'Diesel', 'Electric']} defaultValue={carToEdit?.fuel} />
+                    <FormFieldItem label="Transmission" name="transmission" as="select" options={['Automatic', 'Manual']} defaultValue={carToEdit?.transmission} />
+                    <FormFieldItem label="KM Driven" name="kmRun" type="number" defaultValue={carToEdit?.kmRun} />
+                    <FormFieldItem label="Colour" name="color" defaultValue={carToEdit?.color} />
+                    <FormFieldItem label="Ownership" name="ownership" type="number" defaultValue={carToEdit?.ownership} />
                 </div>
                 <FormFieldItem label="Additional Details" name="details" as="textarea" placeholder="Include insurance details, challans, etc." defaultValue={carToEdit?.additionalDetails} />
                 <FormFieldItem label="Badges" name="badges" placeholder="e.g. Featured, Price Drop" defaultValue={carToEdit?.badges?.join(', ')} />
@@ -1187,9 +1188,9 @@ const FormFieldItem = ({label, name, as = 'input', options, ...props}: {label: s
         if (as === 'select') {
           const selectProps = props as React.SelectHTMLAttributes<HTMLSelectElement>;
           return (
-            <Select name={name} value={selectProps.value} defaultValue={selectProps.defaultValue} onValueChange={(value) => {
+            <Select name={name} value={selectProps.value as string | undefined} defaultValue={selectProps.defaultValue as string | undefined} onValueChange={(value) => {
               if (selectProps.onChange) {
-                  const event = { target: { value: value, name: name } } as React.ChangeEvent<HTMLSelectElement>;
+                  const event = { target: { value: value, name: name } } as unknown as React.ChangeEvent<HTMLSelectElement>;
                   selectProps.onChange(event);
               }
             }} disabled={props.disabled} required={props.required}>
@@ -1420,108 +1421,6 @@ function NewsletterPanel({ subscribers }: { subscribers: User[]}) {
                 <Button onClick={handleSendEmail}>Send Email</Button>
             </CardFooter>
         </Card>
-    );
-}
-
-function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: boolean; onClose: () => void; currentUser: User | null}) {
-    const { toast } = useToast();
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-        }
-    };
-
-    const handleImport = () => {
-        if (!file || !currentUser) {
-            toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
-            return;
-        }
-        setIsProcessing(true);
-
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: async (results) => {
-                const requiredHeaders = ['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'images'];
-                const headers = results.meta.fields || [];
-                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-
-                if (missingHeaders.length > 0) {
-                    toast({ title: "Invalid CSV Format", description: `Missing required columns: ${missingHeaders.join(', ')}`, variant: "destructive" });
-                    setIsProcessing(false);
-                    return;
-                }
-
-                const batch = writeBatch(db);
-                let count = 0;
-
-                for (const row of results.data as any[]) {
-                    try {
-                        const newCar: Omit<CarType, 'id'> = {
-                            brand: row.brand,
-                            model: row.model,
-                            year: parseInt(row.year),
-                            price: parseInt(row.price),
-                            engineCC: row.engineCC ? parseInt(row.engineCC) : 0,
-                            fuel: row.fuel || 'Petrol',
-                            transmission: row.transmission || 'Manual',
-                            kmRun: parseInt(row.kmRun),
-                            color: row.color,
-                            ownership: parseInt(row.ownership),
-                            additionalDetails: row.additionalDetails || '',
-                            images: row.images.split(',').map((img: string) => img.trim()),
-                            status: 'pending',
-                            submittedBy: currentUser.id,
-                            badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
-                        };
-                        const carRef = doc(collection(db, 'cars'));
-                        batch.set(carRef, newCar);
-                        count++;
-                    } catch (e) {
-                         toast({ title: `Error in row ${count+1}`, description: `Skipping row due to invalid data.`, variant: 'destructive' });
-                    }
-                }
-                
-                try {
-                    await batch.commit();
-                    toast({ title: `Import Successful`, description: `${count} cars have been added for approval.` });
-                    onClose();
-                } catch (error) {
-                    toast({ title: `Import Failed`, description: `Could not save cars to the database.`, variant: 'destructive' });
-                }
-
-                setIsProcessing(false);
-            },
-            error: (error: any) => {
-                toast({ title: "Parsing Error", description: error.message, variant: "destructive" });
-                setIsProcessing(false);
-            }
-        });
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Import Cars from CSV</DialogTitle>
-                    <DialogDescription>Upload a CSV file with car data. The file must contain the following headers: `brand,model,year,price,kmRun,color,ownership,images,engineCC,fuel,transmission,additionalDetails,badges`.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <Label htmlFor="csv-file">CSV File</Label>
-                    <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-                    <Button onClick={handleImport} disabled={isProcessing}>
-                        {isProcessing ? <Loader2 className="animate-spin mr-2"/> : <Upload className="mr-2"/>}
-                        Import
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     );
 }
     

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -25,29 +26,21 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Car, ShieldCheck, Upload } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import Link from 'next/link';
-import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db } from '@/lib/firebase';
+import { addDoc, collection } from 'firebase/firestore';
+import type { Car as CarType } from '@/lib/types';
+
 
 export default function SellCarPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
-  // Form state
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [imagesToUpload, setImagesToUpload] = useState<FileList | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-
-  // Filter options from mock
-  const [carBrands, setCarBrands] = useState<string[]>([]);
-  const [carModels, setCarModels] = useState<{[key: string]: string[]}>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -55,86 +48,29 @@ export default function SellCarPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    const fetchFilters = async () => {
-        const configRef = doc(db, "config", "filters");
-        const configSnap = await getDoc(configRef);
-        if (configSnap.exists()) {
-            const configData = configSnap.data();
-            setCarBrands(configData.brands || []);
-            setCarModels(configData.models || {});
-        }
-    };
-    fetchFilters();
-  }, []);
-
-  const uploadImages = async (): Promise<string[]> => {
-    if (!imagesToUpload || imagesToUpload.length === 0) return [];
-
-    const urls: string[] = [];
-    const uploadPromises: Promise<void>[] = [];
-    let totalUploaded = 0;
-
-    Array.from(imagesToUpload).forEach(file => {
-      const storageRef = ref(storage, `car-images/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      const promise = new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            // Individual progress can be tracked here if needed
-          },
-          (error) => {
-            console.error("Upload failed", error);
-            reject(error);
-          },
-          async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            urls.push(downloadURL);
-            totalUploaded++;
-            setUploadProgress((totalUploaded / imagesToUpload.length) * 100);
-            resolve();
-          }
-        );
-      });
-      uploadPromises.push(promise);
-    });
-
-    await Promise.all(uploadPromises);
-    return urls;
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !imagesToUpload) return;
+    if (!user) return;
     setIsSubmitting(true);
-    setUploadProgress(0);
 
     const formData = new FormData(event.currentTarget);
     const formValues = Object.fromEntries(formData.entries()) as any;
     
     try {
-      toast({ title: 'Uploading Images...', description: 'Please wait while we upload your car photos.'});
-      const imageUrls = await uploadImages();
-      
-      if (imageUrls.length === 0) {
-        throw new Error("Image upload failed.");
-      }
-
-      const carData = {
-          brand: selectedBrand,
+      const carData: Partial<Omit<CarType, 'id'>> = {
+          brand: formValues.brand,
           model: formValues.model,
-          year: parseInt(formValues.year),
-          price: parseInt(formValues.price),
-          engineCC: parseInt(formValues.engineCC),
-          fuel: formValues.fuel,
-          transmission: formValues.transmission,
-          kmRun: parseInt(formValues.kmRun),
-          color: formValues.color,
-          ownership: parseInt(formValues.ownership),
-          additionalDetails: formValues.details,
-          images: imageUrls,
+          year: formValues.year ? parseInt(formValues.year) : undefined,
+          price: formValues.price ? parseInt(formValues.price) : undefined,
+          engineCC: formValues.engineCC ? parseInt(formValues.engineCC) : undefined,
+          fuel: formValues.fuel || undefined,
+          transmission: formValues.transmission || undefined,
+          kmRun: formValues.kmRun ? parseInt(formValues.kmRun) : undefined,
+          color: formValues.color || undefined,
+          ownership: formValues.ownership ? parseInt(formValues.ownership) : undefined,
+          additionalDetails: formValues.details || undefined,
+          images: [], // No images from customer
           status: 'pending' as const,
           submittedBy: user.id,
       };
@@ -148,7 +84,6 @@ export default function SellCarPage() {
       toast({ title: 'Submission Failed', description: 'There was an error submitting your listing.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
-      setUploadProgress(0);
     }
   };
   
@@ -200,41 +135,27 @@ export default function SellCarPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="brand">Brand</Label>
-                          <Select name="brand" onValueChange={setSelectedBrand} required>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a brand" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {carBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
+                          <Input id="brand" name="brand" placeholder="e.g., Maruti Suzuki" required />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="model">Model</Label>
-                          <Select name="model" disabled={!selectedBrand} required>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a model" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
+                           <Label htmlFor="model">Model</Label>
+                           <Input id="model" name="model" placeholder="e.g., Swift" required />
                         </div>
                          <div className="space-y-2">
                           <Label htmlFor="year">Manufactured Year</Label>
-                          <Input id="year" name="year" type="number" placeholder="e.g., 2022" required />
+                          <Input id="year" name="year" type="number" placeholder="e.g., 2022" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="price">Expected Price (₹)</Label>
-                          <Input id="price" name="price" type="number" placeholder="e.g., 750000" required />
+                          <Input id="price" name="price" type="number" placeholder="e.g., 750000" />
                         </div>
                          <div className="space-y-2">
                           <Label htmlFor="engineCC">Engine CC</Label>
-                          <Input id="engineCC" name="engineCC" type="number" placeholder="e.g., 1197" required />
+                          <Input id="engineCC" name="engineCC" type="number" placeholder="e.g., 1197" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="fuel">Fuel</Label>
-                           <Select name="fuel" required>
+                           <Select name="fuel">
                               <SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Petrol">Petrol</SelectItem>
@@ -245,7 +166,7 @@ export default function SellCarPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="transmission">Transmission</Label>
-                           <Select name="transmission" required>
+                           <Select name="transmission">
                               <SelectTrigger><SelectValue placeholder="Select transmission" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Automatic">Automatic</SelectItem>
@@ -255,15 +176,15 @@ export default function SellCarPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="kmRun">KM Driven</Label>
-                          <Input id="kmRun" name="kmRun" type="number" placeholder="e.g., 15000" required />
+                          <Input id="kmRun" name="kmRun" type="number" placeholder="e.g., 15000" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="color">Colour</Label>
-                          <Input id="color" name="color" placeholder="e.g., Red" required />
+                          <Input id="color" name="color" placeholder="e.g., Red" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="ownership">No. of Owners</Label>
-                          <Input id="ownership" name="ownership" type="number" placeholder="e.g., 1" required />
+                          <Input id="ownership" name="ownership" type="number" placeholder="e.g., 1" />
                         </div>
                     </div>
 
@@ -271,18 +192,8 @@ export default function SellCarPage() {
                       <Label htmlFor="details">Additional Details</Label>
                       <Textarea id="details" name="details" placeholder="Include insurance details, any pending challans, car's condition, features, or any other relevant information."/>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="images">Upload Images (select multiple)</Label>
-                        <Input id="images" type="file" multiple onChange={(e) => setImagesToUpload(e.target.files)} required accept="image/*" />
-                    </div>
-                    {isSubmitting && (
-                      <div>
-                        <Progress value={uploadProgress} className="h-2"/>
-                        <p className="text-sm text-center mt-1 text-muted-foreground">Uploading...</p>
-                      </div>
-                    )}
                   </div>
-                  <CardFooter className="mt-6">
+                  <CardFooter className="mt-6 px-0">
                     <Button type="submit" disabled={isSubmitting} size="lg">
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Submit for Approval

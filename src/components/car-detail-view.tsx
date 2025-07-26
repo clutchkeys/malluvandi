@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,17 @@ const badgeIcons: Record<string, React.ReactNode> = {
   'price drop': <TrendingDown size={14} className="mr-1"/>,
   'new': <Sparkles size={14} className="mr-1"/>,
   'featured': <Star size={14} className="mr-1"/>,
+}
+
+const DetailItem = ({ icon, label, value }: {icon: React.ElementType, label: string, value: string | number | undefined | null }) => {
+    if (!value) return null;
+    const Icon = icon;
+    return (
+        <div className="flex items-start gap-3">
+            <Icon className="text-muted-foreground" size={20}/>
+            <p><span className="font-medium">{label}</span><br/>{value}{label === 'Kilometers' ? ' km' : ''}</p>
+        </div>
+    );
 }
 
 export function CarDetailView({ car, sellerName }: { car: Car, sellerName: string }) {
@@ -42,18 +54,7 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
   useEffect(() => {
     if (car) {
       setIsSummaryLoading(true);
-      const carSummaryData = {
-          brand: car.brand,
-          model: car.model,
-          year: car.year,
-          color: car.color,
-          kmRun: car.kmRun,
-          ownership: car.ownership,
-          insurance: car.additionalDetails, 
-          challans: '',
-          additionalDetails: car.additionalDetails
-      };
-      summarizeCarDetails(carSummaryData)
+      summarizeCarDetails(car)
         .then(result => setSummary(result.summary))
         .catch(err => {
           console.error(err);
@@ -75,7 +76,7 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
               <CardContent className="p-4">
                    <Carousel className="w-full">
                       <CarouselContent>
-                          {car.images.map((img, index) => (
+                          {car.images && car.images.length > 0 ? car.images.map((img, index) => (
                           <CarouselItem key={index}>
                               <div className="relative aspect-video">
                               <Image
@@ -87,7 +88,20 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                               />
                               </div>
                           </CarouselItem>
-                          ))}
+                          )) : (
+                            <CarouselItem>
+                                 <div className="relative aspect-video">
+                                    <Image
+                                        src={'https://placehold.co/800x450.png'}
+                                        alt={`${car.brand} ${car.model}`}
+                                        fill
+                                        className="rounded-lg object-cover"
+                                        data-ai-hint="car detail placeholder"
+                                    />
+                                </div>
+                            </CarouselItem>
+                          )
+                        }
                       </CarouselContent>
                       <CarouselPrevious />
                       <CarouselNext />
@@ -100,23 +114,26 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                   <CardTitle>Specifications</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
-                  <div className="flex items-start gap-3"><Calendar className="text-muted-foreground" size={20}/><p><span className="font-medium">Year</span><br/>{car.year}</p></div>
-                  <div className="flex items-start gap-3"><Gauge className="text-muted-foreground" size={20}/><p><span className="font-medium">Kilometers</span><br/>{car.kmRun.toLocaleString('en-IN')} km</p></div>
-                  <div className="flex items-start gap-3"><PaintBucket className="text-muted-foreground" size={20}/><p><span className="font-medium">Color</span><br/>{car.color}</p></div>
-                  <div className="flex items-start gap-3"><Users className="text-muted-foreground" size={20}/><p><span className="font-medium">Ownership</span><br/>{car.ownership} {car.ownership > 1 ? 'Owners' : 'Owner'}</p></div>
-                  <div className="flex items-start gap-3"><Cog className="text-muted-foreground" size={20}/><p><span className="font-medium">Engine</span><br/>{car.engineCC} CC</p></div>
-                  <div className="flex items-start gap-3"><Wrench className="text-muted-foreground" size={20}/><p><span className="font-medium">Transmission</span><br/>{car.transmission}</p></div>
+                  <DetailItem icon={Calendar} label="Year" value={car.year} />
+                  <DetailItem icon={Gauge} label="Kilometers" value={car.kmRun?.toLocaleString('en-IN')} />
+                  <DetailItem icon={PaintBucket} label="Color" value={car.color} />
+                  <DetailItem icon={Users} label="Ownership" value={car.ownership ? `${car.ownership} ${car.ownership > 1 ? 'Owners' : 'Owner'}`: null} />
+                  <DetailItem icon={Cog} label="Engine" value={car.engineCC ? `${car.engineCC} CC` : null} />
+                  <DetailItem icon={Wrench} label="Transmission" value={car.transmission} />
+                  <DetailItem icon={Info} label="Fuel" value={car.fuel} />
               </CardContent>
           </Card>
 
-          <Card className="mt-8">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Info /> Additional Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <p className="text-muted-foreground">{car.additionalDetails}</p>
-              </CardContent>
-          </Card>
+          {car.additionalDetails && (
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Info /> Additional Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">{car.additionalDetails}</p>
+                </CardContent>
+            </Card>
+          )}
 
         </div>
         <div className="md:col-span-1 space-y-6">
@@ -131,7 +148,7 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                 ))}
               </div>
               <h1 className="font-headline text-2xl">{car.brand} {car.model}</h1>
-              <p className="text-3xl font-bold text-primary pt-1">₹{car.price.toLocaleString('en-IN')}</p>
+              {car.price && <p className="text-3xl font-bold text-primary pt-1">₹{car.price.toLocaleString('en-IN')}</p>}
             </CardHeader>
             <CardContent>
                <Button className="w-full" size="lg" onClick={handleInquireClick}>

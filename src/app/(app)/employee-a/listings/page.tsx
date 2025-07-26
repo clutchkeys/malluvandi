@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,111 +43,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Loader2, Trash2, Upload } from 'lucide-react';
 import type { Car, User } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
-import Papa from 'papaparse';
-
-
-function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: boolean; onClose: () => void; currentUser: User | null}) {
-    const { toast } = useToast();
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-        }
-    };
-
-    const handleImport = () => {
-        if (!file || !currentUser) {
-            toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
-            return;
-        }
-        setIsProcessing(true);
-
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: async (results) => {
-                const requiredHeaders = ['brand', 'model', 'year', 'price', 'kmRun', 'color', 'ownership', 'images'];
-                const headers = results.meta.fields || [];
-                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-
-                if (missingHeaders.length > 0) {
-                    toast({ title: "Invalid CSV Format", description: `Missing required columns: ${missingHeaders.join(', ')}`, variant: "destructive" });
-                    setIsProcessing(false);
-                    return;
-                }
-
-                const batch = writeBatch(db);
-                let count = 0;
-
-                for (const row of results.data as any[]) {
-                    try {
-                        const newCar: Omit<Car, 'id'> = {
-                            brand: row.brand,
-                            model: row.model,
-                            year: parseInt(row.year),
-                            price: parseInt(row.price),
-                            engineCC: row.engineCC ? parseInt(row.engineCC) : 0,
-                            fuel: row.fuel || 'Petrol',
-                            transmission: row.transmission || 'Manual',
-                            kmRun: parseInt(row.kmRun),
-                            color: row.color,
-                            ownership: parseInt(row.ownership),
-                            additionalDetails: row.additionalDetails || '',
-                            images: row.images.split(',').map((img: string) => img.trim()),
-                            status: 'pending',
-                            submittedBy: currentUser.id,
-                            badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
-                        };
-                        const carRef = doc(collection(db, 'cars'));
-                        batch.set(carRef, newCar);
-                        count++;
-                    } catch (e) {
-                         toast({ title: `Error in row ${count+1}`, description: `Skipping row due to invalid data.`, variant: 'destructive' });
-                    }
-                }
-                
-                try {
-                    await batch.commit();
-                    toast({ title: `Import Successful`, description: `${count} cars have been added for approval.` });
-                    onClose();
-                } catch (error) {
-                    toast({ title: `Import Failed`, description: `Could not save cars to the database.`, variant: 'destructive' });
-                }
-
-                setIsProcessing(false);
-            },
-            error: (error: any) => {
-                toast({ title: "Parsing Error", description: error.message, variant: "destructive" });
-                setIsProcessing(false);
-            }
-        });
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Import Cars from CSV</DialogTitle>
-                    <DialogDescription>Upload a CSV file with car data. The file must contain the following headers: `brand,model,year,price,kmRun,color,ownership,images,engineCC,fuel,transmission,additionalDetails,badges`.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <Label htmlFor="csv-file">CSV File</Label>
-                    <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-                    <Button onClick={handleImport} disabled={isProcessing}>
-                        {isProcessing ? <Loader2 className="animate-spin mr-2"/> : <Upload className="mr-2"/>}
-                        Import
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { ImportCarsModal } from '@/components/import-cars-modal';
 
 export default function EmployeeAListingsPage() {
   const { user } = useAuth();
@@ -246,22 +142,22 @@ export default function EmployeeAListingsPage() {
     const formValues = Object.fromEntries(formData.entries()) as any;
     
     try {
-      if (imageUrls.length === 0) {
-        throw new Error("Please add at least one image URL.");
+      if (!selectedBrand || !formValues.model) {
+        throw new Error("Brand and Model are required fields.");
       }
       
-      const carData: Omit<Car, 'id'> = {
+      const carData: Partial<Omit<Car, 'id'>> = {
           brand: selectedBrand,
           model: formValues.model,
-          year: parseInt(formValues.year),
-          price: parseInt(formValues.price),
-          engineCC: parseInt(formValues.engineCC),
-          fuel: formValues.fuel,
-          transmission: formValues.transmission,
-          kmRun: parseInt(formValues.kmRun),
-          color: formValues.color,
-          ownership: parseInt(formValues.ownership),
-          additionalDetails: formValues.details,
+          year: formValues.year ? parseInt(formValues.year) : undefined,
+          price: formValues.price ? parseInt(formValues.price) : undefined,
+          engineCC: formValues.engineCC ? parseInt(formValues.engineCC) : undefined,
+          fuel: formValues.fuel || undefined,
+          transmission: formValues.transmission || undefined,
+          kmRun: formValues.kmRun ? parseInt(formValues.kmRun) : undefined,
+          color: formValues.color || undefined,
+          ownership: formValues.ownership ? parseInt(formValues.ownership) : undefined,
+          additionalDetails: formValues.details || undefined,
           status: 'pending' as const,
           submittedBy: user.id,
           images: imageUrls,
@@ -276,17 +172,6 @@ export default function EmployeeAListingsPage() {
         await addDoc(collection(db, 'cars'), carData);
         toast({ title: 'Listing Submitted', description: 'Your car listing has been sent for admin approval.' });
       }
-      
-        // Dynamically add model to filters if it doesn't exist
-        const filtersRef = doc(db, 'config', 'filters');
-        const filtersSnap = await getDoc(filtersRef);
-        if (filtersSnap.exists()) {
-            const filtersData = filtersSnap.data();
-            if (filtersData.models && filtersData.models[carData.brand] && !filtersData.models[carData.brand].includes(carData.model)) {
-                filtersData.models[carData.brand].push(carData.model);
-                await updateDoc(filtersRef, { models: filtersData.models });
-            }
-        }
       
       handleCloseDialog();
     } catch (error: any) {
@@ -313,7 +198,7 @@ export default function EmployeeAListingsPage() {
               <DialogHeader>
                 <DialogTitle>{carToEdit ? 'Edit Car' : 'Add New Car'}</DialogTitle>
                 <DialogDescription>
-                  Fill in the details of the car. It will be sent for admin approval.
+                  Fill in the details of the car. It will be sent for admin approval. Brand and Model are required.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
@@ -326,23 +211,28 @@ export default function EmployeeAListingsPage() {
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="model" className="text-right">Model</Label>
-                  <Input id="model" name="model" className="col-span-3" defaultValue={carToEdit?.model} required />
+                   <Select name="model" disabled={!selectedBrand} defaultValue={carToEdit?.model} required>
+                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a model" /></SelectTrigger>
+                      <SelectContent>
+                          {selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="year" className="text-right">Year</Label>
-                  <Input id="year" name="year" type="number" className="col-span-3" defaultValue={carToEdit?.year} required />
+                  <Input id="year" name="year" type="number" className="col-span-3" defaultValue={carToEdit?.year} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="price" className="text-right">Price (₹)</Label>
-                  <Input id="price" name="price" type="number" className="col-span-3" defaultValue={carToEdit?.price} required />
+                  <Input id="price" name="price" type="number" className="col-span-3" defaultValue={carToEdit?.price} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="engineCC" className="text-right">Engine CC</Label>
-                  <Input id="engineCC" name="engineCC" type="number" className="col-span-3" defaultValue={carToEdit?.engineCC} required />
+                  <Input id="engineCC" name="engineCC" type="number" className="col-span-3" defaultValue={carToEdit?.engineCC} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="fuel" className="text-right">Fuel</Label>
-                   <Select name="fuel" defaultValue={carToEdit?.fuel} required>
+                   <Select name="fuel" defaultValue={carToEdit?.fuel}>
                       <SelectTrigger className="col-span-3"><SelectValue placeholder="Select fuel type" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Petrol">Petrol</SelectItem>
@@ -353,7 +243,7 @@ export default function EmployeeAListingsPage() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="transmission" className="text-right">Transmission</Label>
-                   <Select name="transmission" defaultValue={carToEdit?.transmission} required>
+                   <Select name="transmission" defaultValue={carToEdit?.transmission}>
                       <SelectTrigger className="col-span-3"><SelectValue placeholder="Select transmission" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Automatic">Automatic</SelectItem>
@@ -363,15 +253,15 @@ export default function EmployeeAListingsPage() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="kmRun" className="text-right">KM Run</Label>
-                  <Input id="kmRun" name="kmRun" type="number" className="col-span-3" defaultValue={carToEdit?.kmRun} required />
+                  <Input id="kmRun" name="kmRun" type="number" className="col-span-3" defaultValue={carToEdit?.kmRun} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="color" className="text-right">Color</Label>
-                  <Input id="color" name="color" className="col-span-3" defaultValue={carToEdit?.color} required />
+                  <Input id="color" name="color" className="col-span-3" defaultValue={carToEdit?.color} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="ownership" className="text-right">Ownership</Label>
-                  <Input id="ownership" name="ownership" type="number" className="col-span-3" defaultValue={carToEdit?.ownership} required />
+                  <Input id="ownership" name="ownership" type="number" className="col-span-3" defaultValue={carToEdit?.ownership} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="details" className="text-right">Details</Label>
@@ -437,7 +327,7 @@ export default function EmployeeAListingsPage() {
                 cars.map(car => (
                   <TableRow key={car.id}>
                     <TableCell className="font-medium">{car.brand} {car.model} ({car.year})</TableCell>
-                    <TableCell>₹{car.price.toLocaleString('en-IN')}</TableCell>
+                    <TableCell>{car.price ? `₹${car.price.toLocaleString('en-IN')}`: 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(car.status)} className="capitalize">{car.status}</Badge>
                     </TableCell>
@@ -461,7 +351,3 @@ export default function EmployeeAListingsPage() {
     </>
   );
 }
-
-    
-
-    
