@@ -56,7 +56,32 @@ export default function Home() {
         setIsLoading(true);
         setUserLocation('Ernakulam');
         setTempLocation('Ernakulam');
-        
+
+        const cacheKey = 'malluVandiCarData';
+        const cacheDuration = 15 * 60 * 1000; // 15 minutes
+
+        try {
+            const cachedItem = localStorage.getItem(cacheKey);
+            if (cachedItem) {
+                const { timestamp, data } = JSON.parse(cachedItem);
+                if (Date.now() - timestamp < cacheDuration) {
+                    console.log("Loading data from cache.");
+                    setAllCars(data.allCars);
+                    setPopularBrands(data.popularBrands);
+                    setBrands(data.brands);
+                    setModels(data.models);
+                    setYears(data.years);
+                    setIsLoading(false);
+                    // Still fetch recommendations as they are user-specific
+                    fetchRecommendations(data.allCars);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Could not read from cache", error);
+        }
+
+        console.log("Fetching fresh data from Firestore.");
         // Fetch cars
         const carsRef = collection(db, 'cars');
         const q = query(carsRef, where('status', '==', 'approved'));
@@ -72,47 +97,66 @@ export default function Home() {
         const sortedBrands = Object.entries(brandCounts)
             .sort(([,a],[,b]) => b - a)
             .map(([brand]) => brand);
-        setPopularBrands(sortedBrands.slice(0, 4));
+        const popularBrandsData = sortedBrands.slice(0, 4);
+        setPopularBrands(popularBrandsData);
 
         // Fetch filter configs
         const configRef = doc(db, "config", "filters");
         const configSnap = await getDoc(configRef);
+        let brandsData: string[] = [];
+        let modelsData: { [key: string]: string[] } = {};
+        let yearsData: number[] = [];
         if (configSnap.exists()) {
             const configData = configSnap.data();
-            setBrands(configData.brands || []);
-            setModels(configData.models || {});
-            setYears(configData.years || []);
+            brandsData = configData.brands || [];
+            modelsData = configData.models || {};
+            yearsData = configData.years || [];
+            setBrands(brandsData);
+            setModels(modelsData);
+            setYears(yearsData);
+        }
+        
+        try {
+            const dataToCache = {
+                allCars: carsData,
+                popularBrands: popularBrandsData,
+                brands: brandsData,
+                models: modelsData,
+                years: yearsData,
+            };
+            const cacheItem = {
+                timestamp: Date.now(),
+                data: dataToCache
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
+        } catch (error) {
+            console.error("Could not write to cache", error);
         }
 
-        // Recommendation logic
-        try {
+        // Recommendation logic (can be a separate non-cached function)
+        fetchRecommendations(carsData);
+        setIsLoading(false);
+    };
+
+    const fetchRecommendations = async (allCarsData: Car[]) => {
+       try {
             const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
             if (viewedCarIds.length > 0) {
                 const lastViewedId = viewedCarIds[0];
-                const lastViewedCarDoc = await getDoc(doc(db, 'cars', lastViewedId));
+                const lastViewedCar = allCarsData.find(c => c.id === lastViewedId);
 
-                if (lastViewedCarDoc.exists()) {
-                    const lastViewedCar = { id: lastViewedCarDoc.id, ...lastViewedCarDoc.data() } as Car;
-                    const recommendationsQuery = query(
-                        carsRef,
-                        where('status', '==', 'approved'),
-                        where('brand', '==', lastViewedCar.brand),
-                        limit(5) // Fetch 5 potential matches
-                    );
-                    const recommendationsSnapshot = await getDocs(recommendationsQuery);
-                    const recommendationsData = recommendationsSnapshot.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() } as Car))
-                        .filter(c => c.id !== lastViewedId && !viewedCarIds.includes(c.id)) // Filter out already seen
-                        .slice(0, 4); // Take the first 4 unique ones
+                if (lastViewedCar) {
+                    const recommendationsData = allCarsData
+                        .filter(c => c.brand === lastViewedCar.brand && c.id !== lastViewedId && !viewedCarIds.includes(c.id))
+                        .slice(0, 4);
                     setRecommendedCars(recommendationsData);
                 }
             }
         } catch (error) {
             console.error("Could not get recommendations:", error);
         }
+    }
 
-        setIsLoading(false);
-    };
     fetchData();
   }, []);
 
@@ -380,4 +424,5 @@ export default function Home() {
       </Dialog>
     </div>
   );
-}
+
+    
