@@ -35,6 +35,7 @@ export default function Home() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(userLocation);
   const [recommendedCars, setRecommendedCars] = useState<Car[]>([]);
+  const [popularBrands, setPopularBrands] = useState<string[]>([]);
 
   // Filter options state
   const [brands, setBrands] = useState<string[]>([]);
@@ -62,6 +63,16 @@ export default function Home() {
         const querySnapshot = await getDocs(q);
         const carsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
         setAllCars(carsData);
+
+        // Calculate popular brands
+        const brandCounts: { [key: string]: number } = {};
+        for (const car of carsData) {
+            brandCounts[car.brand] = (brandCounts[car.brand] || 0) + 1;
+        }
+        const sortedBrands = Object.entries(brandCounts)
+            .sort(([,a],[,b]) => b - a)
+            .map(([brand]) => brand);
+        setPopularBrands(sortedBrands.slice(0, 4));
 
         // Fetch filter configs
         const configRef = doc(db, "config", "filters");
@@ -117,6 +128,11 @@ export default function Home() {
       document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  const handlePopularTagClick = (brand: string) => {
+    setSelectedBrands([brand]);
+    document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleBodyTypeChange = (type: string) => {
     setSelectedBodyTypes(prev =>
@@ -242,8 +258,8 @@ export default function Home() {
                 </div>
                  <div className="mt-4 flex flex-wrap justify-center items-center gap-2">
                     <span className="text-sm font-medium mr-2">Popular:</span>
-                    {['Maruti Suzuki', 'Hyundai', 'SUV', 'Sedan'].map(tag => (
-                        <Button key={tag} size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full text-xs h-7 px-3">
+                    {popularBrands.map(tag => (
+                        <Button key={tag} size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full text-xs h-7 px-3" onClick={() => handlePopularTagClick(tag)}>
                             {tag}
                         </Button>
                     ))}
@@ -365,5 +381,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
