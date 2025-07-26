@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -30,14 +31,13 @@ export default function TermsOfServicePage() {
             <p>When you create an account with us, you must provide information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Site.</p>
 
             <h2 className="text-xl font-semibold text-foreground pt-4">3. Prohibited Activities</h2>
-            <p>You may not access or use the Site for any purpose other than that for which we make the Site available. Prohibited activity includes, but is not limited to:
+            <p>You may not access or use the Site for any purpose other than that for which we make the Site available. Prohibited activity includes, but is not limited to:</p>
               <ul className="list-disc pl-6 space-y-1 mt-2">
                 <li>Engaging in any automated use of the system, such as using scripts to send comments or messages.</li>
                 <li>Interfering with, disrupting, or creating an undue burden on the Site or the networks or services connected to the Site.</li>
                 <li>Attempting to impersonate another user or person.</li>
                 <li>Using any information obtained from the Site in order to harass, abuse, or harm another person.</li>
               </ul>
-            </p>
             
             <h2 className="text-xl font-semibold text-foreground pt-4">4. Intellectual Property</h2>
             <p>The Site and its original content, features, and functionality are and will remain the exclusive property of Mallu Vandi and its licensors. The Site is protected by copyright, trademark, and other laws of both the country and foreign countries.</p>
