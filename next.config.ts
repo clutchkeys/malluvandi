@@ -46,7 +46,13 @@ const nextConfig: NextConfig = {
         hostname: 'uploads.vw-mms.de',
         port: '',
         pathname: '/**',
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.onlycars.co.za',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
