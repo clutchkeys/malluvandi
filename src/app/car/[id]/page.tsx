@@ -17,16 +17,26 @@ type Props = {
 }
 
 async function getCar(id: string): Promise<Car | null> {
-    const carDocRef = doc(db, 'cars', id);
-    const carDoc = await getDoc(carDocRef);
-    if (!carDoc.exists()) {
+    try {
+        const carDocRef = doc(db, 'cars', id);
+        const carDoc = await getDoc(carDocRef);
+
+        if (!carDoc.exists()) {
+            return null;
+        }
+
+        const carData = carDoc.data();
+        // Ensure only approved cars are shown on public-facing pages
+        if (carData.status !== 'approved') {
+            return null;
+        }
+        return { id: carDoc.id, ...carData } as Car;
+    } catch (error) {
+        console.error("Failed to fetch car data during build:", error);
+        // Return null if there's an error (e.g., during build when env vars might be missing)
+        // This allows the build to succeed, and the page will be rendered dynamically on request.
         return null;
     }
-    const carData = carDoc.data();
-    if (carData.status !== 'approved') {
-      return null; // Don't show non-approved cars on public pages
-    }
-    return { id: carDoc.id, ...carData } as Car;
 }
 
 export async function generateMetadata(
@@ -38,7 +48,8 @@ export async function generateMetadata(
  
   if (!car) {
     return {
-      title: 'Car Not Found',
+      title: 'Car Not Found | Mallu Vandi',
+      description: 'The car you are looking for is not available or could not be found.',
     }
   }
  
@@ -68,3 +79,4 @@ export default async function CarDetailPage({ params }: { params: { id: string }
     </div>
   );
 }
+
