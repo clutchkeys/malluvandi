@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
         hostname: 'i.pinimg.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'uploads.vw-mms.de',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
