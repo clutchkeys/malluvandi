@@ -294,7 +294,7 @@ export default function Home() {
                 <div className="relative">
                     <Input
                         placeholder="Search by make, model, or paste an IG Reel link..."
-                        className="w-full text-base h-14 pl-12 pr-4 bg-white/90 text-foreground"
+                        className="w-full text-base h-14 pl-12 pr-4 bg-background text-foreground"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                     />
@@ -426,3 +426,4 @@ export default function Home() {
   );
 
     
+
