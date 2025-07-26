@@ -9,6 +9,8 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Metadata, ResolvingMetadata } from 'next'
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: { id: string }
   searchParams: { [key: string]: string | string[] | undefined }
