@@ -83,8 +83,8 @@ export function Footer() {
           <div className="space-y-2">
             <h3 className="font-semibold mb-4 text-base">Get in Touch</h3>
             <ul className="space-y-4 text-sm text-muted-foreground">
-              <li className="flex items-start gap-3"><MapPin size={16} className="mt-1 shrink-0 text-primary" /> <span>123 Car Street, Kochi, Kerala, 682001</span></li>
-              <li className="flex items-center gap-3"><Phone size={14} className="shrink-0 text-primary" /> <a href="tel:9633377313" className="hover:text-primary transition-colors">9633377313</a></li>
+              <li className="flex items-start gap-3"><MapPin size={16} className="mt-1 shrink-0 text-primary" /> <span>Pullikal, Malapuram, Kerala, 673637</span></li>
+              <li className="flex items-center gap-3"><Phone size={14} className="shrink-0 text-primary" /> <a href="tel:9847916352" className="hover:text-primary transition-colors">98479 16352</a></li>
             </ul>
              <div className="flex space-x-2 pt-2">
                 <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary"><Facebook size={20} /></Button>
