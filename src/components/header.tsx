@@ -143,11 +143,8 @@ export function Header() {
                 <NotificationsDropdown />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                        <Avatar>
-                            <AvatarImage src={`https://i.pravatar.cc/40?u=${user.id}`} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
+                    <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
+                       <UserIcon />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>

@@ -100,7 +100,8 @@ import {
   CircleOff,
   Menu,
   Image as ImageIcon,
-  Upload
+  Upload,
+  User as UserIcon
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord, Brand } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -604,10 +605,7 @@ export default function AdminPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
-                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={`https://i.pravatar.cc/40?u=${user?.id}`} />
-                  <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserIcon className="h-5 w-5" />
                 <span className="sr-only">Toggle user menu</span>
               </Button>
             </DropdownMenuTrigger>
