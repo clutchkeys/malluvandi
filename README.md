@@ -75,7 +75,7 @@ This project requires a Firebase project to handle authentication, data storage,
 
 ### 4. Configure Environment Variables
 
-Create a file named `.env` in the root of the project and add your Firebase configuration details:
+Create a file named `.env.local` in the root of the project and add your Firebase configuration details:
 
 ```env
 # Firebase Public Config
@@ -102,7 +102,7 @@ The application will be available at `http://localhost:9002`.
 
 This project is configured for easy deployment on platforms like Vercel or Netlify.
 
-- **Environment Variables**: Ensure you add all the `.env` variables from the previous step to your hosting provider's environment variable settings.
+- **Environment Variables**: **IMPORTANT!** You must add all the environment variables from the previous step to your hosting provider's project settings. The `.env.local` file is not uploaded during deployment.
 - **Build Command**: `npm run build`
 - **Publish Directory**: `.next`
 
