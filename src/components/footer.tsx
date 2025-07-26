@@ -114,10 +114,10 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-y-4 sm:gap-y-0">
           <div className="text-center sm:text-left text-sm text-muted-foreground">
              <span>&copy; {new Date().getFullYear()} Mallu Vandi. Powered by </span>
-             <Link href="https://advalix.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center align-middle hover:text-primary">
+             <Link href="https://advalixcorp.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center align-middle hover:text-primary">
                  <Image src="https://ik.imagekit.io/qctc8ch4l/advalixnew_zl_QmfPfa?updatedAt=1751042510689" alt="Advalix Logo" width={60} height={15} className="object-contain dark:invert" />
              </Link>
-             <span> and made by Alxvgh.</span>
+             <span> and made by <Link href="https://www.instagram.com/itsalxinsta/" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">Alxvgh</Link>.</span>
            </div>
            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
