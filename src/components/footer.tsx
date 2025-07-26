@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Twitter, Instagram, Linkedin, Phone, MapPin, Youtube, Loader2 } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Phone, MapPin, Youtube, Loader2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -87,10 +87,15 @@ export function Footer() {
               <li className="flex items-center gap-3"><Phone size={14} className="shrink-0 text-primary" /> <a href="tel:9847916352" className="hover:text-primary transition-colors">98479 16352</a></li>
             </ul>
              <div className="flex space-x-2 pt-2">
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary"><Facebook size={20} /></Button>
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary"><Twitter size={20} /></Button>
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary"><Instagram size={20} /></Button>
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary"><Youtube size={20} /></Button>
+                <Button asChild size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <a href="https://m.facebook.com/malluvandis/" target="_blank" rel="noopener noreferrer"><Facebook size={20} /></a>
+                </Button>
+                <Button asChild size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <a href="https://www.instagram.com/malluvandis" target="_blank" rel="noopener noreferrer"><Instagram size={20} /></a>
+                </Button>
+                <Button asChild size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <a href="https://www.youtube.com/@malluvandikerala" target="_blank" rel="noopener noreferrer"><Youtube size={20} /></a>
+                </Button>
             </div>
           </div>
           
