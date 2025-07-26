@@ -42,7 +42,7 @@ export function LoginForm() {
       const user = await login(email, password);
       if (user) {
         toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-        const redirectPath = redirectUrl || (user.role === 'customer' ? '/' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
+        const redirectPath = redirectUrl || (user.role === 'customer' ? '/dashboard' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
         router.push(redirectPath);
         router.refresh();
       }

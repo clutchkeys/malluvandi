@@ -1,10 +1,11 @@
+
 'use client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export default function AppPage() {
+export default function DashboardPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
