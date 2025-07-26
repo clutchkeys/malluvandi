@@ -17,11 +17,16 @@ const firebaseConfig: FirebaseOptions = {
 // Initialize Firebase
 const app = !getApps().length && firebaseConfig.apiKey 
   ? initializeApp(firebaseConfig) 
-  : getApp();
+  : getApps().length > 0 ? getApp() : null;
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const rtdb = getDatabase(app);
-const storage = getStorage(app);
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const rtdb = app ? getDatabase(app) : null;
+const storage = app ? getStorage(app) : null;
+
+if (!app) {
+    console.warn("Firebase not initialized. Ensure environment variables are set.");
+}
+
 
 export { app, auth, db, rtdb, storage };

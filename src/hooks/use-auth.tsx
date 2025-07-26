@@ -133,8 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        } else {
            // For staff creation, we sign out the temporary session to avoid auto-logging in as the new user.
            // The admin remains logged in with their own credentials.
-           await signOut(auth);
-           // We re-authenticate the admin silently in a real scenario, but for now, we assume the admin's session is managed.
+           if (auth.currentUser?.email !== email) {
+            await signOut(auth);
+           }
        }
        
        return userWithId;
