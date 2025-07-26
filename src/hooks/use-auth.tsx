@@ -51,8 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (userDoc.exists()) {
                 const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
                 setUser(userData);
-                 // Defer presence system setup to after user state is set
-                if (userData.role !== 'customer') {
+                
+                // Only run presence system on the client side
+                if (typeof window !== 'undefined' && userData.role !== 'customer') {
                     const rtdb = getDatabase();
                     const statusRef = ref(rtdb, `users/${firebaseUser.uid}/status`);
                     onValue(ref(rtdb, '.info/connected'), (snap) => {
