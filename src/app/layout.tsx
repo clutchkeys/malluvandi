@@ -12,9 +12,6 @@ export const metadata: Metadata = {
   title: 'Mallu Vandi - Trusted Used Cars in Kerala',
   description: 'Buy and sell top-quality, certified pre-owned cars in Kerala. Explore hundreds of listings for Swift, Creta, Nexon, and more with Mallu Vandi, your trusted used car marketplace.',
   keywords: ['used cars kerala', 'second hand cars kochi', 'pre-owned cars', 'mallu vandi', 'buy used car', 'sell used car', 'used car dealership'],
-  icons: {
-    icon: 'https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078',
-  },
 };
 
 export default function RootLayout({
