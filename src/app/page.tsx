@@ -202,21 +202,24 @@ export default function Home() {
   const filteredCars = useMemo(() => {
     const isInstagramSearch = searchQuery.trim().startsWith('https://www.instagram.com/');
     
-    // A function to normalize Instagram URLs for comparison (removes query params and trailing slashes)
-    const normalizeInstaUrl = (url: string | undefined): string => {
-        if (!url) return '';
+    const getInstagramIdFromUrl = (url: string | undefined): string | null => {
+        if (!url) return null;
         try {
-            const urlObj = new URL(url);
-            return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`.replace(/\/$/, '');
+            const path = new URL(url).pathname;
+            const segments = path.split('/').filter(Boolean); // e.g., ['p', 'Cz...'] or ['reel', 'Cz...']
+            if ((segments[0] === 'p' || segments[0] === 'reel') && segments[1]) {
+                return segments[1];
+            }
+            return null;
         } catch (e) {
-            // Fallback for invalid URLs, though shouldn't happen with the prefix check
-            return url.split('?')[0].replace(/\/$/, '');
+            return null; // Invalid URL
         }
     };
 
     if (isInstagramSearch) {
-        const normalizedSearchUrl = normalizeInstaUrl(searchQuery);
-        return allCars.filter(car => normalizeInstaUrl(car.instagramReelUrl) === normalizedSearchUrl);
+        const searchId = getInstagramIdFromUrl(searchQuery);
+        if (!searchId) return allCars; // Fallback to showing all if URL is invalid
+        return allCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
     }
     
     return allCars.filter(car => {
@@ -226,7 +229,7 @@ export default function Home() {
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
-      const kmMatch = car.kmRun ? car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1] : true;
+      const kmMatch = car.kmRun ? car.kmRun >= kmRange[0] && car.kmRun <= priceRange[1] : true;
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
@@ -446,5 +449,6 @@ export default function Home() {
   );
 
     
+
 
 
