@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -199,14 +200,33 @@ export default function Home() {
   }
 
   const filteredCars = useMemo(() => {
+    const isInstagramSearch = searchQuery.trim().startsWith('https://www.instagram.com/');
+    
+    // A function to normalize Instagram URLs for comparison (removes query params and trailing slashes)
+    const normalizeInstaUrl = (url: string | undefined): string => {
+        if (!url) return '';
+        try {
+            const urlObj = new URL(url);
+            return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`.replace(/\/$/, '');
+        } catch (e) {
+            // Fallback for invalid URLs, though shouldn't happen with the prefix check
+            return url.split('?')[0].replace(/\/$/, '');
+        }
+    };
+
+    if (isInstagramSearch) {
+        const normalizedSearchUrl = normalizeInstaUrl(searchQuery);
+        return allCars.filter(car => normalizeInstaUrl(car.instagramReelUrl) === normalizedSearchUrl);
+    }
+    
     return allCars.filter(car => {
       const searchMatch = searchQuery
-        ? `${car.brand} ${car.model} ${car.year} ${car.color} ${car.instagramReelUrl || ''}`.toLowerCase().includes(searchQuery.toLowerCase())
+        ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
-      const yearMatch = selectedYear ? car.year.toString() === selectedYear : true;
-      const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
-      const kmMatch = car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
+      const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
+      const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
+      const kmMatch = car.kmRun ? car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1] : true;
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
@@ -426,4 +446,5 @@ export default function Home() {
   );
 
     
+
 
