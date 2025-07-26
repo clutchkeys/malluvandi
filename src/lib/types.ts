@@ -36,6 +36,8 @@ export interface Car {
   color?: string;
   kmRun?: number;
   ownership?: number;
+  insurance?: string;
+  challans?: string;
   additionalDetails?: string;
   images: string[];
   status: 'pending' | 'approved' | 'rejected';
