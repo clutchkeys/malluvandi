@@ -124,7 +124,7 @@ const userSchema = z.object({
 });
 
 export default function AdminPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -261,18 +261,22 @@ export default function AdminPage() {
   }
   
   const onUserSubmit = async (values: z.infer<typeof userSchema>) => {
-    if (userToEdit) {
-        const userRef = doc(db, 'users', userToEdit.id);
-        try {
-            await updateDoc(userRef, {
-                role: values.role,
-                performanceScore: values.role.startsWith('employee') ? values.performanceScore : undefined
-            });
-            toast({ title: 'User Updated' });
-            setIsUserFormOpen(false);
-        } catch(e) {
-            toast({ title: 'Error', description: 'Could not update user.', variant: 'destructive'});
-        }
+    try {
+      if (userToEdit) {
+          const userRef = doc(db, 'users', userToEdit.id);
+          await updateDoc(userRef, {
+              role: values.role,
+              performanceScore: values.role.startsWith('employee') ? values.performanceScore : undefined
+          });
+          toast({ title: 'User Updated' });
+      } else {
+          // This uses the 'register' function which now supports creating any user type
+          await register(values.name, values.email, Math.random().toString(36).slice(-8), '', false, values.role);
+          toast({ title: 'User Created', description: 'User has been created with a temporary password.' });
+      }
+      setIsUserFormOpen(false);
+    } catch(e: any) {
+        toast({ title: 'Error', description: e.message || 'Could not save user.', variant: 'destructive'});
     }
   };
 
@@ -737,9 +741,12 @@ export default function AdminPage() {
 
             {activeView === 'users' && user?.role === 'admin' && (
                 <Card>
-                    <CardHeader>
-                      <CardTitle>User Management</CardTitle>
-                      <CardDescription>Manage staff and customer accounts.</CardDescription>
+                    <CardHeader className="flex-row justify-between items-center">
+                      <div>
+                        <CardTitle>User Management</CardTitle>
+                        <CardDescription>Manage staff and customer accounts.</CardDescription>
+                      </div>
+                      <Button onClick={() => handleOpenUserForm(null)}><PlusCircle className="mr-2 h-4 w-4"/> Add User</Button>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="staff">
@@ -1014,18 +1021,19 @@ export default function AdminPage() {
                 <DialogHeader><DialogTitle>{userToEdit ? 'Edit User' : 'Add New User'}</DialogTitle></DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onUserSubmit)} className="space-y-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled={!!userToEdit} /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} disabled={!!userToEdit} /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={form.control} name="role" render={({ field }) => (
                             <FormItem><FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={user?.role !== 'admin'}>
+                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={user?.role !== 'admin' && !userToEdit}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="manager">Manager</SelectItem>
                                         <SelectItem value="employee-a">Content Editor</SelectItem>
                                         <SelectItem value="employee-b">Sales & Support</SelectItem>
-                                        <SelectItem value="customer">Customer</SelectItem>
+                                        {/* Customer role is only for public registrations */}
+                                        {!userToEdit && <SelectItem value="customer" disabled>Customer</SelectItem>}
                                     </SelectContent>
                                 </Select><FormMessage />
                             </FormItem>
