@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { User, Role } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
@@ -17,6 +17,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
 import { useToast } from './use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   user: User | null;
@@ -28,11 +29,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function AuthInitializer({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Any logic that uses router or searchParams can go here if needed.
+  // For now, just rendering children is enough to ensure the hook is used within Suspense.
+  return <>{children}</>;
+}
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -141,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    const router = (await import('next/navigation')).useRouter();
     if (user && user.role !== 'customer') {
         const rtdb = getDatabase();
         const statusRef = ref(rtdb, `users/${user.id}/status`);
@@ -153,7 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, register }}>
-      {children}
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>}>
+         <AuthInitializer>{children}</AuthInitializer>
+      </Suspense>
     </AuthContext.Provider>
   );
 }
