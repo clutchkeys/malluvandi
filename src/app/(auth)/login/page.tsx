@@ -10,8 +10,8 @@ export default function LoginPage() {
           <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <LoginForm />
-        <CardFooter className="flex justify-center text-sm">
-            <p>Don't have an account?&nbsp;</p><Link href="/register" className="font-semibold text-primary hover:underline">Sign up</Link>
+        <CardFooter className="flex-col items-center justify-center text-sm space-y-2">
+            <p>Don't have an account?&nbsp;<Link href="/register" className="font-semibold text-primary hover:underline">Sign up</Link></p>
         </CardFooter>
       </Card>
   );

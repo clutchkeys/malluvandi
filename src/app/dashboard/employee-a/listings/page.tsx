@@ -211,13 +211,8 @@ export default function EmployeeAListingsPage() {
                   </Select>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="model" className="text-right">Model</Label>
-                   <Select name="model" disabled={!selectedBrand} defaultValue={carToEdit?.model} required>
-                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a model" /></SelectTrigger>
-                      <SelectContent>
-                          {selectedBrand && (carModels[selectedBrand] || []).map(model => <SelectItem key={model} value={model}>{model}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
+                    <Label htmlFor="model" className="text-right">Model</Label>
+                    <Input id="model" name="model" required className="col-span-3" defaultValue={carToEdit?.model} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="year" className="text-right">Year</Label>

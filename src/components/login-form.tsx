@@ -25,7 +25,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { login } = useAuth();
+  const { login, sendPasswordReset } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -42,7 +42,7 @@ export function LoginForm() {
       const user = await login(email, password);
       if (user) {
         toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-        const redirectPath = redirectUrl || (user.role === 'customer' ? '/dashboard' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
+        const redirectPath = redirectUrl || (user.role === 'customer' ? '/dashboard/my-account/saved-cars' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
         router.push(redirectPath);
         router.refresh();
       }
@@ -50,6 +50,33 @@ export function LoginForm() {
       toast({
         title: 'Login Failed',
         description: error.message || 'Please check your email and password.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast({
+        title: 'Email Required',
+        description: 'Please enter your email address to reset your password.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await sendPasswordReset(email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'Check your inbox for instructions to reset your password.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Could not send password reset email.',
         variant: 'destructive',
       });
     } finally {
@@ -85,7 +112,10 @@ export function LoginForm() {
           <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Button variant="link" type="button" onClick={handlePasswordReset} className="px-0 h-auto text-xs">Forgot Password?</Button>
+          </div>
           <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
       </CardContent>

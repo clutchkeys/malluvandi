@@ -101,7 +101,8 @@ import {
   Menu,
   Image as ImageIcon,
   Upload,
-  User as UserIcon
+  User as UserIcon,
+  KeyRound
 } from 'lucide-react';
 import type { User, Role, Car as CarType, Inquiry, AttendanceRecord, Brand } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -109,7 +110,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { addMonths, subMonths, format, startOfMonth, getDay, isSameDay, isSameMonth, parseISO } from 'date-fns';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { ImportCarsModal } from '@/components/import-cars-modal';
@@ -124,7 +125,7 @@ const userSchema = z.object({
 });
 
 export default function AdminPage() {
-  const { user, loading, logout, register } = useAuth();
+  const { user, loading, logout, register, sendPasswordReset } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -153,6 +154,7 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string | number, description: string, categoryId?: string } | null>(null);
   const [isBrandFormOpen, setIsBrandFormOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
 
   // States for editing specific items
@@ -270,7 +272,6 @@ export default function AdminPage() {
           });
           toast({ title: 'User Updated' });
       } else {
-          // This uses the 'register' function which now supports creating any user type
           await register(values.name, values.email, Math.random().toString(36).slice(-8), '', false, values.role);
           toast({ title: 'User Created', description: 'User has been created with a temporary password.' });
       }
@@ -287,6 +288,15 @@ export default function AdminPage() {
         toast({ title: `User ${currentStatus ? 'Unbanned' : 'Banned'}`, description: `The user's account status has been updated.` });
     } catch (e) {
         toast({ title: 'Error', description: 'Could not update ban status.', variant: 'destructive'});
+    }
+  }
+
+  const handlePasswordReset = async (email: string) => {
+    try {
+        await sendPasswordReset(email);
+        toast({ title: 'Password Reset Email Sent', description: `An email has been sent to ${email} with instructions to reset their password.`});
+    } catch (e: any) {
+        toast({ title: 'Error', description: e.message || 'Could not send password reset email.', variant: 'destructive'});
     }
   }
   
@@ -342,12 +352,14 @@ export default function AdminPage() {
           toast({ title: 'Car Added' });
         }
 
-        // Dynamically add model to filters if it doesn't exist
         const filtersRef = doc(db, 'config', 'filters');
         const filtersSnap = await getDoc(filtersRef);
         if (filtersSnap.exists()) {
             const filtersData = filtersSnap.data();
-            if (carData.brand && filtersData.models && filtersData.models[carData.brand] && carData.model && !filtersData.models[carData.brand].includes(carData.model)) {
+            if (carData.brand && carData.model && !filtersData.models[carData.brand]?.includes(carData.model)) {
+                if (!filtersData.models[carData.brand]) {
+                    filtersData.models[carData.brand] = [];
+                }
                 filtersData.models[carData.brand].push(carData.model);
                 await updateDoc(filtersRef, { models: filtersData.models });
             }
@@ -561,7 +573,10 @@ export default function AdminPage() {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => {
+                  setActiveView(item.id);
+                  if (isSheetOpen) setIsSheetOpen(false);
+              }}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
                 activeView === item.id && 'bg-muted text-primary'
@@ -589,18 +604,21 @@ export default function AdminPage() {
       </aside>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-           <Sheet>
+           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-                <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 -mx-6">
-                    <h2 className="font-semibold text-lg">Admin Panel</h2>
+            <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle>Admin Panel</SheetTitle>
+                  <SheetDescription asChild><span className="sr-only">Main Navigation</span></SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 py-4">
+                    <SideNav />
                 </div>
-                <SideNav />
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1">
@@ -773,6 +791,7 @@ export default function AdminPage() {
                                         <TableCell>{u.performanceScore || 0}/10</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)} disabled={u.role === 'admin' && user?.role !== 'admin'}><Edit size={16}/></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handlePasswordReset(u.email)}><KeyRound size={16} /></Button>
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})} disabled={u.role === 'admin'}><Trash2 size={16}/></Button>
                                         </TableCell>
                                         </TableRow>
@@ -796,6 +815,7 @@ export default function AdminPage() {
                                                 {u.banned ? <CircleOff className="mr-2 h-4 w-4"/> : <Ban className="mr-2 h-4 w-4"/>}
                                                 {u.banned ? 'Unban' : 'Ban'}
                                             </Button>
+                                             <Button variant="ghost" size="icon" onClick={() => handlePasswordReset(u.email)}><KeyRound size={16} /></Button>
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})}><Trash2 size={16}/></Button>
                                         </TableCell>
                                         </TableRow>
@@ -1025,15 +1045,14 @@ export default function AdminPage() {
                         <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john@malluvandi.com" {...field} disabled={!!userToEdit} /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={form.control} name="role" render={({ field }) => (
                             <FormItem><FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={user?.role !== 'admin' && !userToEdit}>
+                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="manager">Manager</SelectItem>
                                         <SelectItem value="employee-a">Content Editor</SelectItem>
                                         <SelectItem value="employee-b">Sales & Support</SelectItem>
-                                        {/* Customer role is only for public registrations */}
-                                        {!userToEdit && <SelectItem value="customer" disabled>Customer</SelectItem>}
+                                        <SelectItem value="customer">Customer</SelectItem>
                                     </SelectContent>
                                 </Select><FormMessage />
                             </FormItem>
@@ -1060,7 +1079,10 @@ export default function AdminPage() {
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-2 gap-4">
                     <FormFieldItem label="Brand" name="brand" as="select" options={brandsState} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBrandForModel(e.target.value)} required defaultValue={carToEdit?.brand} />
-                    <FormFieldItem label="Model" name="model" required as="select" options={modelsState[selectedBrandForModel] || []} defaultValue={carToEdit?.model} />
+                     <div className="grid grid-cols-4 items-center gap-4 col-span-2 -mb-2">
+                        <Label htmlFor="model" className="text-right">Model</Label>
+                        <Input id="model" name="model" required className="col-span-3" defaultValue={carToEdit?.model} />
+                    </div>
                     <FormFieldItem label="Manufactured Year" name="year" type="number" defaultValue={carToEdit?.year} />
                     <FormFieldItem label="Expected Price (₹)" name="price" type="number" defaultValue={carToEdit?.price} />
                     <FormFieldItem label="Engine CC" name="engineCC" type="number" defaultValue={carToEdit?.engineCC} />

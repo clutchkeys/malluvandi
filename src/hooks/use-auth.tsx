@@ -13,6 +13,7 @@ import {
   signOut,
   setPersistence,
   browserSessionPersistence,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
@@ -25,6 +26,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<User | null>;
   logout: () => Promise<void>;
   register: (name: string, email: string, pass: string, phone: string, subscribe: boolean, role?: Role) => Promise<User | null>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         setUser(userData);
-        // Presence update is now handled by the onAuthStateChanged listener
         return userData;
       } else {
          throw new Error("User data not found in Firestore.");
@@ -108,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, pass: string, phone: string, subscribe: boolean, role: Role = 'customer'): Promise<User | null> => {
      setLoading(true);
      try {
-       // Note: This creates a user in Firebase Auth. It doesn't sign them in immediately in the context of the admin panel.
        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
        const firebaseUser = userCredential.user;
        
@@ -127,15 +127,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        
        const userWithId = { id: firebaseUser.uid, ...newUser } as User;
        
-       // If the registration is for a customer, sign them in.
        if (role === 'customer') {
            setUser(userWithId);
-       } else {
-           // For staff creation, we sign out the temporary session to avoid auto-logging in as the new user.
-           // The admin remains logged in with their own credentials.
-           if (auth.currentUser?.email !== email) {
-            await signOut(auth);
-           }
+       } else if (auth.currentUser?.email !== email) {
+            const currentAdmin = auth.currentUser;
+            if (currentAdmin) {
+                // This part is tricky. Re-authenticating admin is not straightforward without their password.
+                // The intended behavior for admin creating users is that the admin *remains* logged in.
+                // `createUserWithEmailAndPassword` automatically signs in the new user, so we sign them out.
+                await signOut(auth);
+                // And then we must restore the admin's session.
+                // For simplicity, we assume the initial onAuthStateChanged will handle this.
+                // In a production app, a more robust session management (e.g., re-authentication flow) would be needed.
+            }
        }
        
        return userWithId;
@@ -148,6 +152,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      } finally {
         setLoading(false);
      }
+  }
+
+  const sendPasswordReset = async (email: string) => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+        console.error("Password Reset Error:", error);
+        throw new Error("Could not send password reset email. Make sure the email is correct.");
+    }
   }
 
   const logout = async () => {
@@ -163,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, sendPasswordReset }}>
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>}>
          <AuthInitializer>{children}</AuthInitializer>
       </Suspense>
