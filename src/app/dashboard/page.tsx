@@ -10,10 +10,10 @@ export default function DashboardPage() {
     const router = useRouter();
 
     const roleRedirects = {
-      'admin': '/admin',
-      'manager': '/admin',
-      'employee-a': '/employee-a',
-      'employee-b': '/employee-b',
+      'admin': '/dashboard/admin',
+      'manager': '/dashboard/admin',
+      'employee-a': '/dashboard/employee-a',
+      'employee-b': '/dashboard/employee-b',
     };
 
     useEffect(() => {
@@ -23,7 +23,7 @@ export default function DashboardPage() {
             } else if (user.role !== 'customer') {
                 router.replace(roleRedirects[user.role as keyof typeof roleRedirects]);
             } else {
-                 router.replace('/my-account');
+                 router.replace('/dashboard/my-account');
             }
         }
     }, [user, loading, router]);

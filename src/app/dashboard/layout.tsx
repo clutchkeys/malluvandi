@@ -38,21 +38,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [activeView, setActiveView] = useState('');
 
   const roleRedirects = {
-      'admin': '/admin',
-      'manager': '/admin',
-      'employee-a': '/employee-a/dashboard',
-      'employee-b': '/employee-b/dashboard',
-      'customer': '/my-account/saved-cars'
+      'admin': '/dashboard/admin',
+      'manager': '/dashboard/admin',
+      'employee-a': '/dashboard/employee-a/dashboard',
+      'employee-b': '/dashboard/employee-b/dashboard',
+      'customer': '/dashboard/my-account/saved-cars'
   };
 
   useEffect(() => {
     if (!loading) {
         if(!user) {
             router.push('/login');
-        } else if (pathname === '/employee-a' || pathname === '/employee-b' || pathname === '/my-account' || pathname === '/dashboard') {
+        } else if (pathname === '/dashboard/employee-a' || pathname === '/dashboard/employee-b' || pathname === '/dashboard/my-account' || pathname === '/dashboard') {
              const redirectPath = roleRedirects[user.role as keyof typeof roleRedirects] || '/';
              router.push(redirectPath);
-        } else if (user.role === 'customer' && (pathname.startsWith('/employee-a') || pathname.startsWith('/employee-b') || pathname.startsWith('/admin'))) {
+        } else if (user.role === 'customer' && (pathname.startsWith('/dashboard/employee-a') || pathname.startsWith('/dashboard/employee-b') || pathname.startsWith('/dashboard/admin'))) {
             router.push('/');
         }
     }
@@ -73,26 +73,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Admins and Managers have a custom layout within their page.
   if (user.role === 'admin' || user.role === 'manager') {
-    if (pathname.startsWith('/admin')) {
+    if (pathname.startsWith('/dashboard/admin')) {
         return <>{children}</>;
     }
   }
   
   const employeeNavItems = {
     'employee-a': [
-      { id: 'dashboard', href: '/employee-a/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { id: 'listings', href: '/employee-a/listings', icon: List, label: 'My Listings' },
-      { id: 'notifications', href: '/employee-a/notifications', icon: Bell, label: 'Notifications' },
+      { id: 'dashboard', href: '/dashboard/employee-a/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { id: 'listings', href: '/dashboard/employee-a/listings', icon: List, label: 'My Listings' },
+      { id: 'notifications', href: '/dashboard/employee-a/notifications', icon: Bell, label: 'Notifications' },
     ],
     'employee-b': [
-      { id: 'dashboard', href: '/employee-b/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { id: 'inquiries', href: '/employee-b/inquiries', icon: Mail, label: 'Inquiries' },
-      { id: 'notifications', href: '/employee-b/notifications', icon: Bell, label: 'Notifications' },
+      { id: 'dashboard', href: '/dashboard/employee-b/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { id: 'inquiries', href: '/dashboard/employee-b/inquiries', icon: Mail, label: 'Inquiries' },
+      { id: 'notifications', href: '/dashboard/employee-b/notifications', icon: Bell, label: 'Notifications' },
     ],
   };
   
   const customerNavItems = [
-    { id: 'saved-cars', href: '/my-account/saved-cars', icon: Bookmark, label: 'Saved Cars' },
+    { id: 'saved-cars', href: '/dashboard/my-account/saved-cars', icon: Bookmark, label: 'Saved Cars' },
   ]
 
   const currentNavItems = user.role === 'customer' 

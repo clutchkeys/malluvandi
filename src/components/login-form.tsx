@@ -14,10 +14,10 @@ import { Loader2 } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
 const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
-  admin: '/admin',
-  manager: '/admin',
-  'employee-a': '/employee-a',
-  'employee-b': '/employee-b',
+  admin: '/dashboard/admin',
+  manager: '/dashboard/admin',
+  'employee-a': '/dashboard/employee-a',
+  'employee-b': '/dashboard/employee-b',
 };
 
 export function LoginForm() {

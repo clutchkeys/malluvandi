@@ -98,10 +98,10 @@ export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
-    admin: '/admin',
-    manager: '/admin',
-    'employee-a': '/employee-a',
-    'employee-b': '/employee-b',
+    admin: '/dashboard/admin',
+    manager: '/dashboard/admin',
+    'employee-a': '/dashboard/employee-a',
+    'employee-b': '/dashboard/employee-b',
   };
   
   const navLinks = [
@@ -158,7 +158,7 @@ export function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                      <DropdownMenuItem asChild>
-                       <Link href="/my-account/saved-cars"><Bookmark className="mr-2 h-4 w-4" />Saved Cars</Link>
+                       <Link href="/dashboard/my-account/saved-cars"><Bookmark className="mr-2 h-4 w-4" />Saved Cars</Link>
                     </DropdownMenuItem>
                      {user.role !== 'customer' && (
                         <>
@@ -238,7 +238,7 @@ export function Header() {
                         ) : (
                           <div className="flex flex-col gap-2">
                               <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
-                                <Link href="/my-account/saved-cars" className="flex items-center justify-center gap-2"><Bookmark />Saved Cars</Link>
+                                <Link href="/dashboard/my-account/saved-cars" className="flex items-center justify-center gap-2"><Bookmark />Saved Cars</Link>
                               </Button>
                             {user.role !== 'customer' && (
                                 <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>

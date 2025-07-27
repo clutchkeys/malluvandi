@@ -16,7 +16,7 @@ export default function EmployeeAPage() {
       if (user?.role !== 'employee-a') {
         router.push('/');
       } else {
-        router.push('/employee-a/dashboard');
+        router.push('/dashboard/employee-a/dashboard');
       }
     }
   }, [user, loading, router]);
