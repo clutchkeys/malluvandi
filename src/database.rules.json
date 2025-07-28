@@ -36,10 +36,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Inquiries: Customers can create. Staff can manage.
+    // Inquiries: Customers can create for themselves. Staff can manage.
     match /inquiries/{inquiryId} {
         allow read, update, delete: if isStaff();
-        allow create: if isAuth();
+        // User must be logged in and the name in the inquiry must match their display name.
+        allow create: if isAuth() && request.resource.data.customerName == request.auth.token.name;
     }
     
     // Notifications: Read-only for customers. Full access for staff.
