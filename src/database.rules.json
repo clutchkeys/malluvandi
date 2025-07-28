@@ -39,8 +39,8 @@ service cloud.firestore {
     // Inquiries: Customers can create for themselves. Staff can manage.
     match /inquiries/{inquiryId} {
         allow read, update, delete: if isStaff();
-        // User must be logged in and the name in the inquiry must match their display name.
-        allow create: if isAuth() && request.resource.data.customerName == request.auth.token.name;
+        // User must be logged in and submitting an inquiry for themselves.
+        allow create: if isAuth() && request.resource.data.customerId == request.auth.uid;
     }
     
     // Notifications: Read-only for customers. Full access for staff.

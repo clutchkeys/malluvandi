@@ -48,6 +48,10 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast({ title: "Authentication Error", description: "You must be logged in to submit an inquiry.", variant: "destructive" });
+      return;
+    }
     if (!name || !phone) {
         toast({
             title: "Validation Error",
@@ -87,6 +91,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
       const newInquiry: Omit<Inquiry, 'id'> = {
         carId: car.id,
         carSummary: `${car.brand} ${car.model}`,
+        customerId: user.id, // Add customer ID for security rules
         customerName: name,
         customerPhone: phone,
         submittedAt: new Date().toISOString(),

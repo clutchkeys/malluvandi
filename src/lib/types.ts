@@ -50,6 +50,7 @@ export interface Inquiry {
   id:string;
   carId: string;
   carSummary: string;
+  customerId: string; // User ID
   customerName: string;
   customerPhone: string;
   submittedAt: string; // ISO 8601 date string
