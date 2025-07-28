@@ -14,16 +14,15 @@ export default function DashboardPage() {
       'manager': '/dashboard/admin',
       'employee-a': '/dashboard/employee-a',
       'employee-b': '/dashboard/employee-b',
+      'customer': '/dashboard/my-account',
     };
 
     useEffect(() => {
         if (!loading) {
             if (!user) {
                 router.replace('/login');
-            } else if (user.role !== 'customer') {
-                router.replace(roleRedirects[user.role as keyof typeof roleRedirects]);
             } else {
-                 router.replace('/dashboard/my-account');
+                router.replace(roleRedirects[user.role as keyof typeof roleRedirects] || '/');
             }
         }
     }, [user, loading, router]);

@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -49,7 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!loading) {
         if(!user) {
             router.push('/login');
-        } else if (pathname === '/dashboard/employee-a' || pathname === '/dashboard/employee-b' || pathname === '/dashboard/my-account' || pathname === '/dashboard') {
+        } else if (pathname === '/dashboard' || pathname === '/dashboard/') {
              const redirectPath = roleRedirects[user.role as keyof typeof roleRedirects] || '/';
              router.push(redirectPath);
         } else if (user.role === 'customer' && (pathname.startsWith('/dashboard/employee-a') || pathname.startsWith('/dashboard/employee-b') || pathname.startsWith('/dashboard/admin'))) {
@@ -149,17 +149,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
-                <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 -mx-6">
-                     <Link href="/" className="flex items-center gap-4">
-                        <Image
-                        src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
-                        alt="Mallu Vandi Logo"
-                        width={140}
-                        height={35}
-                        />
-                    </Link>
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle>Menu</SheetTitle>
+                  <SheetDescription asChild><span className="sr-only">Main Navigation</span></SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 py-4">
+                    <SideNav />
                 </div>
-                <SideNav />
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1">
