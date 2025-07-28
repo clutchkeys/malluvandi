@@ -80,6 +80,10 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)].id;
       }
       
+      const remarks = callPreference === 'now' 
+        ? 'Customer prefers a call as soon as possible.' 
+        : `Scheduled call requested for ${scheduledDate ? format(scheduledDate, 'PPP') : 'a future date'} at ${scheduledTime}.`;
+
       const newInquiry: Omit<Inquiry, 'id'> = {
         carId: car.id,
         carSummary: `${car.brand} ${car.model}`,
@@ -88,7 +92,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         submittedAt: new Date().toISOString(),
         assignedTo: assignedTo,
         status: 'new' as const,
-        remarks: `Call preference: ${callPreference === 'now' ? 'ASAP' : `Scheduled for ${format(scheduledDate!, 'PPP')} at ${scheduledTime}`}`,
+        remarks: remarks,
         privateNotes: ''
       }
       

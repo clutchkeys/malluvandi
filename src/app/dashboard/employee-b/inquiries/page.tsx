@@ -84,7 +84,7 @@ export default function EmployeeBInquiriesPage() {
 
         return () => unsubscribe();
     }
-  }, [user]);
+  }, [user, selectedInquiryId]);
   
   const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
   
@@ -214,7 +214,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         }
     }
     
-    if (!car && !isSummaryLoading) return <div className="p-6">Loading car details or car not found...</div>;
+    if (!car && isSummaryLoading) return <div className="p-6">Loading car details...</div>;
 
     return (
         <div className="p-6 space-y-6">
