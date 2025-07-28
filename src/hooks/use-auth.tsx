@@ -14,8 +14,10 @@ import {
   setPersistence,
   browserSessionPersistence,
   sendPasswordResetEmail,
+  signInWithPopup,
+  GoogleAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getDatabase, ref, set, onValue, off } from "firebase/database";
 import { useToast } from './use-toast';
 import { Loader2 } from 'lucide-react';
@@ -27,6 +29,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   register: (name: string, email: string, pass: string, phone: string, subscribe: boolean, role?: Role) => Promise<User | null>;
   sendPasswordReset: (email: string) => Promise<void>;
+  signInWithGoogle: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     });
                 }
             } else {
+                 // This can happen if a user signs in with Google for the first time
+                 // The signInWithGoogle function will handle creating the user doc
                 setUser(null);
             }
         } else {
@@ -130,16 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        if (role === 'customer') {
            setUser(userWithId);
        } else if (auth.currentUser?.email !== email) {
-            const currentAdmin = auth.currentUser;
-            if (currentAdmin) {
-                // This part is tricky. Re-authenticating admin is not straightforward without their password.
-                // The intended behavior for admin creating users is that the admin *remains* logged in.
-                // `createUserWithEmailAndPassword` automatically signs in the new user, so we sign them out.
-                await signOut(auth);
-                // And then we must restore the admin's session.
-                // For simplicity, we assume the initial onAuthStateChanged will handle this.
-                // In a production app, a more robust session management (e.g., re-authentication flow) would be needed.
-            }
+            // This case handles an admin creating another user.
+            // After creating the new user, Firebase automatically signs them in.
+            // We immediately sign them out to keep the admin's session active.
+            // The onAuthStateChanged listener will then re-verify the admin's auth state.
+            await signOut(auth);
        }
        
        return userWithId;
@@ -163,6 +163,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signInWithGoogle = async (): Promise<User | null> => {
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const firebaseUser = result.user;
+
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+             const userData = { id: firebaseUser.uid, ...userDoc.data() } as User;
+             if (userData.banned) {
+                await signOut(auth);
+                throw new Error("This account has been banned.");
+            }
+            setUser(userData);
+            return userData;
+        } else {
+            // New user, create a document for them
+            const newUser: Omit<User, 'id'> = {
+                name: firebaseUser.displayName || 'New User',
+                email: firebaseUser.email!,
+                phone: firebaseUser.phoneNumber || '',
+                role: 'customer',
+                newsletterSubscribed: false,
+                banned: false,
+                status: 'Offline'
+            };
+            await setDoc(userDocRef, newUser);
+            const userWithId = { id: firebaseUser.uid, ...newUser } as User;
+            setUser(userWithId);
+            return userWithId;
+        }
+    } catch (error: any) {
+        console.error("Google Sign-In Error:", error);
+        if (error.code === 'auth/account-exists-with-different-credential') {
+            throw new Error("An account already exists with the same email address but different sign-in credentials.");
+        }
+        throw new Error("Google Sign-In failed. Please try again.");
+    } finally {
+        setLoading(false);
+    }
+  }
+
+
   const logout = async () => {
     const router = (await import('next/navigation')).useRouter();
     if (user && user.role !== 'customer') {
@@ -176,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register, sendPasswordReset }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, sendPasswordReset, signInWithGoogle }}>
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>}>
          <AuthInitializer>{children}</AuthInitializer>
       </Suspense>

@@ -174,7 +174,7 @@ export default function AdminPage() {
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', role: 'employee-a', performanceScore: 0 },
+    defaultValues: { name: '', email: '', role: 'customer', performanceScore: 0 },
   });
   
   useEffect(() => {
@@ -258,7 +258,7 @@ export default function AdminPage() {
   // --- User Management ---
   const handleOpenUserForm = (user: User | null) => {
     setUserToEdit(user);
-    form.reset(user ? { ...user, performanceScore: user.performanceScore || 0 } : { name: '', email: '', role: 'employee-a', performanceScore: 0 });
+    form.reset(user ? { ...user, performanceScore: user.performanceScore || 0 } : { name: '', email: '', role: 'customer', performanceScore: 0 });
     setIsUserFormOpen(true);
   }
   
@@ -266,11 +266,16 @@ export default function AdminPage() {
     try {
       if (userToEdit) {
           const userRef = doc(db, 'users', userToEdit.id);
-          await updateDoc(userRef, {
+          const updates: Partial<User> = {
               role: values.role,
-              performanceScore: values.role.startsWith('employee') ? values.performanceScore : undefined
-          });
-          toast({ title: 'User Updated' });
+          };
+          if (values.role.startsWith('employee')) {
+              updates.performanceScore = values.performanceScore;
+          } else {
+              updates.performanceScore = 0; // Or remove it if your data model allows
+          }
+          await updateDoc(userRef, updates);
+          toast({ title: 'User Updated', description: `${userToEdit.name}'s role has been updated.` });
       } else {
           await register(values.name, values.email, Math.random().toString(36).slice(-8), '', false, values.role);
           toast({ title: 'User Created', description: 'User has been created with a temporary password.' });
@@ -781,7 +786,7 @@ export default function AdminPage() {
                                         <TableRow key={u.id}>
                                         <TableCell className="font-medium">{u.name}</TableCell>
                                         <TableCell>{u.email}</TableCell>
-                                        <TableCell><Badge variant={roleDisplay[u.role as Exclude<Role, 'customer'>]?.variant}>{roleDisplay[u.role as Exclude<Role, 'customer'>]?.name}</Badge></TableCell>
+                                        <TableCell><Badge variant={roleDisplay[u.role]?.variant}>{roleDisplay[u.role]?.name}</Badge></TableCell>
                                         <TableCell>
                                             <Badge variant={u.status === 'Online' ? 'default' : 'outline'} className="gap-1">
                                                 <span className={cn("h-2 w-2 rounded-full", u.status === 'Online' ? 'bg-green-500' : 'bg-gray-400')}></span>
@@ -811,11 +816,12 @@ export default function AdminPage() {
                                         <TableCell><Badge variant={u.banned ? 'destructive' : 'default'} className="capitalize">{u.banned ? 'Banned' : 'Active'}</Badge></TableCell>
                                         <TableCell>{u.newsletterSubscribed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-muted-foreground" />}</TableCell>
                                         <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenUserForm(u)}><Edit size={16}/></Button>
                                             <Button variant="outline" size="sm" className="mr-2" onClick={() => handleToggleBan(u.id, !!u.banned)}>
                                                 {u.banned ? <CircleOff className="mr-2 h-4 w-4"/> : <Ban className="mr-2 h-4 w-4"/>}
                                                 {u.banned ? 'Unban' : 'Ban'}
                                             </Button>
-                                             <Button variant="ghost" size="icon" onClick={() => handlePasswordReset(u.email)}><KeyRound size={16} /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handlePasswordReset(u.email)}><KeyRound size={16} /></Button>
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setItemToDelete({type: 'user', id: u.id, description: `This will delete the user record for ${u.name}.`})}><Trash2 size={16}/></Button>
                                         </TableCell>
                                         </TableRow>

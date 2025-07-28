@@ -300,7 +300,7 @@ export default function Home() {
         <section className="relative bg-card h-[50vh] flex items-center justify-center text-center text-white overflow-hidden">
           <div className="absolute inset-0 bg-black/60 z-10" />
           <Image
-            src="https://ik.imagekit.io/qctc8ch4l/WhatsApp%20Image%202025-07-25%20at%2021.25.04_3699409e.jpg?updatedAt=1753469895495"
+            src="https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203"
             alt="Mallu Vandi dealership storefront"
             fill
             className="z-0 object-cover"
