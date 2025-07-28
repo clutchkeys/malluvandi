@@ -37,10 +37,14 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
   const [scheduledTime, setScheduledTime] = useState('');
 
   useEffect(() => {
-    if (user) {
+    if (user && isOpen) {
         setName(user.name);
+        setPhone(user.phone || '');
+    } else if (!user && isOpen) {
+        setName('');
+        setPhone('');
     }
-  }, [user]);
+  }, [user, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

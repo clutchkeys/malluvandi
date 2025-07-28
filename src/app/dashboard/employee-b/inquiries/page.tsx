@@ -84,7 +84,7 @@ export default function EmployeeBInquiriesPage() {
 
         return () => unsubscribe();
     }
-  }, [user, selectedInquiryId]);
+  }, [user]);
   
   const selectedInquiry = inquiries.find(inq => inq.id === selectedInquiryId);
   
@@ -106,21 +106,32 @@ export default function EmployeeBInquiriesPage() {
                     <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-16 w-full" />
                   </div>
-                ) : inquiries.map(inquiry => (
+                ) : inquiries.length > 0 ? inquiries.map(inquiry => (
                   <InquiryListItem 
                     key={inquiry.id}
                     inquiry={inquiry}
                     onSelect={setSelectedInquiryId}
                     isSelected={selectedInquiryId === inquiry.id}
                   />
-                ))}
+                )) : (
+                  <div className="p-8 text-center text-muted-foreground">No inquiries found.</div>
+                )}
             </ScrollArea>
           </div>
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
           <ScrollArea className="h-[calc(100vh-theme(spacing.24))]">
-            {selectedInquiry ? <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiryInState} /> : <div className="p-8 text-center text-muted-foreground h-full flex items-center justify-center">Select an inquiry to view details</div>}
+            {isLoading && !selectedInquiry ? (
+              <div className="p-6 space-y-6">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ) : selectedInquiry ? (
+               <InquiryDetails inquiry={selectedInquiry} onUpdate={updateInquiryInState} />
+            ) : (
+                <div className="p-8 text-center text-muted-foreground h-full flex items-center justify-center">Select an inquiry to view details</div>
+            )}
           </ScrollArea>
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -130,7 +141,7 @@ export default function EmployeeBInquiriesPage() {
 function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (inquiryId: string, updates: Partial<Inquiry>) => void }) {
     const [car, setCar] = useState<Car | null>(null);
     const [summary, setSummary] = useState('');
-    const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+    const [isSummaryLoading, setIsSummaryLoading] = useState(true);
     
     const [query, setQuery] = useState('');
     const [isAiAnswering, setIsAiAnswering] = useState(false);
@@ -196,7 +207,7 @@ function InquiryDetails({ inquiry, onUpdate }: { inquiry: Inquiry; onUpdate: (in
         const inquiryRef = doc(db, 'inquiries', inquiry.id);
         try {
             await updateDoc(inquiryRef, { [field]: value });
-            onUpdate(inquiry.id, { [field]: value });
+            onUpdate(inquiry.id, { [field]: value as any });
             toast({ title: `${field.charAt(0).toUpperCase() + field.slice(1)} Updated` });
         } catch (error) {
             toast({ title: 'Update Failed', variant: 'destructive' });
