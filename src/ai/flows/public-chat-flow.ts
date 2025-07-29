@@ -59,6 +59,10 @@ const getCarListings = ai.defineTool(
         outputSchema: z.array(CarSchema),
     },
     async ({ count }) => {
+        if (!db) {
+            console.error("Firestore is not initialized.");
+            return [];
+        }
         const carsRef = collection(db, 'cars');
         const q = query(
             carsRef, 
@@ -74,7 +78,7 @@ const getCarListings = ai.defineTool(
                 model: data.model,
                 year: data.year,
                 price: data.price,
-                images: data.images,
+                images: data.images || [],
                 kmRun: data.kmRun,
                 fuel: data.fuel,
                 transmission: data.transmission,
