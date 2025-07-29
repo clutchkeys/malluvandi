@@ -69,7 +69,7 @@ export function CarCard({ car }: CarCardProps) {
           <CardHeader className="p-0">
               <div className="relative h-48 w-full">
               <Image
-                  src={car.images[0]}
+                  src={car.images?.[0] || 'https://placehold.co/600x400.png'}
                   alt={`${car.brand} ${car.model}`}
                   fill
                   className="object-cover"
@@ -99,13 +99,13 @@ export function CarCard({ car }: CarCardProps) {
           <CardContent className="flex-grow p-3 grid gap-1">
               <h3 className="text-md font-bold">{car.brand} {car.model}</h3>
               <p className="text-lg font-semibold text-primary">
-                  ₹{car.price.toLocaleString('en-IN')}
+                  {car.price ? `₹${car.price.toLocaleString('en-IN')}` : 'Price on request'}
               </p>
                <div className="pt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5 truncate"><Calendar size={12} /> <span>{car.year}</span></div>
-                  <div className="flex items-center gap-1.5 truncate"><Gauge size={12} /> <span>{car.kmRun.toLocaleString('en-IN')} km</span></div>
+                  <div className="flex items-center gap-1.5 truncate"><Gauge size={12} /> <span>{car.kmRun?.toLocaleString('en-IN')} km</span></div>
                   <div className="flex items-center gap-1.5 truncate"><PaintBucket size={12} /> <span>{car.color}</span></div>
-                  <div className="flex items-center gap-1.5 truncate"><Users size={12} /> <span>{car.ownership} {car.ownership > 1 ? 'Owners' : 'Owner'}</span></div>
+                  <div className="flex items-center gap-1.5 truncate"><Users size={12} /> <span>{car.ownership} {car.ownership && car.ownership > 1 ? 'Owners' : 'Owner'}</span></div>
               </div>
           </CardContent>
           <CardFooter className="p-3 bg-secondary/30">
