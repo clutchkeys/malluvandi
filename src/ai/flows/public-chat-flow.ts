@@ -152,7 +152,7 @@ const publicChatFlow = ai.defineFlow(
   async (input) => {
     const { history, message } = input;
 
-    const { output } = await ai.generate({
+    const llmResponse = await ai.generate({
         system: systemPrompt,
         history: history || [],
         prompt: message,
@@ -162,10 +162,20 @@ const publicChatFlow = ai.defineFlow(
         }
     });
 
-    if (!output) {
+    if (!llmResponse.output) {
       return { reply: "Sorry, I couldn't process that request. Please try again." };
     }
     
-    return output;
+    // Ensure that if a tool was called and returned cars, they are in the final output.
+    const toolOutputs = llmResponse.toolRequest?.tool?.outputs;
+    if (toolOutputs && Array.isArray(toolOutputs) && toolOutputs.length > 0) {
+        // Assuming the tool output is the array of cars
+        const carsFromTool = toolOutputs[0] as Car[];
+        if (carsFromTool && carsFromTool.length > 0) {
+            llmResponse.output.cars = carsFromTool;
+        }
+    }
+
+    return llmResponse.output;
   }
 );
