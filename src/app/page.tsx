@@ -21,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, doc, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDoc, doc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const keralaDistricts = [
@@ -52,20 +52,32 @@ export default function Home() {
   const [kmRange, setKmRange] = useState([0, 200000]);
 
    useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        setUserLocation('Ernakulam');
-        setTempLocation('Ernakulam');
+    setIsLoading(true);
+    setUserLocation('Ernakulam');
+    setTempLocation('Ernakulam');
 
-        console.log("Fetching fresh data from Firestore.");
-        // Fetch cars
-        const carsRef = collection(db, 'cars');
-        const q = query(carsRef, where('status', '==', 'approved'));
-        const querySnapshot = await getDocs(q);
+    // Fetch filter configs
+    const fetchFilters = async () => {
+        const configRef = doc(db, "config", "filters");
+        const configSnap = await getDoc(configRef);
+        if (configSnap.exists()) {
+            const configData = configSnap.data();
+            setBrands(configData.brands || []);
+            setModels(configData.models || {});
+            setYears(configData.years || []);
+        }
+    }
+    fetchFilters();
+
+    // Set up real-time listener for cars
+    const carsRef = collection(db, 'cars');
+    const q = query(carsRef, where('status', '==', 'approved'));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const carsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
         setAllCars(carsData);
 
-        // Calculate popular brands
+        // Recalculate everything that depends on car data
         const brandCounts: { [key: string]: number } = {};
         for (const car of carsData) {
             brandCounts[car.brand] = (brandCounts[car.brand] || 0) + 1;
@@ -75,31 +87,16 @@ export default function Home() {
             .map(([brand]) => brand);
         const popularBrandsData = sortedBrands.slice(0, 4);
         setPopularBrands(popularBrandsData);
-
-        // Fetch filter configs
-        const configRef = doc(db, "config", "filters");
-        const configSnap = await getDoc(configRef);
-        if (configSnap.exists()) {
-            const configData = configSnap.data();
-            setBrands(configData.brands || []);
-            setModels(configData.models || {});
-            setYears(configData.years || []);
-        }
         
-        // Recommendation logic (can be a separate non-cached function)
-        fetchRecommendations(carsData);
-        setIsLoading(false);
-    };
-
-    const fetchRecommendations = async (allCarsData: Car[]) => {
-       try {
+        // Recommendation logic
+        try {
             const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
             if (viewedCarIds.length > 0) {
                 const lastViewedId = viewedCarIds[0];
-                const lastViewedCar = allCarsData.find(c => c.id === lastViewedId);
+                const lastViewedCar = carsData.find(c => c.id === lastViewedId);
 
                 if (lastViewedCar) {
-                    const recommendationsData = allCarsData
+                    const recommendationsData = carsData
                         .filter(c => c.brand === lastViewedCar.brand && c.id !== lastViewedId && !viewedCarIds.includes(c.id))
                         .slice(0, 4);
                     setRecommendedCars(recommendationsData);
@@ -108,9 +105,14 @@ export default function Home() {
         } catch (error) {
             console.error("Could not get recommendations:", error);
         }
-    }
+        
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching cars in real-time:", error);
+        setIsLoading(false);
+    });
 
-    fetchData();
+    return () => unsubscribe(); // Cleanup listener on component unmount
   }, []);
 
   const handleBrandChange = (brand: string) => {
