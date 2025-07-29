@@ -22,7 +22,6 @@ import { AdPlaceholder } from '@/components/ad-placeholder';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, getDoc, doc, limit } from 'firebase/firestore';
-import { ALL_BRANDS } from '@/lib/mock-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const keralaDistricts = [
@@ -58,30 +57,6 @@ export default function Home() {
         setUserLocation('Ernakulam');
         setTempLocation('Ernakulam');
 
-        const cacheKey = 'malluVandiCarData';
-        const cacheDuration = 15 * 60 * 1000; // 15 minutes
-
-        try {
-            const cachedItem = localStorage.getItem(cacheKey);
-            if (cachedItem) {
-                const { timestamp, data } = JSON.parse(cachedItem);
-                if (Date.now() - timestamp < cacheDuration) {
-                    console.log("Loading data from cache.");
-                    setAllCars(data.allCars);
-                    setPopularBrands(data.popularBrands);
-                    setBrands(data.brands);
-                    setModels(data.models);
-                    setYears(data.years);
-                    setIsLoading(false);
-                    // Still fetch recommendations as they are user-specific
-                    fetchRecommendations(data.allCars);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Could not read from cache", error);
-        }
-
         console.log("Fetching fresh data from Firestore.");
         // Fetch cars
         const carsRef = collection(db, 'cars');
@@ -104,36 +79,13 @@ export default function Home() {
         // Fetch filter configs
         const configRef = doc(db, "config", "filters");
         const configSnap = await getDoc(configRef);
-        let brandsData: string[] = [];
-        let modelsData: { [key: string]: string[] } = {};
-        let yearsData: number[] = [];
         if (configSnap.exists()) {
             const configData = configSnap.data();
-            brandsData = configData.brands || [];
-            modelsData = configData.models || {};
-            yearsData = configData.years || [];
-            setBrands(brandsData);
-            setModels(modelsData);
-            setYears(yearsData);
+            setBrands(configData.brands || []);
+            setModels(configData.models || {});
+            setYears(configData.years || []);
         }
         
-        try {
-            const dataToCache = {
-                allCars: carsData,
-                popularBrands: popularBrandsData,
-                brands: brandsData,
-                models: modelsData,
-                years: yearsData,
-            };
-            const cacheItem = {
-                timestamp: Date.now(),
-                data: dataToCache
-            };
-            localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
-        } catch (error) {
-            console.error("Could not write to cache", error);
-        }
-
         // Recommendation logic (can be a separate non-cached function)
         fetchRecommendations(carsData);
         setIsLoading(false);
@@ -412,7 +364,7 @@ export default function Home() {
         <section className="py-16 bg-secondary">
           <div className="container mx-auto px-4">
               <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
-              <BrandMarquee brands={ALL_BRANDS} onBrandClick={handleBrandClickFromMarquee}/>
+              <BrandMarquee onBrandClick={handleBrandClickFromMarquee}/>
           </div>
         </section>
       </main>
