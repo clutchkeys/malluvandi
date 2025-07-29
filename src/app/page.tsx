@@ -4,22 +4,11 @@ import Image from 'next/image';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CarCard } from '@/components/car-card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Search, MapPin, Edit2, Star } from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 import type { Car, Brand } from '@/lib/types';
-import { Checkbox } from '@/components/ui/checkbox';
-import { AdPlaceholder } from '@/components/ad-placeholder';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, doc, limit } from 'firebase/firestore';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { PageContent } from '@/components/page-content';
+import { collection, getDocs, query, where, getDoc, limit } from 'firebase/firestore';
+import { PageContent, SearchBar, RecommendedSection } from '@/components/page-content';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
@@ -84,11 +73,11 @@ export default async function Home() {
             <p className="text-lg md:text-xl text-primary-foreground/90 mt-4 max-w-3xl mx-auto">
               Kerala's most trusted marketplace for buying and selling quality pre-owned cars.
             </p>
-             <PageContent.Search allCars={allCars} popularBrands={popularBrands} />
+             <SearchBar allCars={allCars} popularBrands={popularBrands} />
           </div>
         </section>
 
-        <PageContent.Recommended />
+        <RecommendedSection />
 
         <div id="listings-section" className="container mx-auto px-4 py-12">
             <PageContent 

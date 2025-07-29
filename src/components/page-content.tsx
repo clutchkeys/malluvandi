@@ -38,7 +38,7 @@ const getInstagramIdFromUrl = (url: string | undefined): string | null => {
     }
 };
 
-const SearchBar = ({ allCars, popularBrands }: { allCars: Car[], popularBrands: string[] }) => {
+export const SearchBar = ({ allCars, popularBrands }: { allCars: Car[], popularBrands: string[] }) => {
     const [searchQuery, setSearchQuery] = useState('');
     
     const handlePopularTagClick = (brand: string) => {
@@ -70,7 +70,7 @@ const SearchBar = ({ allCars, popularBrands }: { allCars: Car[], popularBrands: 
     );
 };
 
-const RecommendedSection = () => {
+export const RecommendedSection = () => {
     const [recommendedCars, setRecommendedCars] = useState<Car[]>([]);
 
     useEffect(() => {
@@ -350,6 +350,3 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     </>
   );
 }
-
-PageContent.Search = SearchBar;
-PageContent.Recommended = RecommendedSection;
