@@ -22,7 +22,7 @@ const ChatInterface = ({
     handleInputChange,
     handleSubmit,
     isLoading,
-    scrollAreaRef,
+    viewportRef,
     isMobile,
     onClose,
   }: {
@@ -31,7 +31,7 @@ const ChatInterface = ({
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     handleSubmit: (e: React.FormEvent) => void;
     isLoading: boolean;
-    scrollAreaRef: React.RefObject<HTMLDivElement>;
+    viewportRef: React.RefObject<HTMLDivElement>;
     isMobile?: boolean;
     onClose?: () => void;
   }) => (
@@ -47,7 +47,7 @@ const ChatInterface = ({
             </Button>
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full" viewportRef={scrollAreaRef}>
+            <ScrollArea className="h-full" viewportRef={viewportRef}>
                 <div className="p-4 space-y-4">
                 {messages.map((message, index) => (
                     <div
@@ -104,7 +104,7 @@ export function AiChatPopup() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -126,9 +126,9 @@ export function AiChatPopup() {
   }
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
+    if (viewportRef.current) {
+      viewportRef.current.scrollTo({
+        top: viewportRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
@@ -167,7 +167,7 @@ export function AiChatPopup() {
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value),
     handleSubmit,
     isLoading,
-    scrollAreaRef,
+    viewportRef,
     onClose: () => setIsOpen(false),
   };
 
