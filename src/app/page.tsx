@@ -7,7 +7,7 @@ import { CarCard } from '@/components/car-card';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, limit } from 'firebase/firestore';
 import { PageContent, SearchBar, RecommendedSection } from '@/components/page-content';
 
 // Revalidate this page every 60 seconds to keep data fresh
