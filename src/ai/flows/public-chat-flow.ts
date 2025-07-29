@@ -39,8 +39,8 @@ const CarSchema = z.object({
 });
 
 const PublicChatOutputSchema = z.object({
-  reply: z.string().describe("The AI assistant's text reply. This should be a friendly and helpful message, acknowledging the user's query and mentioning that the requested car listings are being displayed."),
-  cars: z.array(CarSchema).optional().describe("A list of cars to display to the user, if relevant to the query. Only populate this when the user is asking to see cars."),
+  reply: z.string().describe("The AI assistant's text reply. This should be a friendly and helpful message."),
+  cars: z.array(CarSchema).optional().describe("A list of cars to display to the user, if relevant to the query."),
 });
 export type PublicChatOutput = z.infer<typeof PublicChatOutputSchema>;
 
@@ -48,21 +48,18 @@ export async function publicChat(input: PublicChatInput): Promise<PublicChatOutp
   return publicChatFlow(input);
 }
 
-// 1. Define a tool for the AI to get car listings from inventory
+// Tool to get a general list of cars
 const getCarListings = ai.defineTool(
     {
         name: 'getCarListings',
-        description: 'Returns a list of available car listings from the dealership inventory. Use this when the user asks what cars are available, asks for a list of cars, or asks for specific types of cars (e.g., "any SUVs?").',
+        description: 'Returns a list of available car listings from the dealership inventory. Use this when the user asks broadly what cars are available or asks for a list of cars without specifying a particular model.',
         inputSchema: z.object({
             count: z.number().optional().default(10).describe("The number of car listings to return."),
         }),
         outputSchema: z.array(CarSchema),
     },
     async ({ count }) => {
-        if (!db) {
-            console.error("Firestore is not initialized.");
-            return [];
-        }
+        if (!db) return [];
         const carsRef = collection(db, 'cars');
         const q = query(
             carsRef, 
@@ -88,14 +85,61 @@ const getCarListings = ai.defineTool(
     }
 );
 
+// New tool to find a specific car, case-insensitively
+const findCar = ai.defineTool(
+    {
+        name: 'findCar',
+        description: 'Searches the inventory for a specific car model. Use this when the user asks if a particular car is in stock (e.g., "Do you have a Toyota Etios?", "Is the Swift available?").',
+        inputSchema: z.object({
+            model: z.string().describe("The model of the car the user is asking about, e.g., 'Etios', 'Swift'."),
+            brand: z.string().optional().describe("The brand of the car, e.g., 'Toyota', 'Maruti Suzuki'."),
+        }),
+        outputSchema: z.array(CarSchema),
+    },
+    async ({ model, brand }) => {
+        if (!db) return [];
+        const carsRef = collection(db, 'cars');
+        const q = query(carsRef, where('status', '==', 'approved'));
+        const querySnapshot = await getDocs(q);
+        
+        const allCars = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
 
-const systemPrompt = `You are a friendly, enthusiastic, and helpful AI sales assistant for "Mallu Vandi", a premier used car dealership in Kerala, India. Your primary goal is to engage customers, help them find their perfect vehicle, and encourage them to take the next step (like inquiring or visiting).
+        const searchModel = model.toLowerCase();
+        const searchBrand = brand?.toLowerCase();
+        
+        const foundCars = allCars.filter(car => {
+            const carModel = car.model.toLowerCase();
+            const carBrand = car.brand.toLowerCase();
+
+            const modelMatch = carModel.includes(searchModel);
+            const brandMatch = searchBrand ? carBrand.includes(searchBrand) : true;
+
+            return modelMatch && brandMatch;
+        });
+
+        return foundCars.map(data => ({
+            id: data.id,
+            brand: data.brand,
+            model: data.model,
+            year: data.year,
+            price: data.price,
+            images: data.images || [],
+            kmRun: data.kmRun,
+            fuel: data.fuel,
+            transmission: data.transmission,
+        }));
+    }
+);
+
+const systemPrompt = `You are a friendly, enthusiastic, and helpful AI sales assistant for "Mallu Vandi", a premier used car dealership in Kerala, India. Your primary goal is to engage customers, help them find their perfect vehicle, and encourage them to take the next step.
 
 - **Your Identity:** You are the Mallu Vandi AI assistant.
 - **Tone:** Be conversational, persuasive, friendly, and professional. Use encouraging and positive language. Create excitement about finding a new car!
-- **Inventory Knowledge:** When a user asks what cars you have, or asks for a list of available cars, you MUST use the 'getCarListings' tool to see the current inventory. If the user asks a very broad question like "what cars do you have?", ask a clarifying question first (e.g., "We have lots of great cars! Are you looking for a specific type, like a hatchback or an SUV, or do you have a budget in mind?"). Only use the tool if the user provides some specifics or asks to see everything.
-- **Responding with Cars**: When your tools return a list of cars, you MUST pass this list back in the 'cars' field of your response. Your text 'reply' should be a friendly message like "Absolutely! Here are some of the great cars we have in stock right now. Let me know if any of these catch your eye!". Do not list the cars in the text reply yourself.
-- **Boundaries:** Do NOT invent car or bike listings. If asked for a specific car not in your tool's output, inform the user it's not currently available but suggest they check back soon or look at similar available models. If asked for contact details, guide them to the Contact page.
+- **Searching for Specific Cars:** When a user asks if you have a specific model (e.g., "Do you have a Swift?", "Looking for Toyota Etios"), you MUST use the 'findCar' tool to search the inventory. Extract the model and, if provided, the brand from the user's message to use in the tool.
+- **Searching for General Cars:** When a user asks a broad question like "what cars do you have?" or asks for a list, you MUST use the 'getCarListings' tool. If the query is very broad, ask a clarifying question first (e.g., "We have lots of great cars! Are you looking for a specific type, like a hatchback or an SUV, or do you have a budget in mind?").
+- **Responding with Cars**: When your tools return one or more cars, you MUST pass this list back in the 'cars' field of your response. Your text 'reply' should be a friendly message like "Yes, we do! Here is the Toyota Etios we have in stock. Let me know if you'd like to know more!" or "Of course! Here are some great cars we have available right now.". Do NOT list the cars in the text reply yourself.
+- **If Car Not Found**: If the 'findCar' tool returns an empty list, inform the user that the specific model is not currently available but offer to show them similar cars, using their request to find alternatives (e.g. "I don't have that specific model in stock right now... would you like to see a list of our other available Toyota cars?").
+- **Boundaries:** Do NOT invent car or bike listings. If asked for contact details, guide them to the Contact page.
 - **Be Concise:** Keep your answers clear and to the point, but warm and engaging.
 `;
 
@@ -112,7 +156,7 @@ const publicChatFlow = ai.defineFlow(
         system: systemPrompt,
         history: history || [],
         prompt: message,
-        tools: [getCarListings],
+        tools: [getCarListings, findCar],
         output: {
             schema: PublicChatOutputSchema,
         }
