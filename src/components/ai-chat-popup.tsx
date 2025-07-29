@@ -8,12 +8,16 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Loader2, MessageSquare, Send, X, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { publicChat } from '@/ai/flows/public-chat-flow';
+import { publicChat, PublicChatOutput } from '@/ai/flows/public-chat-flow';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
+import type { Car } from '@/lib/types';
+import { MiniCarCard } from './mini-car-card';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 
 type ChatMessage = {
   role: 'user' | 'model';
   content: string;
+  cars?: Car[];
 };
 
 const ChatInterface = ({
@@ -51,23 +55,43 @@ const ChatInterface = ({
                 <div className="p-4 space-y-4">
                 {messages.map((message, index) => (
                     <div
-                    key={index}
-                    className={cn(
-                        'flex items-end gap-2',
-                        message.role === 'user' ? 'justify-end' : 'justify-start'
-                    )}
-                    >
-                    {message.role === 'model' && <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />}
-                    <div
+                        key={index}
                         className={cn(
-                        'max-w-[80%] rounded-lg px-3 py-2 text-sm break-words',
-                        message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                            'flex flex-col gap-2',
+                             message.role === 'user' ? 'items-end' : 'items-start'
                         )}
                     >
-                        {message.content}
-                    </div>
+                        <div className={cn(
+                            'flex items-end gap-2 w-full',
+                             message.role === 'user' ? 'justify-end' : 'justify-start'
+                        )}>
+                            {message.role === 'model' && <Bot className="h-6 w-6 flex-shrink-0 text-muted-foreground" />}
+                            <div
+                                className={cn(
+                                'max-w-[80%] rounded-lg px-3 py-2 text-sm break-words',
+                                message.role === 'user'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted'
+                                )}
+                            >
+                                {message.content}
+                            </div>
+                        </div>
+                        {message.cars && message.cars.length > 0 && (
+                            <div className="w-full max-w-sm self-start">
+                                <Carousel opts={{ align: "start", loop: false }} className="w-full">
+                                    <CarouselContent className="-ml-2">
+                                        {message.cars.map((car, carIndex) => (
+                                            <CarouselItem key={carIndex} className="pl-2 basis-[80%] md:basis-2/3">
+                                                <MiniCarCard car={car} />
+                                            </CarouselItem>
+                                        ))}
+                                    </CarouselContent>
+                                    <CarouselPrevious className="-left-2 h-6 w-6" />
+                                    <CarouselNext className="-right-2 h-6 w-6" />
+                                </Carousel>
+                            </div>
+                        )}
                     </div>
                 ))}
                 {isLoading && (
@@ -145,9 +169,13 @@ export function AiChatPopup() {
 
     try {
       const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
-      const result = await publicChat({ history: chatHistory, message: userMessage.content });
+      const result: PublicChatOutput = await publicChat({ history: chatHistory, message: userMessage.content });
       
-      const aiMessage: ChatMessage = { role: 'model', content: result.reply };
+      const aiMessage: ChatMessage = { 
+        role: 'model', 
+        content: result.reply,
+        cars: result.cars as Car[] | undefined,
+       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error('AI chat error:', error);
