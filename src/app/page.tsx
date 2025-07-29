@@ -176,6 +176,8 @@ export default function Home() {
         return allCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
     }
     
+    const isKmRangeDefault = kmRange[0] === 0 && kmRange[1] === 200000;
+
     return allCars.filter(car => {
       const searchMatch = searchQuery
         ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
@@ -183,7 +185,11 @@ export default function Home() {
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
-      const kmMatch = car.kmRun ? car.kmRun >= kmRange[0] && car.kmRun <= priceRange[1] : true;
+      
+      const kmMatch = isKmRangeDefault
+          ? true // Don't filter by km if slider is at default
+          : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
+
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
