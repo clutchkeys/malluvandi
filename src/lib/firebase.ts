@@ -15,27 +15,11 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase for client-side
-let app;
-if (typeof window !== 'undefined') {
-    if (!getApps().length) {
-        if (firebaseConfig.apiKey) {
-            app = initializeApp(firebaseConfig);
-        } else {
-            console.warn("Firebase API key is missing. Firebase has not been initialized.");
-        }
-    } else {
-        app = getApp();
-    }
-}
-
-const auth = app ? getAuth(app) : null;
-const db = app ? getFirestore(app) : null;
-const rtdb = app ? getDatabase(app) : null;
-const storage = app ? getStorage(app) : null;
-
-if (!app && typeof window !== 'undefined') {
-    console.warn("Firebase not initialized. Ensure environment variables are set and loaded correctly.");
-}
+// Initialize Firebase for SSR and SSG, and prevent re-initialization on the client
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
+const auth = getAuth(app);
+const rtdb = getDatabase(app);
+const storage = getStorage(app);
 
 export { app, auth, db, rtdb, storage };
