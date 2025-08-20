@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import Image from 'next/image';
 import { CarCard } from '@/components/car-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,65 +27,15 @@ const getInstagramIdFromUrl = (url: string | undefined): string | null => {
     if (!url) return null;
     try {
         const path = new URL(url).pathname;
-        const segments = path.split('/').filter(Boolean); // e.g., ['p', 'Cz...'] or ['reel', 'Cz...']
+        const segments = path.split('/').filter(Boolean);
         if ((segments[0] === 'p' || segments[0] === 'reel') && segments[1]) {
             return segments[1];
         }
         return null;
     } catch (e) {
-        return null; // Invalid URL
+        return null;
     }
 };
-
-export const SearchBar = ({ allCars, popularBrands }: { allCars: Car[], popularBrands: string[] }) => {
-    const [searchQuery, setSearchQuery] = useState('');
-    
-    const handlePopularTagClick = (brand: string) => {
-        // This functionality needs to be implemented within the main PageContent component
-        // Or state needs to be lifted up. For now, we just log it.
-        console.log("Clicked popular brand:", brand);
-    };
-
-    return (
-        <div className="mt-8 max-w-2xl mx-auto">
-            <div className="relative">
-                <Input
-                    placeholder="Search by make, model, or paste an IG Reel link..."
-                    className="w-full text-base h-14 pl-12 pr-4 bg-background text-foreground"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"/>
-            </div>
-             <div className="mt-4 flex flex-wrap justify-center items-center gap-2">
-                <span className="text-sm font-medium mr-2">Popular:</span>
-                {popularBrands.map(tag => (
-                    <Button key={tag} size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full text-xs h-7 px-3" onClick={() => handlePopularTagClick(tag)}>
-                        {tag}
-                    </Button>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-export const RecommendedSection = ({ newCars }: { newCars: Car[] }) => {
-    if (newCars.length === 0) return null;
-
-    return (
-        <section className="py-12 bg-secondary/30">
-            <div className="container mx-auto px-4">
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <Star className="text-yellow-400" /> Newly Added Cars
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    {newCars.map(car => <CarCard key={car.id} car={car} />)}
-                </div>
-            </div>
-        </section>
-    );
-};
-
 
 interface PageContentProps {
   initialCars: Car[];
@@ -133,14 +82,11 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   }, []);
 
   const handleBrandChange = (brand: string) => {
-    setSelectedBrands(prev => {
-        const isSelected = prev.includes(brand);
-        if (isSelected) {
-            return prev.filter(b => b !== brand);
-        } else {
-            return [...prev, brand];
-        }
-    });
+    setSelectedBrands(prev => 
+      prev.includes(brand) 
+        ? prev.filter(b => b !== brand) 
+        : [...prev, brand]
+    );
     resetVisibleCount();
   };
   
@@ -171,7 +117,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     
     if (isInstagramSearch) {
         const searchId = getInstagramIdFromUrl(searchQuery);
-        if (!searchId) return allCars; // Fallback to showing all if URL is invalid
+        if (!searchId) return [];
         return allCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
     }
     
@@ -179,18 +125,16 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
 
     return allCars.filter(car => {
       const searchMatch = searchQuery
-        ? `${car.brand} ${car.model} ${car.year} ${car.color}`.toLowerCase().includes(searchQuery.toLowerCase())
+        ? `${car.brand} ${car.model}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
       
       const kmMatch = isKmRangeDefault
-          ? true // Don't filter by km if slider is at default
+          ? true
           : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
-      // This logic was previously incorrect, but it is not used for any filter yet.
-      // For now, we will set it to true to avoid unintended filtering.
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
@@ -201,7 +145,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
 
   useEffect(() => {
     resetVisibleCount();
-  }, [searchQuery, selectedBrands.length, selectedBodyTypes.length, selectedYear, priceRange[0], priceRange[1], kmRange[0], kmRange[1]]);
+  }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange]);
 
 
   const FilterContent = () => (
@@ -262,7 +206,19 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
 
   return (
     <>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="relative -mt-16 z-20">
+             <div className="relative max-w-3xl mx-auto">
+                <Input
+                    placeholder="Search by make, model, or paste an IG Reel link..."
+                    className="w-full text-base h-14 pl-12 pr-4 bg-background text-foreground shadow-lg"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"/>
+            </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center my-6 gap-4">
             <h2 className="text-2xl font-bold">All Listings ({filteredCars.length})</h2>
             <div className="w-full md:w-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}>
@@ -359,5 +315,3 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     </>
   );
 }
-
-    

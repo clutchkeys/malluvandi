@@ -3,12 +3,11 @@ import React from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { CarCard } from '@/components/car-card';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc, limit, orderBy } from 'firebase/firestore';
-import { PageContent, SearchBar, RecommendedSection } from '@/components/page-content';
+import { PageContent } from '@/components/page-content';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
@@ -19,11 +18,6 @@ async function getPageData() {
     const filtersRef = doc(db, 'config', 'filters');
     const brandsRef = collection(db, 'brands');
     
-    // Define the cutoff for "new" cars (last 2 days)
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const twoDaysAgoTimestamp = twoDaysAgo.toISOString();
-
     // Fetch all data in parallel
     const [carSnapshot, filtersSnap, brandsSnap] = await Promise.all([
         getDocs(query(carsRef, where('status', '==', 'approved'))),
@@ -44,33 +38,19 @@ async function getPageData() {
     // Sort cars by creation date descending to ensure we get the latest ones
     allCars.sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
 
-    const newCars = allCars.filter(car => car.createdAt! >= twoDaysAgoTimestamp);
-
     const filters = filtersSnap.exists() ? filtersSnap.data() : { brands: [], models: {}, years: [] };
     const brandLogos = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
 
-    // Calculate popular brands
-    const brandCounts: { [key: string]: number } = {};
-    for (const car of allCars) {
-        brandCounts[car.brand] = (brandCounts[car.brand] || 0) + 1;
-    }
-    const popularBrands = Object.entries(brandCounts)
-        .sort(([,a],[,b]) => b - a)
-        .map(([brand]) => brand)
-        .slice(0, 4);
-
     return {
         allCars,
-        newCars,
         filters,
         brandLogos,
-        popularBrands,
     };
 }
 
 
 export default async function Home() {
-    const { allCars, newCars, filters, brandLogos, popularBrands } = await getPageData();
+    const { allCars, filters, brandLogos } = await getPageData();
     const { brands, models, years } = filters;
 
   return (
@@ -78,7 +58,7 @@ export default async function Home() {
       <Header />
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative bg-card h-[50vh] flex items-center justify-center text-center text-white overflow-hidden">
+        <section className="relative bg-card h-[40vh] flex items-center justify-center text-center text-white overflow-hidden">
           <div className="absolute inset-0 bg-black/60 z-10" />
           <Image
             src="https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203"
@@ -93,11 +73,8 @@ export default async function Home() {
             <p className="text-lg md:text-xl text-primary-foreground/90 mt-4 max-w-3xl mx-auto">
               Kerala's most trusted marketplace for buying and selling quality pre-owned cars.
             </p>
-             <SearchBar allCars={allCars} popularBrands={popularBrands} />
           </div>
         </section>
-
-        <RecommendedSection newCars={newCars}/>
 
         <div id="listings-section" className="container mx-auto px-4 py-12">
             <PageContent 
