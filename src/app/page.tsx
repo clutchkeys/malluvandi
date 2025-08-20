@@ -8,6 +8,9 @@ import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc, limit, orderBy } from 'firebase/firestore';
 import { PageContent } from '@/components/page-content';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Card, CardContent } from '@/components/ui/card';
+import { CarCard } from '@/components/car-card';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
@@ -35,14 +38,20 @@ async function getPageData() {
         } as Car;
     });
 
-    // Sort cars by creation date descending to ensure we get the latest ones
+    // Sort cars by creation date descending
     allCars.sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+    // Filter for newly added cars (last 2 days)
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const newCars = allCars.filter(car => car.createdAt && new Date(car.createdAt) > twoDaysAgo);
 
     const filters = filtersSnap.exists() ? filtersSnap.data() : { brands: [], models: {}, years: [] };
     const brandLogos = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
 
     return {
         allCars,
+        newCars,
         filters,
         brandLogos,
     };
@@ -50,7 +59,7 @@ async function getPageData() {
 
 
 export default async function Home() {
-    const { allCars, filters, brandLogos } = await getPageData();
+    const { allCars, newCars, filters, brandLogos } = await getPageData();
     const { brands, models, years } = filters;
 
   return (
@@ -76,12 +85,39 @@ export default async function Home() {
           </div>
         </section>
 
+        {newCars.length > 0 && (
+            <section className="py-12 bg-secondary/30">
+                <div className="container mx-auto px-4">
+                    <h2 className="text-2xl font-bold mb-6">Newly Added Cars</h2>
+                    <Carousel
+                        opts={{
+                            align: "start",
+                            loop: false,
+                        }}
+                        className="w-full"
+                    >
+                        <CarouselContent>
+                            {newCars.map((car) => (
+                                <CarouselItem key={car.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                                    <div className="p-1 h-full">
+                                        <CarCard car={car} />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="ml-12" />
+                        <CarouselNext className="mr-12" />
+                    </Carousel>
+                </div>
+            </section>
+        )}
+
         <div id="listings-section" className="container mx-auto px-4 py-12">
             <PageContent 
                 initialCars={allCars} 
-                brands={brands} 
-                models={models} 
-                years={years} 
+                brands={brands || []} 
+                models={models || {}} 
+                years={(years || []).sort((a: number, b: number) => b - a)} 
             />
         </div>
       
@@ -97,3 +133,5 @@ export default async function Home() {
     </div>
   );
 }
+
+    

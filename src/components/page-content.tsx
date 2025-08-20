@@ -3,9 +3,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { CarCard } from '@/components/car-card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2, Search, MapPin, Edit2, X, Star } from 'lucide-react';
+import { SlidersHorizontal, Loader2, MapPin, Edit2, X } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -20,20 +19,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const keralaDistricts = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
 ];
-
-const getInstagramIdFromUrl = (url: string | undefined): string | null => {
-    if (!url) return null;
-    try {
-        const path = new URL(url).pathname;
-        const segments = path.split('/').filter(Boolean);
-        if ((segments[0] === 'p' || segments[0] === 'reel') && segments[1]) {
-            return segments[1];
-        }
-        return null;
-    } catch (e) {
-        return null;
-    }
-};
 
 interface PageContentProps {
   initialCars: Car[];
@@ -50,12 +35,9 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   const [tempLocation, setTempLocation] = useState(userLocation);
   const [visibleCount, setVisibleCount] = useState(CARS_PER_PAGE);
 
-  const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV'];
-
   // Filters values
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
@@ -66,24 +48,18 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setVisibleCount(prevCount => prevCount + CARS_PER_PAGE);
   };
 
-  const handleBrandChange = (brand: string) => {
+  const handleBrandChange = (brand: string, checked: boolean) => {
     setSelectedBrands(prev => 
-      prev.includes(brand) 
-        ? prev.filter(b => b !== brand) 
-        : [...prev, brand]
+      checked
+        ? [...prev, brand] 
+        : prev.filter(b => b !== brand)
     );
-  };
-  
-  const handleBodyTypeChange = (type: string) => {
-    setSelectedBodyTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
+    setSelectedModel(''); // Reset model when brand changes
   };
   
   const handleResetFilters = () => {
-    setSearchQuery('');
     setSelectedBrands([]);
-    setSelectedBodyTypes([]);
+    setSelectedModel('');
     setSelectedYear('');
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
@@ -94,22 +70,19 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setIsLocationModalOpen(false);
   }
 
-  const filteredCars = useMemo(() => {
-    const isInstagramSearch = searchQuery.trim().startsWith('https://www.instagram.com/');
-    
-    if (isInstagramSearch) {
-        const searchId = getInstagramIdFromUrl(searchQuery);
-        if (!searchId) return [];
-        return initialCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
+  const availableModels = useMemo(() => {
+    if (selectedBrands.length === 1) {
+        return models[selectedBrands[0]] || [];
     }
-    
+    return [];
+  }, [selectedBrands, models]);
+
+  const filteredCars = useMemo(() => {
     const isKmRangeDefault = kmRange[0] === 0 && kmRange[1] === 200000;
 
     return initialCars.filter(car => {
-      const searchMatch = searchQuery
-        ? `${car.brand} ${car.model}`.toLowerCase().includes(searchQuery.toLowerCase())
-        : true;
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
+      const modelMatch = selectedModel ? car.model === selectedModel : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
       
@@ -117,18 +90,15 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
           ? true
           : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
-      // Body type filter is not implemented on the car data yet, so we'll keep it simple
-      const bodyTypeMatch = true; 
-
-      return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
+      return brandMatch && modelMatch && yearMatch && priceMatch && kmMatch;
     });
-  }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange, initialCars]);
+  }, [selectedBrands, selectedModel, selectedYear, priceRange, kmRange, initialCars]);
 
   const carsToShow = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);
 
   useEffect(() => {
     resetVisibleCount();
-  }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange]);
+  }, [selectedBrands, selectedModel, selectedYear, priceRange, kmRange]);
 
 
   const FilterContent = () => (
@@ -138,22 +108,20 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
             <div className="space-y-3">
                 {brands.map(brand => (
                     <div key={brand} className="flex items-center space-x-2">
-                        <Checkbox id={`filter-${brand}`} checked={selectedBrands.includes(brand)} onCheckedChange={() => handleBrandChange(brand)}/>
+                        <Checkbox id={`filter-${brand}`} checked={selectedBrands.includes(brand)} onCheckedChange={(checked) => handleBrandChange(brand, !!checked)}/>
                         <label htmlFor={`filter-${brand}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{brand}</label>
                     </div>
                 ))}
             </div>
         </div>
         <div>
-            <h3 className="font-semibold mb-4 text-lg">Body Type</h3>
-            <div className="space-y-3">
-                {carBodyTypes.map(type => (
-                    <div key={type} className="flex items-center space-x-2">
-                        <Checkbox id={`filter-${type}`} checked={selectedBodyTypes.includes(type)} onCheckedChange={() => handleBodyTypeChange(type)}/>
-                        <label htmlFor={`filter-${type}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{type}</label>
-                    </div>
-                ))}
-            </div>
+            <h3 className="font-semibold mb-4 text-lg">Model</h3>
+            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={selectedBrands.length !== 1}>
+                <SelectTrigger><SelectValue placeholder="Select a brand first" /></SelectTrigger>
+                <SelectContent>
+                    {availableModels.map(model => <SelectItem key={model} value={String(model)}>{model}</SelectItem>)}
+                </SelectContent>
+            </Select>
         </div>
           <div>
             <h3 className="font-semibold mb-4 text-lg">Year</h3>
@@ -181,7 +149,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
             </div>
         </div>
           <div className="pt-4 border-t">
-            <Button onClick={handleResetFilters} variant="ghost" className="w-full">Reset All Filters</Button>
+            <Button onClick={handleResetFilters} variant="outline" className="w-full">Reset Filters</Button>
         </div>
     </div>
   );
@@ -189,18 +157,6 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
 
   return (
     <>
-        <div className="relative -mt-16 z-20">
-             <div className="relative max-w-3xl mx-auto">
-                <Input
-                    placeholder="Search by make, model, or paste an IG Reel link..."
-                    className="w-full text-base h-14 pl-12 pr-4 bg-background text-foreground shadow-lg"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"/>
-            </div>
-        </div>
-
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center my-6 gap-4">
             <h2 className="text-2xl font-bold">All Listings ({filteredCars.length})</h2>
             <div className="w-full md:w-auto flex items-center justify-between gap-4">
@@ -232,7 +188,10 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
             <aside className="hidden lg:block lg:col-span-1 lg:sticky lg:top-24">
                 <Card className="shadow-lg">
-                    <CardContent className="p-6">
+                    <CardHeader>
+                      <h3 className="text-xl font-semibold">Filters</h3>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0">
                         <FilterContent />
                     </CardContent>
                 </Card>
@@ -294,3 +253,5 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     </>
   );
 }
+
+    
