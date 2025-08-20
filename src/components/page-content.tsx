@@ -2,9 +2,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { CarCard } from '@/components/car-card';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, Loader2, MapPin, Edit2, X } from 'lucide-react';
+import { SlidersHorizontal, MapPin, Edit2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -30,18 +31,19 @@ interface PageContentProps {
 const CARS_PER_PAGE = 18;
 
 export function PageContent({ initialCars, brands, models, years }: PageContentProps) {
+  const searchParams = useSearchParams();
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(userLocation);
   const [visibleCount, setVisibleCount] = useState(CARS_PER_PAGE);
 
   // Filters values
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(searchParams.get('brand')?.split(',') || []);
+  const [selectedModel, setSelectedModel] = useState(searchParams.get('model') || '');
+  const [selectedYear, setSelectedYear] = useState(searchParams.get('year') || '');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
-  
+
   const resetVisibleCount = () => setVisibleCount(CARS_PER_PAGE);
   
   const handleLoadMore = () => {
@@ -253,5 +255,3 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     </>
   );
 }
-
-    

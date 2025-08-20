@@ -6,11 +6,11 @@ import { Footer } from '@/components/footer';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, getDoc, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { PageContent } from '@/components/page-content';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Card, CardContent } from '@/components/ui/card';
 import { CarCard } from '@/components/car-card';
+import { HomeFilter } from '@/components/home-filter';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
@@ -85,6 +85,8 @@ export default async function Home() {
           </div>
         </section>
 
+        <HomeFilter brands={brands} models={models} years={years} />
+        
         {newCars.length > 0 && (
             <section className="py-12 bg-secondary/30">
                 <div className="container mx-auto px-4">
@@ -133,5 +135,3 @@ export default async function Home() {
     </div>
   );
 }
-
-    
