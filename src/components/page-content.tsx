@@ -38,7 +38,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   const [visibleCount, setVisibleCount] = useState(CARS_PER_PAGE);
 
   // Filters values
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(searchParams.get('brand')?.split(',') || []);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(searchParams.get('brand')?.split(',').filter(Boolean) || []);
   const [selectedModel, setSelectedModel] = useState(searchParams.get('model') || '');
   const [selectedYear, setSelectedYear] = useState(searchParams.get('year') || '');
   const [selectedRegYear, setSelectedRegYear] = useState(searchParams.get('regyear') || '');
