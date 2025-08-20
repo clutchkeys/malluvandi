@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { CarCard } from '@/components/car-card';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, Loader2, MapPin, Edit2, X } from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
