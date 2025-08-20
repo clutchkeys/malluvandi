@@ -163,6 +163,7 @@ export default function EmployeeAListingsPage() {
           images: imageUrls,
           badges: formValues.badges ? formValues.badges.split(',').map((b:string) => b.trim()) : [],
           instagramReelUrl: formValues.instagramReelUrl || undefined,
+          createdAt: new Date().toISOString(),
       };
 
       if (carToEdit) {

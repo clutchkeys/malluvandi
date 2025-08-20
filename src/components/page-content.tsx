@@ -70,43 +70,17 @@ export const SearchBar = ({ allCars, popularBrands }: { allCars: Car[], popularB
     );
 };
 
-export const RecommendedSection = () => {
-    const [recommendedCars, setRecommendedCars] = useState<Car[]>([]);
-
-    useEffect(() => {
-        // Recommendation logic now runs on the client
-        try {
-            const viewedCarIds = JSON.parse(localStorage.getItem('viewedCars') || '[]') as string[];
-            if (viewedCarIds.length > 0) {
-                const q = query(collection(db, 'cars'), where('status', '==', 'approved'));
-                onSnapshot(q, (snapshot) => {
-                    const allCars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Car }));
-                    const lastViewedId = viewedCarIds[0];
-                    const lastViewedCar = allCars.find(c => c.id === lastViewedId);
-
-                    if (lastViewedCar) {
-                        const recommendationsData = allCars
-                            .filter(c => c.brand === lastViewedCar.brand && c.id !== lastViewedId && !viewedCarIds.includes(c.id))
-                            .slice(0, 4);
-                        setRecommendedCars(recommendationsData);
-                    }
-                });
-            }
-        } catch (error) {
-            console.error("Could not get recommendations:", error);
-        }
-    }, []);
-
-    if (recommendedCars.length === 0) return null;
+export const RecommendedSection = ({ newCars }: { newCars: Car[] }) => {
+    if (newCars.length === 0) return null;
 
     return (
         <section className="py-12 bg-secondary/30">
             <div className="container mx-auto px-4">
                 <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <Star className="text-yellow-400" /> Recommended For You
+                    <Star className="text-yellow-400" /> Newly Added Cars
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    {recommendedCars.map(car => <CarCard key={car.id} car={car} />)}
+                    {newCars.map(car => <CarCard key={car.id} car={car} />)}
                 </div>
             </div>
         </section>
@@ -121,12 +95,15 @@ interface PageContentProps {
   years: number[];
 }
 
+const CARS_PER_PAGE = 18;
+
 export function PageContent({ initialCars, brands, models, years }: PageContentProps) {
   const [allCars, setAllCars] = useState<Car[]>(initialCars);
-  const [isLoading, setIsLoading] = useState(false); // Initially false as we have initial data
+  const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(userLocation);
+  const [visibleCount, setVisibleCount] = useState(CARS_PER_PAGE);
 
   const carBodyTypes = ['Hatchback', 'Sedan', 'SUV', 'MUV'];
 
@@ -137,6 +114,12 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   const [selectedYear, setSelectedYear] = useState('');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
+  
+  const resetVisibleCount = () => setVisibleCount(CARS_PER_PAGE);
+  
+  const handleLoadMore = () => {
+    setVisibleCount(prevCount => prevCount + CARS_PER_PAGE);
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -153,12 +136,14 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setSelectedBrands(prev => 
       prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
     );
+    resetVisibleCount();
   };
   
   const handleBodyTypeChange = (type: string) => {
     setSelectedBodyTypes(prev =>
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
+    resetVisibleCount();
   };
   
   const handleResetFilters = () => {
@@ -168,6 +153,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setSelectedYear('');
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
+    resetVisibleCount();
   };
   
   const handleLocationSave = () => {
@@ -203,6 +189,13 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
     });
   }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange, allCars]);
+
+  const carsToShow = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);
+
+  useEffect(() => {
+    resetVisibleCount();
+  }, [searchQuery, selectedBrands.length, selectedBodyTypes.length, selectedYear, priceRange[0], priceRange[1], kmRange[0], kmRange[1]]);
+
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -263,7 +256,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   return (
     <>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold">All Listings</h2>
+            <h2 className="text-2xl font-bold">All Listings ({filteredCars.length})</h2>
             <div className="w-full md:w-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer" onClick={() => { setTempLocation(userLocation); setIsLocationModalOpen(true); }}>
                 <MapPin size={16} className="text-primary"/>
@@ -301,16 +294,17 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
             
             <section className="lg:col-span-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                    {isLoading && filteredCars.length === 0 ? (
+                    {isLoading && carsToShow.length === 0 ? (
                     <div className="col-span-full flex justify-center py-12">
                         <Loader2 className="h-10 w-10 animate-spin text-primary" />
                     </div>
-                    ) : filteredCars.length > 0 ? (
-                        <>
-                            {filteredCars.slice(0, 3).map(car => <CarCard key={car.id} car={car} />)}
-                            <div className="hidden sm:block xl:block col-span-1"><AdPlaceholder shape="post" /></div>
-                            {filteredCars.slice(3).map(car => <CarCard key={car.id} car={car} />)}
-                        </>
+                    ) : carsToShow.length > 0 ? (
+                        carsToShow.map((car, index) => (
+                           <React.Fragment key={car.id}>
+                                <CarCard car={car} />
+                                {index === 2 && <div className="hidden sm:block xl:block col-span-1 row-span-1"><AdPlaceholder shape="post" /></div>}
+                           </React.Fragment>
+                        ))
                     ) : (
                         <div className="col-span-full text-center py-12 text-muted-foreground bg-card rounded-lg">
                             <p className="text-lg font-semibold">No cars match your current filters.</p>
@@ -319,6 +313,14 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
                         </div>
                     )}
                 </div>
+
+                {filteredCars.length > visibleCount && (
+                    <div className="text-center mt-8">
+                        <Button onClick={handleLoadMore} size="lg">
+                            Load More ({filteredCars.length - visibleCount} remaining)
+                        </Button>
+                    </div>
+                )}
             </section>
         </div>
 

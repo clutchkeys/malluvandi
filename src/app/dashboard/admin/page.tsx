@@ -352,6 +352,7 @@ export default function AdminPage() {
             ...carData,
             submittedBy: user.id,
             status: carData.status || 'pending',
+            createdAt: new Date().toISOString(),
           };
           await addDoc(collection(db, 'cars'), newCarData);
           toast({ title: 'Car Added' });

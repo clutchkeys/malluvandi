@@ -74,6 +74,7 @@ export default function SellCarPage() {
           images: [], // No images from customer
           status: 'pending' as const,
           submittedBy: user.id,
+          createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, 'cars'), carData);

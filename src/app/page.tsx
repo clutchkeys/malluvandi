@@ -7,7 +7,7 @@ import { CarCard } from '@/components/car-card';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, getDoc, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, limit, orderBy } from 'firebase/firestore';
 import { PageContent, SearchBar, RecommendedSection } from '@/components/page-content';
 
 // Revalidate this page every 60 seconds to keep data fresh
@@ -19,6 +19,11 @@ async function getPageData() {
     const filtersRef = doc(db, 'config', 'filters');
     const brandsRef = collection(db, 'brands');
     
+    // Define the cutoff for "new" cars (last 2 days)
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const twoDaysAgoTimestamp = twoDaysAgo.toISOString();
+
     // Fetch all data in parallel
     const [carSnapshot, filtersSnap, brandsSnap] = await Promise.all([
         getDocs(query(carsRef, where('status', '==', 'approved'))),
@@ -26,7 +31,21 @@ async function getPageData() {
         getDocs(query(brandsRef, limit(12)))
     ]);
 
-    const allCars = carSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
+    const allCars = carSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            // Ensure createdAt is a string for client-side date parsing
+            createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date(0).toISOString(),
+        } as Car;
+    });
+
+    // Sort cars by creation date descending to ensure we get the latest ones
+    allCars.sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+    const newCars = allCars.filter(car => car.createdAt! >= twoDaysAgoTimestamp);
+
     const filters = filtersSnap.exists() ? filtersSnap.data() : { brands: [], models: {}, years: [] };
     const brandLogos = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
 
@@ -42,6 +61,7 @@ async function getPageData() {
 
     return {
         allCars,
+        newCars,
         filters,
         brandLogos,
         popularBrands,
@@ -50,7 +70,7 @@ async function getPageData() {
 
 
 export default async function Home() {
-    const { allCars, filters, brandLogos, popularBrands } = await getPageData();
+    const { allCars, newCars, filters, brandLogos, popularBrands } = await getPageData();
     const { brands, models, years } = filters;
 
   return (
@@ -77,7 +97,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <RecommendedSection />
+        <RecommendedSection newCars={newCars}/>
 
         <div id="listings-section" className="container mx-auto px-4 py-12">
             <PageContent 

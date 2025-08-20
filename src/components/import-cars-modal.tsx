@@ -68,6 +68,7 @@ export function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: bool
                             submittedBy: currentUser.id,
                             badges: row.badges ? row.badges.split(',').map((b: string) => b.trim()) : [],
                             instagramReelUrl: row.instagramReelUrl || undefined,
+                            createdAt: new Date().toISOString(),
                         };
 
                         if (!newCar.brand || !newCar.model) {

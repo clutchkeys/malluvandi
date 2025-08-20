@@ -44,6 +44,7 @@ export interface Car {
   submittedBy: string; // User ID
   badges?: string[];
   instagramReelUrl?: string;
+  createdAt?: string; // ISO 8601 date string
 }
 
 export interface Inquiry {
