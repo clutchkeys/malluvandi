@@ -309,7 +309,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
                         carsToShow.map((car, index) => (
                            <React.Fragment key={car.id}>
                                 <CarCard car={car} />
-                                {index === 2 && <div className="hidden sm:block xl:block col-span-1 row-span-1"><AdPlaceholder shape="post" /></div>}
+                                {(index + 1) % 6 === 3 && <div className="hidden sm:block xl:block col-span-1 row-span-1"><AdPlaceholder shape="post" /></div>}
                            </React.Fragment>
                         ))
                     ) : (
@@ -359,3 +359,5 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     </>
   );
 }
+
+    
