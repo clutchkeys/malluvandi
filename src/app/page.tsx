@@ -6,7 +6,7 @@ import { Footer } from '@/components/footer';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, limit, orderBy, getDoc } from 'firebase/firestore';
 import { PageContent } from '@/components/page-content';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { CarCard } from '@/components/car-card';
