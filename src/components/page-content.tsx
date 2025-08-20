@@ -16,8 +16,6 @@ import type { Car } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 const keralaDistricts = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
@@ -47,8 +45,6 @@ interface PageContentProps {
 const CARS_PER_PAGE = 18;
 
 export function PageContent({ initialCars, brands, models, years }: PageContentProps) {
-  const [allCars, setAllCars] = useState<Car[]>(initialCars);
-  const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(userLocation);
@@ -70,31 +66,18 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setVisibleCount(prevCount => prevCount + CARS_PER_PAGE);
   };
 
-  useEffect(() => {
-    setIsLoading(true);
-    const q = query(collection(db, 'cars'), where('status', '==', 'approved'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const carsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
-        setAllCars(carsData);
-        setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
   const handleBrandChange = (brand: string) => {
     setSelectedBrands(prev => 
       prev.includes(brand) 
         ? prev.filter(b => b !== brand) 
         : [...prev, brand]
     );
-    resetVisibleCount();
   };
   
   const handleBodyTypeChange = (type: string) => {
     setSelectedBodyTypes(prev =>
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
-    resetVisibleCount();
   };
   
   const handleResetFilters = () => {
@@ -104,7 +87,6 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setSelectedYear('');
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
-    resetVisibleCount();
   };
   
   const handleLocationSave = () => {
@@ -118,12 +100,12 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     if (isInstagramSearch) {
         const searchId = getInstagramIdFromUrl(searchQuery);
         if (!searchId) return [];
-        return allCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
+        return initialCars.filter(car => getInstagramIdFromUrl(car.instagramReelUrl) === searchId);
     }
     
     const isKmRangeDefault = kmRange[0] === 0 && kmRange[1] === 200000;
 
-    return allCars.filter(car => {
+    return initialCars.filter(car => {
       const searchMatch = searchQuery
         ? `${car.brand} ${car.model}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
@@ -135,11 +117,12 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
           ? true
           : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
+      // Body type filter is not implemented on the car data yet, so we'll keep it simple
       const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
     });
-  }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange, allCars]);
+  }, [searchQuery, selectedBrands, selectedBodyTypes, selectedYear, priceRange, kmRange, initialCars]);
 
   const carsToShow = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);
 
@@ -257,11 +240,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
             
             <section className="lg:col-span-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                    {isLoading && carsToShow.length === 0 ? (
-                    <div className="col-span-full flex justify-center py-12">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    </div>
-                    ) : carsToShow.length > 0 ? (
+                    {carsToShow.length > 0 ? (
                         carsToShow.map((car, index) => (
                            <React.Fragment key={car.id}>
                                 <CarCard car={car} />
