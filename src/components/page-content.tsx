@@ -184,7 +184,9 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
           ? true // Don't filter by km if slider is at default
           : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
-      const bodyTypeMatch = true; // Placeholder
+      // This logic was previously incorrect, but it is not used for any filter yet.
+      // For now, we will set it to true to avoid unintended filtering.
+      const bodyTypeMatch = true; 
 
       return searchMatch && brandMatch && bodyTypeMatch && yearMatch && priceMatch && kmMatch;
     });
