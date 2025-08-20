@@ -60,7 +60,8 @@ async function getPageData() {
 
 export default async function Home() {
     const { allCars, newCars, filters, brandLogos } = await getPageData();
-    const { brands, models, years } = filters;
+    const { brands, models } = filters;
+    const years = (filters.years || []).sort((a: number, b: number) => b - a);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -119,7 +120,7 @@ export default async function Home() {
                 initialCars={allCars} 
                 brands={brands || []} 
                 models={models || {}} 
-                years={(years || []).sort((a: number, b: number) => b - a)} 
+                years={years} 
             />
         </div>
       
