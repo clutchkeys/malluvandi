@@ -41,6 +41,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   const [selectedBrands, setSelectedBrands] = useState<string[]>(searchParams.get('brand')?.split(',') || []);
   const [selectedModel, setSelectedModel] = useState(searchParams.get('model') || '');
   const [selectedYear, setSelectedYear] = useState(searchParams.get('year') || '');
+  const [selectedRegYear, setSelectedRegYear] = useState(searchParams.get('regyear') || '');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
 
@@ -63,6 +64,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setSelectedBrands([]);
     setSelectedModel('');
     setSelectedYear('');
+    setSelectedRegYear('');
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
   };
@@ -86,21 +88,22 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const modelMatch = selectedModel ? car.model === selectedModel : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
+      const regYearMatch = selectedRegYear ? car.year?.toString() === selectedRegYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
       
       const kmMatch = isKmRangeDefault
           ? true
           : car.kmRun !== undefined && car.kmRun >= kmRange[0] && car.kmRun <= kmRange[1];
 
-      return brandMatch && modelMatch && yearMatch && priceMatch && kmMatch;
+      return brandMatch && modelMatch && yearMatch && regYearMatch && priceMatch && kmMatch;
     });
-  }, [selectedBrands, selectedModel, selectedYear, priceRange, kmRange, initialCars]);
+  }, [selectedBrands, selectedModel, selectedYear, selectedRegYear, priceRange, kmRange, initialCars]);
 
   const carsToShow = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);
 
   useEffect(() => {
     resetVisibleCount();
-  }, [selectedBrands, selectedModel, selectedYear, priceRange, kmRange]);
+  }, [selectedBrands, selectedModel, selectedYear, selectedRegYear, priceRange, kmRange]);
 
 
   const FilterContent = () => (
@@ -125,9 +128,18 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
                 </SelectContent>
             </Select>
         </div>
-          <div>
-            <h3 className="font-semibold mb-4 text-lg">Year</h3>
+        <div>
+            <h3 className="font-semibold mb-4 text-lg">Model Year</h3>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
+                <SelectContent>
+                    {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div>
+            <h3 className="font-semibold mb-4 text-lg">Registration Year</h3>
+            <Select value={selectedRegYear} onValueChange={setSelectedRegYear}>
                 <SelectTrigger><SelectValue placeholder="Any Year" /></SelectTrigger>
                 <SelectContent>
                     {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}

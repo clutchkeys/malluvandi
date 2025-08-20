@@ -19,6 +19,7 @@ export function HomeFilter({ brands, models, years }: HomeFilterProps) {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedRegYear, setSelectedRegYear] = useState('');
 
   const availableModels = useMemo(() => {
     if (selectedBrand) {
@@ -32,8 +33,19 @@ export function HomeFilter({ brands, models, years }: HomeFilterProps) {
     if (selectedBrand) query.append('brand', selectedBrand);
     if (selectedModel) query.append('model', selectedModel);
     if (selectedYear) query.append('year', selectedYear);
+    if (selectedRegYear) query.append('regyear', selectedRegYear);
 
-    router.push(`/listings-section?${query.toString()}`);
+    const scrollTarget = document.getElementById('listings-section');
+    if (scrollTarget) {
+      const url = `/#listings-section?${query.toString()}`;
+      history.pushState(null, '', url);
+      // Manually trigger a popstate event to make sure navigation listeners fire,
+      // or directly call the filtering logic if it's exposed.
+      // For simplicity here, we'll just scroll.
+      scrollTarget.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        router.push(`/?${query.toString()}#listings-section`);
+    }
   };
 
   return (
@@ -41,7 +53,7 @@ export function HomeFilter({ brands, models, years }: HomeFilterProps) {
       <div className="container mx-auto px-4">
         <Card className="shadow-lg -mt-20 z-20 relative">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Brand</label>
                 <Select value={selectedBrand} onValueChange={setSelectedBrand}>
@@ -65,8 +77,19 @@ export function HomeFilter({ brands, models, years }: HomeFilterProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                 <label className="text-sm font-medium">Year</label>
+                 <label className="text-sm font-medium">Model Year</label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
+                  <SelectContent>
+                    {years.map(year => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+                <div className="space-y-2">
+                 <label className="text-sm font-medium">Registration Year</label>
+                <Select value={selectedRegYear} onValueChange={setSelectedRegYear}>
                   <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
                   <SelectContent>
                     {years.map(year => (
