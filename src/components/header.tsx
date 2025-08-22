@@ -1,4 +1,3 @@
-
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,14 +16,12 @@ import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
 import { useState } from 'react';
 import { ThemeToggle } from './theme-toggle';
+import { useAuth } from '@/hooks/use-auth';
 
 
 export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-
-  // Mocked user state for UI demonstration
-  const user = null; 
-  const loading = false;
+  const { user, loading, signOut } = useAuth();
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
@@ -71,7 +68,7 @@ export function Header() {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-sm font-medium leading-none">{user.user_metadata?.name || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>
@@ -79,10 +76,13 @@ export function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                      <DropdownMenuItem asChild>
+                       <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link>
+                    </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
                        <Link href="/dashboard/my-account/saved-cars"><Bookmark className="mr-2 h-4 w-4" />Saved Cars</Link>
                     </DropdownMenuItem>
                      <DropdownMenuSeparator />
-                     <DropdownMenuItem>
+                     <DropdownMenuItem onClick={signOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -151,9 +151,9 @@ export function Header() {
                         ) : (
                           <div className="flex flex-col gap-2">
                               <Button asChild size="lg" className="w-full" onClick={() => setIsSheetOpen(false)}>
-                                <Link href="/dashboard/my-account/saved-cars" className="flex items-center justify-center gap-2"><Bookmark />Saved Cars</Link>
+                                <Link href="/dashboard" className="flex items-center justify-center gap-2"><LayoutDashboard />Dashboard</Link>
                               </Button>
-                             <Button asChild variant="secondary" size="lg" className="w-full" onClick={() => {setIsSheetOpen(false);}}>
+                             <Button asChild variant="secondary" size="lg" className="w-full" onClick={() => {setIsSheetOpen(false); signOut();}}>
                                 <span className="flex items-center justify-center gap-2"><LogOut /> Logout</span>
                             </Button>
                           </div>

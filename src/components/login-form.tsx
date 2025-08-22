@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { Separator } from './ui/separator';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 function GoogleIcon() {
     return (
@@ -25,59 +26,69 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
-  
-  const handleSubmit = async (e: React.FormEvent) => {
+  const supabase = createClient();
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    toast({
-        title: 'Backend Disconnected',
-        description: 'Login is temporarily unavailable.',
-        variant: 'destructive',
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+
+    if (error) {
+      toast({
+        title: 'Login Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Login Successful!',
+        description: "Welcome back!",
+      });
+      router.push('/dashboard');
+    }
+    
     setIsLoading(false);
   };
 
-  const handlePasswordReset = async () => {
-    if (!email) {
-      toast({
-        title: 'Email Required',
-        description: 'Please enter your email address to reset your password.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    toast({
-        title: 'Backend Disconnected',
-        description: 'Password reset is temporarily unavailable.',
-        variant: 'destructive',
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: `${location.origin}/auth/callback`,
+        }
     });
+    setIsGoogleLoading(false);
   };
 
   return (
     <>
-    <form onSubmit={handleSubmit}>
-      <CardContent className="space-y-4">
+    <form onSubmit={handleLogin}>
+        <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <Button variant="link" type="button" onClick={handlePasswordReset} className="px-0 h-auto text-xs">Forgot Password?</Button>
-          </div>
-          <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-      </CardContent>
-      <CardFooter className="flex-col gap-4">
-        <Button className="w-full" type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Login
-        </Button>
-      </CardFooter>
+        </CardContent>
+        <CardFooter className="flex-col gap-4">
+            <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Log In
+            </Button>
+        </CardFooter>
     </form>
-     <div className="relative mb-4">
+    <div className="relative mb-4">
         <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
         </div>
@@ -85,10 +96,10 @@ export function LoginForm() {
             <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
         </div>
     </div>
-    <div className="px-6 pb-4">
-         <Button variant="outline" className="w-full" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
-            <span className="ml-2">Sign in with Google</span>
+    <div className="px-6 pb-6">
+         <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isGoogleLoading}>
+            {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
+            <span className="ml-2">Log in with Google</span>
         </Button>
     </div>
     </>

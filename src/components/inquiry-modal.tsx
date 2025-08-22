@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,6 +14,8 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
 
 
 interface InquiryModalProps {
@@ -26,6 +26,8 @@ interface InquiryModalProps {
 
 export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const supabase = createClient();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,13 +35,66 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState('');
 
+  useEffect(() => {
+    if (user) {
+      setName(user.user_metadata?.name || '');
+      setPhone(user.user_metadata?.phone || '');
+    }
+  }, [user, isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-        title: "Feature Unavailable",
-        description: "Inquiries are temporarily disabled as the backend is disconnected.",
-        variant: "destructive"
-    });
+    setIsSubmitting(true);
+    
+    let scheduledCallTime = null;
+    if (callPreference === 'schedule') {
+        if (!scheduledDate || !scheduledTime) {
+            toast({ title: "Please select a date and time for your scheduled call.", variant: "destructive" });
+            setIsSubmitting(false);
+            return;
+        }
+        // Basic parsing, assumes scheduledTime is "HH:MM AM/PM"
+        const [time, modifier] = scheduledTime.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (modifier === 'PM' && hours < 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
+        
+        const scheduledDateTime = new Date(scheduledDate);
+        scheduledDateTime.setHours(hours, minutes, 0, 0);
+        scheduledCallTime = scheduledDateTime.toISOString();
+    }
+
+    const inquiryData = {
+        carId: car.id,
+        customerName: name,
+        customerPhone: phone,
+        customerId: user?.id,
+        carSummary: `${car.year} ${car.brand} ${car.model}`,
+        status: 'new',
+        callPreference,
+        scheduledCallTime,
+    };
+
+    try {
+        const { error } = await supabase.from('inquiries').insert(inquiryData);
+
+        if (error) throw error;
+
+        toast({
+            title: "Inquiry Submitted!",
+            description: "Our team will contact you shortly.",
+        });
+        onClose();
+    } catch (error: any) {
+        console.error("Error submitting inquiry", error);
+        toast({
+            title: "Submission Failed",
+            description: error.message || "There was an error submitting your inquiry. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const timeSlots = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];

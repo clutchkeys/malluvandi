@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
-import { summarizeCarDetails } from '@/ai/flows/summarize-car-details';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench, Instagram } from 'lucide-react';
 import { AdPlaceholder } from '@/components/ad-placeholder';
@@ -54,14 +53,8 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
 
   useEffect(() => {
     if (car) {
-      setIsSummaryLoading(true);
-      summarizeCarDetails(car)
-        .then(result => setSummary(result.summary))
-        .catch(err => {
-          console.error(err);
-          setSummary("Could not generate summary for this vehicle.");
-        })
-        .finally(() => setIsSummaryLoading(false));
+      setIsSummaryLoading(false);
+      setSummary("AI Summary feature is temporarily unavailable.");
     }
   }, [car]);
   
@@ -186,9 +179,4 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
       </div>
       <InquiryModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        car={car}
-      />
-    </>
-  );
-}
+        

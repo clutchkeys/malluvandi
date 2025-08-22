@@ -22,14 +22,11 @@ export default function DashboardPage() {
             if (!user) {
                 router.replace('/login');
             } else {
-                router.replace(roleRedirects[user.role as keyof typeof roleRedirects] || '/');
+                const userRole = user.app_metadata?.role || 'customer';
+                router.replace(roleRedirects[userRole as keyof typeof roleRedirects] || '/');
             }
         }
     }, [user, loading, router]);
 
     return (
-        <div className="flex h-screen w-screen items-center justify-center">
-            <Loader2 className="h-10 w-10 animate-spin" />
-        </div>
-    );
-}
+        <div className="flex h-screen w-screen items

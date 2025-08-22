@@ -9,24 +9,34 @@ import { PageContent } from '@/components/page-content';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { CarCard } from '@/components/car-card';
 import { HomeFilter } from '@/components/home-filter';
+import { createClient } from '@/lib/supabase/server';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
 export const dynamic = 'force-dynamic';
 
 async function getPageData() {
+  const supabase = createClient();
 
-    const allCars:Car[] = [];
-    const newCars:Car[] = [];
-    const filters = { brands: [], models: {}, years: [] };
-    const brandLogos:Brand[] = [];
+  // Fetch all data in parallel
+  const [carData, filtersData, brandData, newData] = await Promise.all([
+    supabase.from('cars').select('*').eq('status', 'approved'),
+    supabase.from('filters').select('*').single(),
+    supabase.from('brands').select('*').limit(12),
+    supabase.from('cars').select('*').eq('status', 'approved').order('createdAt', { ascending: false }).limit(8),
+  ]);
 
-    return {
-        allCars,
-        newCars,
-        filters,
-        brandLogos,
-    };
+  const allCars: Car[] = carData.data || [];
+  const newCars: Car[] = newData.data || [];
+  const filters = filtersData.data || { brands: [], models: {}, years: [] };
+  const brandLogos: Brand[] = brandData.data || [];
+
+  return {
+    allCars,
+    newCars,
+    filters,
+    brandLogos,
+  };
 }
 
 
@@ -99,11 +109,11 @@ export default async function Home() {
         <section className="py-16 bg-secondary">
           <div className="container mx-auto px-4">
               <h2 className="text-2xl font-bold text-center mb-8">Browse by Brands</h2>
-              <BrandMarquee initialBrands={brandLogos}/>
+              <BrandMarquee initialBrands={brandLogos} />
           </div>
         </section>
-      </main>
 
+      </main>
       <Footer />
     </div>
   );
