@@ -2,8 +2,6 @@
 'use client';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 import type { Brand } from '@/lib/types';
 import React, { useState, useEffect } from 'react';
 
@@ -14,16 +12,6 @@ interface BrandMarqueeProps {
 
 export function BrandMarquee({ initialBrands = [], onBrandClick = () => {} }: BrandMarqueeProps) {
     const [brands, setBrands] = useState<Brand[]>(initialBrands);
-
-    useEffect(() => {
-        if (initialBrands.length > 0) return; // Don't fetch if we have initial data
-
-        const q = query(collection(db, 'brands'), limit(12));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand)));
-        });
-        return () => unsub();
-    }, [initialBrands]);
 
   const marqueeContent = brands.map((brand) => (
     <Button

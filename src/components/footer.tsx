@@ -9,12 +9,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { useAuth } from '@/hooks/use-auth';
 
 export function Footer() {
-  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const { toast } = useToast();
@@ -25,27 +21,11 @@ export function Footer() {
       return;
     }
     setIsSubscribing(true);
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', email));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        toast({ title: 'No Account Found', description: 'No user account found with that email. Please register to subscribe.', variant: 'destructive' });
-      } else {
-        const userDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, 'users', userDoc.id), {
-          newsletterSubscribed: true
-        });
-        toast({ title: 'Subscribed!', description: 'Thank you for subscribing to our newsletter.' });
-        setEmail('');
-      }
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast({ title: 'Error', description: 'Could not process your subscription.', variant: 'destructive' });
-    } finally {
-      setIsSubscribing(false);
-    }
+    // Placeholder for subscription logic
+    setTimeout(() => {
+        toast({ title: 'Backend Disconnected', description: 'Cannot subscribe at this time.' });
+        setIsSubscribing(false);
+    }, 1000);
   };
 
   return (
@@ -100,7 +80,6 @@ export function Footer() {
           </div>
           
            {/* Newsletter */}
-          {(!user || !user.newsletterSubscribed) && (
             <div className="space-y-4">
                 <h3 className="font-semibold mb-4 text-base">Subscribe to our Newsletter</h3>
                 <p className="text-sm text-muted-foreground">Get the latest listings and offers delivered right to your inbox.</p>
@@ -111,7 +90,6 @@ export function Footer() {
                     </Button>
                 </div>
             </div>
-          )}
         </div>
         
         <Separator className="my-8 bg-border" />

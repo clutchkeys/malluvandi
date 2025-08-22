@@ -1,7 +1,7 @@
+
 'use client';
 
 import React from 'react';
-import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 
@@ -14,7 +14,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
       disableTransitionOnChange
       {...props}
     >
-      <AuthProvider>{children}</AuthProvider>
+      {children}
     </NextThemesProvider>
   )
 }

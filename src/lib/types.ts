@@ -12,7 +12,7 @@ export interface AttendanceRecord {
 }
 
 export interface User {
-  id: string; // Firebase Auth UID or mock ID
+  id: string;
   name: string;
   email: string;
   phone?: string;

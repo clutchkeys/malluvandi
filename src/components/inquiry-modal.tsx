@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Car, Inquiry, User } from '@/lib/types';
-import { useAuth } from '@/hooks/use-auth';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -16,8 +16,6 @@ import { Calendar } from './ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 
 
 interface InquiryModalProps {
@@ -28,7 +26,6 @@ interface InquiryModalProps {
 
 export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,88 +33,13 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState('');
 
-  useEffect(() => {
-    if (user && isOpen) {
-        setName(user.name);
-        setPhone(user.phone || '');
-    } else if (!user && isOpen) {
-        setName('');
-        setPhone('');
-    }
-  }, [user, isOpen]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast({ title: "Authentication Error", description: "You must be logged in to submit an inquiry.", variant: "destructive" });
-      return;
-    }
-    if (!name || !phone) {
-        toast({
-            title: "Validation Error",
-            description: "Please fill in both name and phone number.",
-            variant: "destructive"
-        })
-        return;
-    }
-     if (callPreference === 'schedule' && (!scheduledDate || !scheduledTime)) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a date and time for your scheduled call.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      // Find an available sales person (Employee B)
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('role', '==', 'employee-b'));
-      const querySnapshot = await getDocs(q);
-      const salesPeople = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-
-      let assignedTo = 'unassigned';
-      if (salesPeople.length > 0) {
-        // Simple random assignment for now
-        assignedTo = salesPeople[Math.floor(Math.random() * salesPeople.length)].id;
-      }
-      
-      const remarks = callPreference === 'now' 
-        ? 'Customer prefers a call as soon as possible.' 
-        : `Scheduled call requested for ${scheduledDate ? format(scheduledDate, 'PPP') : 'a future date'} at ${scheduledTime}.`;
-
-      const newInquiry: Omit<Inquiry, 'id'> = {
-        carId: car.id,
-        carSummary: `${car.brand} ${car.model}`,
-        customerId: user.id, // Add customer ID for security rules
-        customerName: name,
-        customerPhone: phone,
-        submittedAt: new Date().toISOString(),
-        assignedTo: assignedTo,
-        status: 'new' as const,
-        remarks: remarks,
-        privateNotes: ''
-      }
-      
-      await addDoc(collection(db, 'inquiries'), newInquiry);
-
-      toast({
-        title: 'Inquiry Sent!',
-        description: "Our team will contact you shortly.",
-      });
-      onClose();
-    } catch (error) {
-       console.error("Error submitting inquiry:", error);
-       toast({
-           title: "Submission Failed",
-           description: "Could not submit your inquiry. Please try again.",
-           variant: "destructive"
-       });
-    } finally {
-        setIsSubmitting(false);
-    }
+    toast({
+        title: "Feature Unavailable",
+        description: "Inquiries are temporarily disabled as the backend is disconnected.",
+        variant: "destructive"
+    });
   };
   
   const timeSlots = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];

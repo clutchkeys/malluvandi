@@ -1,17 +1,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import type { Role } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
 
 function GoogleIcon() {
@@ -25,66 +21,21 @@ function GoogleIcon() {
     )
 }
 
-const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
-  admin: '/dashboard/admin',
-  manager: '/dashboard/admin',
-  'employee-a': '/dashboard/employee-a',
-  'employee-b': '/dashboard/employee-b',
-};
-
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const { login, sendPasswordReset, signInWithGoogle } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect');
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const handleAuthSuccess = (user: User) => {
-    toast({ title: 'Login Successful', description: `Welcome back, ${user.name}!` });
-    const redirectPath = redirectUrl || (user.role === 'customer' ? '/dashboard/my-account/saved-cars' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
-    router.push(redirectPath);
-    router.refresh();
-  }
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-        const user = await signInWithGoogle();
-        if (user) {
-            handleAuthSuccess(user);
-        }
-    } catch (error: any) {
-         toast({ title: 'Sign-in Failed', description: error.message || 'Could not sign in with Google.', variant: 'destructive'});
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try {
-      const user = await login(email, password);
-      if (user) {
-        handleAuthSuccess(user);
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Login Failed',
-        description: error.message || 'Please check your email and password.',
+    toast({
+        title: 'Backend Disconnected',
+        description: 'Login is temporarily unavailable.',
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
+    setIsLoading(false);
   };
 
   const handlePasswordReset = async () => {
@@ -96,43 +47,12 @@ export function LoginForm() {
       });
       return;
     }
-    setIsLoading(true);
-    try {
-      await sendPasswordReset(email);
-      toast({
-        title: 'Password Reset Email Sent',
-        description: 'Check your inbox for instructions to reset your password.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Could not send password reset email.',
+    toast({
+        title: 'Backend Disconnected',
+        description: 'Password reset is temporarily unavailable.',
         variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
-
-  if (!isMounted) {
-    return (
-        <>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Skeleton className="h-10 w-full" />
-            </CardFooter>
-        </>
-    );
-  }
 
   return (
     <>
@@ -166,7 +86,7 @@ export function LoginForm() {
         </div>
     </div>
     <div className="px-6 pb-4">
-         <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+         <Button variant="outline" className="w-full" onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
             <span className="ml-2">Sign in with Google</span>
         </Button>

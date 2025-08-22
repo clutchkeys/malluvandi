@@ -1,18 +1,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
 import { Checkbox } from './ui/checkbox';
-import type { Role } from '@/lib/types';
 import { Separator } from './ui/separator';
 
 function GoogleIcon() {
@@ -26,13 +22,6 @@ function GoogleIcon() {
     )
 }
 
-const roleRedirects: Record<Exclude<Role, 'customer'>, string> = {
-  admin: '/dashboard/admin',
-  manager: '/dashboard/admin',
-  'employee-a': '/dashboard/employee-a',
-  'employee-b': '/dashboard/employee-b',
-};
-
 export function RegisterForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -40,80 +29,19 @@ export function RegisterForm() {
   const [phone, setPhone] = useState('');
   const [subscribe, setSubscribe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const { register, signInWithGoogle } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const handleAuthSuccess = (user: User) => {
-    toast({ title: 'Registration Successful', description: `Welcome, ${user.name}!` });
-    const redirectPath = (user.role === 'customer' ? '/' : roleRedirects[user.role as Exclude<Role, 'customer'>]);
-    router.push(redirectPath);
-    router.refresh();
-  }
-  
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-        const user = await signInWithGoogle();
-        if (user) {
-            handleAuthSuccess(user);
-        }
-    } catch (error: any) {
-         toast({ title: 'Sign-in Failed', description: error.message || 'Could not sign in with Google.', variant: 'destructive'});
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try {
-      const user = await register(name, email, password, phone, subscribe);
-      if (user) {
-        handleAuthSuccess(user);
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Registration Failed',
-        description: error.message || 'An unexpected error occurred.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: 'Backend Disconnected',
+      description: 'Registration is temporarily unavailable.',
+      variant: 'destructive',
+    });
+    setIsLoading(false);
   };
-
-  if (!isMounted) {
-    return (
-      <>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Skeleton className="h-10 w-full" />
-        </CardFooter>
-      </>
-    );
-  }
-
+  
   return (
     <>
     <form onSubmit={handleSubmit}>
@@ -160,7 +88,7 @@ export function RegisterForm() {
         </div>
     </div>
     <div className="px-6 pb-4">
-         <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+         <Button variant="outline" className="w-full" onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
             <span className="ml-2">Sign up with Google</span>
         </Button>

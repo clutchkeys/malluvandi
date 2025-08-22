@@ -5,8 +5,6 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, limit, orderBy, getDoc } from 'firebase/firestore';
 import { PageContent } from '@/components/page-content';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { CarCard } from '@/components/car-card';
@@ -17,37 +15,11 @@ export const revalidate = 60;
 export const dynamic = 'force-dynamic';
 
 async function getPageData() {
-    const carsRef = collection(db, 'cars');
-    const filtersRef = doc(db, 'config', 'filters');
-    const brandsRef = collection(db, 'brands');
-    
-    // Fetch all data in parallel
-    const [carSnapshot, filtersSnap, brandsSnap] = await Promise.all([
-        getDocs(query(carsRef, where('status', '==', 'approved'))),
-        getDoc(filtersRef),
-        getDocs(query(brandsRef, limit(12)))
-    ]);
 
-    const allCars = carSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            // Ensure createdAt is a string for client-side date parsing
-            createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date(0).toISOString(),
-        } as Car;
-    });
-
-    // Sort cars by creation date descending
-    allCars.sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
-
-    // Filter for newly added cars (last 2 days)
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const newCars = allCars.filter(car => car.createdAt && new Date(car.createdAt) > twoDaysAgo);
-
-    const filters = filtersSnap.exists() ? filtersSnap.data() : { brands: [], models: {}, years: [] };
-    const brandLogos = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
+    const allCars:Car[] = [];
+    const newCars:Car[] = [];
+    const filters = { brands: [], models: {}, years: [] };
+    const brandLogos:Brand[] = [];
 
     return {
         allCars,
