@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
-import { Separator } from './ui/separator';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 function GoogleIcon() {
     return (
@@ -29,22 +30,58 @@ export function RegisterForm() {
   const [phone, setPhone] = useState('');
   const [subscribe, setSubscribe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const supabase = createClient();
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    toast({
-      title: 'Backend Disconnected',
-      description: 'Registration is temporarily unavailable.',
-      variant: 'destructive',
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          phone: phone,
+          role: 'customer',
+          subscribe_newsletter: subscribe
+        }
+      }
     });
+
+    if (error) {
+      toast({
+        title: 'Registration Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Registration Successful!',
+        description: 'Please check your email to verify your account.',
+      });
+      router.push('/login');
+    }
+    
     setIsLoading(false);
+  };
+   const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: `${location.origin}/auth/callback`,
+        }
+    });
+    setIsGoogleLoading(false);
   };
   
   return (
     <>
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleRegister}>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -88,8 +125,8 @@ export function RegisterForm() {
         </div>
     </div>
     <div className="px-6 pb-4">
-         <Button variant="outline" className="w-full" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
+         <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isGoogleLoading}>
+            {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
             <span className="ml-2">Sign up with Google</span>
         </Button>
     </div>
