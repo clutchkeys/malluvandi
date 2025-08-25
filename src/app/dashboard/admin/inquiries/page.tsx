@@ -7,13 +7,20 @@ import type { Inquiry, User } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { InquiryActions } from '@/components/inquiry-actions';
 
+// This custom type helps us handle the joined data from Supabase
+type InquiryWithAssignee = Inquiry & {
+    profiles: { name: string } | null;
+};
+
+
 async function getInquiries(): Promise<(Inquiry & { assignedTo_name?: string })[]> {
     const supabase = createClient();
+    // The query now explicitly joins profiles on the assignedTo field.
     const { data, error } = await supabase
         .from('inquiries')
         .select(`
             *,
-            profile:profiles ( name )
+            profiles ( name )
         `)
         .order('submittedAt', { ascending: false });
 
@@ -22,11 +29,14 @@ async function getInquiries(): Promise<(Inquiry & { assignedTo_name?: string })[
         return [];
     }
     
-    // The type from generated Supabase types might be complex, so we cast it.
-    return data.map(item => ({
+    // The Supabase query returns an array of InquiryWithAssignee
+    const typedData = data as InquiryWithAssignee[];
+
+    // We map over the data to create a clean structure with assignedTo_name
+    return typedData.map(item => ({
         ...item,
-        assignedTo_name: (item.profile as any)?.name || 'Unassigned'
-    })) as (Inquiry & { assignedTo_name?: string })[];
+        assignedTo_name: item.profiles?.name || 'Unassigned'
+    }));
 }
 
 async function getSalesStaff(): Promise<User[]> {
