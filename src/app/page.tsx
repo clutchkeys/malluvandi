@@ -7,6 +7,8 @@ import type { Car, Brand } from '@/lib/types';
 import { BrandMarquee } from '@/components/brand-marquee';
 import { PageContent } from '@/components/page-content';
 import { createClient } from '@/lib/supabase/server';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
@@ -38,6 +40,7 @@ export default async function Home() {
     const { allCars, filters, brandLogos } = await getPageData();
     const { brands, models } = filters;
     const years = (filters.years || []).sort((a: number, b: number) => b - a);
+    const popularBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota'];
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -59,6 +62,14 @@ export default async function Home() {
             <p className="text-lg md:text-xl text-primary-foreground/90 mt-4 max-w-3xl mx-auto">
               Kerala's most trusted marketplace for buying and selling quality pre-owned cars.
             </p>
+             <div className="mt-8 flex items-center justify-center gap-2 md:gap-4 flex-wrap">
+                <span className="text-sm font-semibold mr-2">Popular:</span>
+                {popularBrands.map(brand => (
+                    <Button asChild key={brand} variant="secondary" size="sm" className="rounded-full backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white">
+                        <Link href={`/#listings-section?brand=${encodeURIComponent(brand)}`}>{brand}</Link>
+                    </Button>
+                ))}
+            </div>
           </div>
         </section>
         
