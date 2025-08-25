@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
@@ -29,10 +29,9 @@ export default function EmployeeBInquiriesPage() {
   const supabase = createClient();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchInquiries = async () => {
+  const fetchInquiries = useCallback(async () => {
       if (!user) return;
-      setLoading(true);
+      
       const { data, error } = await supabase
         .from('inquiries')
         .select('*')
@@ -41,21 +40,42 @@ export default function EmployeeBInquiriesPage() {
 
       if (error) {
         console.error('Error fetching inquiries:', error);
+        setInquiries([]);
       } else {
         setInquiries(data as Inquiry[]);
       }
-      setLoading(false);
-    };
-
-    if(user) {
-        fetchInquiries();
-    }
   }, [user, supabase]);
+
+
+  useEffect(() => {
+    if (!user) return;
+
+    setLoading(true);
+    fetchInquiries().finally(() => setLoading(false));
+
+    const channel = supabase.channel(`realtime-inquiries-employee-${user.id}`)
+      .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'inquiries',
+            filter: `assignedTo=eq.${user.id}`
+          },
+          (payload) => {
+             fetchInquiries();
+          }
+      ).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+  }, [user, supabase, fetchInquiries]);
 
   const handleStatusChange = async (inquiryId: string, newStatus: 'new' | 'contacted' | 'closed') => {
     setIsUpdating(inquiryId);
     const { success, error } = await updateInquiryStatus(inquiryId, newStatus);
     if (success) {
+      // The real-time subscription will handle the update, but we can also optimistically update the state
       setInquiries(prev => prev.map(i => i.id === inquiryId ? { ...i, status: newStatus } : i));
       toast({ title: "Status updated successfully" });
     } else {

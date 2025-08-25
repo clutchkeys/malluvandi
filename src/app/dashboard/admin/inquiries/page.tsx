@@ -1,70 +1,105 @@
 
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { Inquiry, User } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { InquiryActions } from '@/components/inquiry-actions';
+import { Loader2 } from 'lucide-react';
 
-// This custom type helps us handle the joined data from Supabase
 type InquiryWithAssignee = Inquiry & {
     profiles: { name: string } | null;
 };
 
-
-async function getInquiries(): Promise<(Inquiry & { assignedTo_name?: string })[]> {
+export default function AdminInquiriesPage() {
+    const [inquiries, setInquiries] = useState<(Inquiry & { assignedTo_name?: string })[]>([]);
+    const [salesStaff, setSalesStaff] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
     const supabase = createClient();
-    // The query now explicitly joins profiles on the assignedTo field.
-    const { data, error } = await supabase
-        .from('inquiries')
-        .select(`
-            *,
-            profiles ( name )
-        `)
-        .order('submittedAt', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching inquiries:', error);
-        return [];
-    }
-    
-    // The Supabase query returns an array of InquiryWithAssignee
-    const typedData = data as InquiryWithAssignee[];
+    const getInquiries = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('inquiries')
+            .select(`
+                *,
+                profiles ( name )
+            `)
+            .order('submittedAt', { ascending: false });
 
-    // We map over the data to create a clean structure with assignedTo_name
-    return typedData.map(item => ({
-        ...item,
-        assignedTo_name: item.profiles?.name || 'Unassigned'
-    }));
-}
+        if (error) {
+            console.error('Error fetching inquiries:', error);
+            return [];
+        }
+        
+        const typedData = data as InquiryWithAssignee[];
+        return typedData.map(item => ({
+            ...item,
+            assignedTo_name: item.profiles?.name || 'Unassigned'
+        }));
+    }, [supabase]);
 
-async function getSalesStaff(): Promise<User[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'employee-b');
+    const getSalesStaff = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'employee-b');
 
-    if (error) {
-        console.error('Error fetching sales staff:', error);
-        return [];
-    }
-    return data as User[];
-}
+        if (error) {
+            console.error('Error fetching sales staff:', error);
+            return [];
+        }
+        return data as User[];
+    }, [supabase]);
 
-export default async function AdminInquiriesPage() {
-    const inquiries = await getInquiries();
-    const salesStaff = await getSalesStaff();
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            const [inquiriesData, salesStaffData] = await Promise.all([
+                getInquiries(),
+                getSalesStaff()
+            ]);
+            setInquiries(inquiriesData);
+            setSalesStaff(salesStaffData);
+            setLoading(false);
+        };
+
+        fetchData();
+
+        const channel = supabase.channel('realtime-inquiries-admin')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, 
+            (payload) => {
+              // Refetch inquiries on any change
+              getInquiries().then(setInquiries);
+            }
+          )
+          .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+
+    }, [getInquiries, getSalesStaff, supabase]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
-        case 'new': return 'default';
-        case 'contacted': return 'secondary';
-        case 'closed': return 'outline';
-        default: return 'outline';
+            case 'new': return 'default';
+            case 'contacted': return 'secondary';
+            case 'closed': return 'outline';
+            default: return 'outline';
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex h-64 w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
     
   return (
     <div className="w-full">
@@ -112,3 +147,4 @@ export default async function AdminInquiriesPage() {
     </div>
   );
 }
+
