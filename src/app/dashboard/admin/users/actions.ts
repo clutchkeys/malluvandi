@@ -11,8 +11,7 @@ export async function updateUserRole(userId: string, newRole: string) {
     .from('profiles')
     .update({ role: newRole })
     .eq('id', userId)
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error('Error updating user role:', error);
@@ -20,5 +19,5 @@ export async function updateUserRole(userId: string, newRole: string) {
   }
 
   revalidatePath('/dashboard/admin/users');
-  return { success: true, data };
+  return { success: true, data: data?.[0] };
 }
