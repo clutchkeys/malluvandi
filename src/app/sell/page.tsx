@@ -1,7 +1,7 @@
 
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { SellCarForm } from '@/components/sell-car-form';
+import { CarForm } from '@/components/car-form';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 0;
@@ -24,7 +24,7 @@ export default async function SellCarPage() {
     <>
       <Header />
       <main className="flex-grow container mx-auto px-4 py-12">
-        <SellCarForm brands={brands} models={models} />
+        <CarForm brands={brands} models={models} />
       </main>
       <Footer />
     </>

@@ -117,7 +117,7 @@ export default function AdminListingsPage() {
                             <TableCell>{car.createdAt ? format(parseISO(car.createdAt), 'dd MMM, yyyy') : 'N/A'}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(car.status)} className="capitalize">{car.status}</Badge></TableCell>
                             <TableCell className="text-right">
-                                {car.status === 'pending' && <ListingActions carId={car.id} />}
+                                <ListingActions carId={car.id} currentStatus={car.status} />
                             </TableCell>
                         </TableRow>
                     ))}
