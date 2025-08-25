@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { updateUserRole } from '@/app/dashboard/admin/users/actions';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserRoleUpdaterProps {
   userId: string;
