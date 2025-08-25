@@ -18,14 +18,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { updateInquiryStatus } from '@/app/dashboard/admin/inquiries/actions';
+import { updateInquiry } from '@/app/dashboard/admin/inquiries/actions';
 import { useToast } from '@/hooks/use-toast';
+import { CloseInquiryDialog } from '@/components/close-inquiry-dialog';
+
 
 export default function EmployeeBInquiriesPage() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+
   const supabase = createClient();
   const { toast } = useToast();
 
@@ -63,7 +68,6 @@ export default function EmployeeBInquiriesPage() {
             filter: `assignedTo=eq.${user.id}`
           },
           (payload) => {
-             // Refetch when a change is detected for this user's assignments
              fetchInquiries();
           }
       ).subscribe();
@@ -75,10 +79,18 @@ export default function EmployeeBInquiriesPage() {
 
   const handleStatusChange = async (inquiryId: string, newStatus: 'new' | 'contacted' | 'closed') => {
     setIsUpdating(inquiryId);
-    const { success, error } = await updateInquiryStatus(inquiryId, newStatus);
+    const inquiry = inquiries.find(i => i.id === inquiryId);
+
+    if (newStatus === 'closed' && inquiry) {
+        setSelectedInquiry(inquiry);
+        setIsCloseModalOpen(true);
+        setIsUpdating(null); 
+        return;
+    }
+
+    const { success, error } = await updateInquiry(inquiryId, { status: newStatus });
+
     if (success) {
-      // The real-time subscription will handle the UI update, but we can also optimistically update the state
-      setInquiries(prev => prev.map(i => i.id === inquiryId ? { ...i, status: newStatus } : i));
       toast({ title: "Status updated successfully" });
     } else {
       toast({ title: "Error updating status", description: error, variant: "destructive" });
@@ -96,6 +108,7 @@ export default function EmployeeBInquiriesPage() {
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>My Inquiries</CardTitle>
@@ -128,7 +141,7 @@ export default function EmployeeBInquiriesPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="capitalize w-28 justify-start" disabled={isUpdating === inquiry.id}>
+                          <Button variant="outline" size="sm" className="capitalize w-32 justify-start" disabled={isUpdating === inquiry.id}>
                             {isUpdating === inquiry.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Badge variant={getStatusVariant(inquiry.status)} className="capitalize mr-2">{inquiry.status}</Badge>}
                              <span className="truncate">{inquiry.status}</span>
                           </Button>
@@ -160,5 +173,16 @@ export default function EmployeeBInquiriesPage() {
         )}
       </CardContent>
     </Card>
+    {selectedInquiry && (
+        <CloseInquiryDialog 
+            isOpen={isCloseModalOpen}
+            onClose={() => {
+              setIsCloseModalOpen(false);
+              setSelectedInquiry(null);
+            }}
+            inquiry={selectedInquiry}
+        />
+    )}
+    </>
   );
 }

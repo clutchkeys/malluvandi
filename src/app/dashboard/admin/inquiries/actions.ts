@@ -22,17 +22,18 @@ export async function assignInquiry(inquiryId: string, employeeId: string) {
   // Revalidate both admin and employee-b pages
   revalidatePath('/dashboard/admin/inquiries');
   revalidatePath('/dashboard/employee-b/inquiries');
+  revalidatePath('/dashboard/admin/serious-customers');
   
   return { success: true, data };
 }
 
 
-export async function updateInquiryStatus(inquiryId: string, newStatus: 'new' | 'contacted' | 'closed') {
+export async function updateInquiry(inquiryId: string, updates: { status?: 'new' | 'contacted' | 'closed', remarks?: string; privateNotes?: string; isSeriousCustomer?: boolean; }) {
   const supabase = createClient();
   
   const { data, error } = await supabase
     .from('inquiries')
-    .update({ status: newStatus })
+    .update(updates)
     .eq('id', inquiryId)
     .select()
     .single();
@@ -45,6 +46,7 @@ export async function updateInquiryStatus(inquiryId: string, newStatus: 'new' | 
   // Revalidate both admin and employee-b pages
   revalidatePath('/dashboard/admin/inquiries');
   revalidatePath('/dashboard/employee-b/inquiries');
+  revalidatePath('/dashboard/admin/serious-customers');
 
   return { success: true, data };
 }

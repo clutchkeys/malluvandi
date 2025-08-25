@@ -55,8 +55,9 @@ export interface Inquiry {
   submittedAt: string; // ISO 8601 date string
   assignedTo: string | null; // EmployeeB ID
   status: 'new' | 'contacted' | 'closed';
-  remarks: string; // Visible to admin
-  privateNotes: string; // Visible only to EmployeeB
+  remarks?: string; // Visible to admin
+  privateNotes?: string; // Visible only to EmployeeB
+  isSeriousCustomer?: boolean;
 }
 
 export interface Notification {
