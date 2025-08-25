@@ -34,13 +34,15 @@ export default function AdminSettingsPage() {
             const { data, error } = await supabase
                 .from('filters')
                 .select('*')
-                .single();
+                .limit(1); // Use limit(1) instead of single()
             
             if (error) {
                 console.error("Error fetching filters:", error);
                 toast({ title: "Error", description: "Could not fetch filter settings. Please ensure the 'filters' table exists and is populated.", variant: "destructive" });
+            } else if (data && data.length > 0) {
+                setFilters(data[0] as Filters);
             } else {
-                setFilters(data as Filters);
+                 toast({ title: "No Settings Found", description: "Filter settings have not been configured yet.", variant: "destructive" });
             }
             setLoading(false);
         };

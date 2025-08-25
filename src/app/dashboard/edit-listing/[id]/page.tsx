@@ -21,16 +21,18 @@ async function getData(id: string) {
   const filtersPromise = supabase
     .from('filters')
     .select('*')
-    .single();
+    .limit(1);
 
   const [
     { data: car, error: carError },
-    { data: filters }
+    { data: filtersData }
   ] = await Promise.all([carPromise, filtersPromise]);
 
   if (carError) {
     notFound();
   }
+
+  const filters = filtersData?.[0];
 
   return {
     car: car as Car,

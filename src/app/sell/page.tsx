@@ -8,11 +8,12 @@ export const revalidate = 0;
 
 async function getFilterOptions() {
   const supabase = createClient();
-  const { data } = await supabase.from('filters').select('*').single();
+  const { data } = await supabase.from('filters').select('*').limit(1);
+  const filters = data?.[0];
   return {
-    brands: data?.brands || [],
-    models: data?.models || {},
-    years: data?.years || [],
+    brands: filters?.brands || [],
+    models: filters?.models || {},
+    years: filters?.years || [],
   };
 }
 

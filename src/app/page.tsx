@@ -21,14 +21,14 @@ async function getPageData() {
   // Fetch all data in parallel
   const [carData, filtersData, brandData, newData] = await Promise.all([
     supabase.from('cars').select('*').eq('status', 'approved'),
-    supabase.from('filters').select('*').single(),
+    supabase.from('filters').select('*').limit(1), // Use limit(1) instead of single()
     supabase.from('brands').select('*').limit(12),
     supabase.from('cars').select('*').eq('status', 'approved').order('createdAt', { ascending: false }).limit(8),
   ]);
 
   const allCars: Car[] = carData.data || [];
   const newCars: Car[] = newData.data || [];
-  const filters = filtersData.data || { brands: [], models: {}, years: [] };
+  const filters = filtersData.data?.[0] || { brands: [], models: {}, years: [] };
   const brandLogos: Brand[] = brandData.data || [];
 
   return {
