@@ -49,7 +49,7 @@ export default function CarDetailPage() {
     };
 
     fetchCar();
-  }, [id]);
+  }, [id, supabase]);
 
   if (error) {
     notFound();
@@ -64,4 +64,12 @@ export default function CarDetailPage() {
         {loading ? (
             <CarDetailSkeleton />
         ) : car ? (
-            <Car
+            <CarDetailView car={car} sellerName={sellerName} />
+        ) : (
+            notFound()
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
