@@ -9,11 +9,13 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Footer() {
   const [email, setEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubscribe = async () => {
     if (!email) {
@@ -80,16 +82,18 @@ export function Footer() {
           </div>
           
            {/* Newsletter */}
-            <div className="space-y-4">
-                <h3 className="font-semibold mb-4 text-base">Subscribe to our Newsletter</h3>
-                <p className="text-sm text-muted-foreground">Get the latest listings and offers delivered right to your inbox.</p>
-                <div className="flex w-full max-w-sm items-center space-x-2">
-                    <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubscribing} />
-                    <Button type="button" onClick={handleSubscribe} disabled={isSubscribing}>
-                      {isSubscribing ? <Loader2 className="animate-spin" /> : 'Subscribe'}
-                    </Button>
-                </div>
-            </div>
+            {(!user || !user.newsletterSubscribed) && (
+              <div className="space-y-4">
+                  <h3 className="font-semibold mb-4 text-base">Subscribe to our Newsletter</h3>
+                  <p className="text-sm text-muted-foreground">Get the latest listings and offers delivered right to your inbox.</p>
+                  <div className="flex w-full max-w-sm items-center space-x-2">
+                      <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubscribing} />
+                      <Button type="button" onClick={handleSubscribe} disabled={isSubscribing}>
+                        {isSubscribing ? <Loader2 className="animate-spin" /> : 'Subscribe'}
+                      </Button>
+                  </div>
+              </div>
+            )}
         </div>
         
         <Separator className="my-8 bg-border" />
