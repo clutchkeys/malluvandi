@@ -30,14 +30,12 @@ export interface Car {
   model: string;
   year?: number;
   price?: number;
-  engineCC?: number;
+  kmRun?: number;
   fuel?: 'Petrol' | 'Diesel' | 'Electric';
   transmission?: 'Automatic' | 'Manual';
-  color?: string;
-  kmRun?: number;
   ownership?: number;
-  insurance?: string;
-  challans?: string;
+  color?: string;
+  engineCC?: number;
   additionalDetails?: string;
   images: string[];
   status: 'pending' | 'approved' | 'rejected';
