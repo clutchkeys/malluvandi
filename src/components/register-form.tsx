@@ -57,7 +57,8 @@ export function RegisterForm() {
     });
     
     // The trigger will handle creating the profile.
-    // If the user's role is 'admin', we need to update it in the profiles table.
+    // If the user's role is 'admin', we need to explicitly update it in the profiles table
+    // as the trigger might default it to 'customer'.
     if (!error && userRole === 'admin' && data.user) {
         const { error: updateError } = await supabase
             .from('profiles')
