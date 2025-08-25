@@ -1,14 +1,22 @@
 
 'use client';
-import { Loader2 } from "lucide-react";
+import { Bell } from "lucide-react";
 import React from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 
 export default function EmployeeANotificationsPage() {
     
     return (
-        <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4">Backend disconnected. Please connect to a new backend.</p>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>System-wide announcements will appear here.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col h-64 items-center justify-center text-center text-muted-foreground">
+                <Bell className="h-12 w-12 mb-4" />
+                <h3 className="text-lg font-semibold">No new notifications</h3>
+                <p className="text-sm">You're all caught up!</p>
+            </CardContent>
+      </Card>
     )
 }
