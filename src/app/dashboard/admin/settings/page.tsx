@@ -140,14 +140,14 @@ export default function AdminSettingsPage() {
             <Accordion type="single" collapsible className="w-full">
                 {filters.brands.map(brand => (
                     <AccordionItem value={brand} key={brand}>
-                        <AccordionTrigger className="hover:no-underline">
-                           <div className="flex justify-between items-center w-full pr-4">
-                             <span>{brand}</span>
-                             <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveBrand(brand); }}>
+                        <div className="flex justify-between items-center w-full">
+                            <AccordionTrigger className="hover:no-underline flex-grow pr-4">
+                                <span>{brand}</span>
+                            </AccordionTrigger>
+                             <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive mr-2" onClick={(e) => { e.stopPropagation(); handleRemoveBrand(brand); }}>
                                 <Trash2 className="h-4 w-4" />
                              </Button>
-                           </div>
-                        </AccordionTrigger>
+                        </div>
                         <AccordionContent className="bg-muted/50 p-4 rounded-md">
                             <h4 className="font-semibold mb-2">Models for {brand}</h4>
                             <ul className="space-y-2 mb-4">
