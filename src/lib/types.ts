@@ -62,7 +62,8 @@ export interface Inquiry {
 export interface Notification {
   id: string;
   message: string;
-  recipientGroup: 'all' | 'all-staff' | 'all-customers' | 'employee-a' | 'employee-b';
+  recipientGroup: 'all-staff' | 'all-customers' | 'employee-a' | 'employee-b';
+  link?: string;
   createdAt: string; // ISO 8601 date string
   createdBy: string; // User ID
 }

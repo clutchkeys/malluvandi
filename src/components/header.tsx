@@ -24,11 +24,13 @@ import { ThemeToggle } from './theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 
 export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
+  const router = useRouter();
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
@@ -36,6 +38,13 @@ export function Header() {
     { href: '/about', label: 'About Us'},
     { href: '/contact', label: 'Contact'},
   ]
+  
+  const handleNotificationClick = (link?: string) => {
+    if (link) {
+      router.push(link);
+    }
+  };
+
 
   return (
     <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
@@ -79,7 +88,7 @@ export function Header() {
                        {notifications.length > 0 ? (
                            <>
                            {notifications.slice(0, 5).map(notif => (
-                               <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-1 whitespace-normal">
+                               <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-1 whitespace-normal cursor-pointer" onClick={() => handleNotificationClick(notif.link)}>
                                    <p className="text-sm">{notif.message}</p>
                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}</p>
                                </DropdownMenuItem>
