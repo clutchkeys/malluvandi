@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -73,6 +74,7 @@ export function InquiryModal({ isOpen, onClose, car }: InquiryModalProps) {
         status: 'new',
         callPreference,
         scheduledCallTime,
+        assignedTo: null,
     };
 
     try {
