@@ -1,24 +1,21 @@
 
 'use client';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
 
 export default function MyAccountPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && user) {
-            router.replace('/dashboard/my-account/saved-cars');
-        } else if (!loading && !user) {
-            router.replace('/login');
+        if (!loading) {
+            if (user?.role === 'customer') {
+                router.replace('/dashboard/my-account/saved-cars');
+            } else if (!user) {
+                router.replace('/login');
+            }
         }
     }, [user, loading, router]);
     
@@ -30,5 +27,11 @@ export default function MyAccountPage() {
         );
     }
 
-  return null;
+    // For non-customer roles, this will be briefly visible during redirect
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-2">Redirecting to your dashboard...</p>
+        </div>
+    );
 }
