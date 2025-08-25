@@ -7,13 +7,13 @@ import type { Inquiry, User } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { InquiryActions } from '@/components/inquiry-actions';
 
-async function getInquiries(): Promise<Inquiry[]> {
+async function getInquiries(): Promise<(Inquiry & { assignedTo_name?: string })[]> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('inquiries')
         .select(`
             *,
-            profiles:assignedTo ( name )
+            profile:profiles ( name )
         `)
         .order('submittedAt', { ascending: false });
 
@@ -25,8 +25,8 @@ async function getInquiries(): Promise<Inquiry[]> {
     // The type from generated Supabase types might be complex, so we cast it.
     return data.map(item => ({
         ...item,
-        assignedTo_name: (item.profiles as any)?.name || 'Unassigned'
-    })) as Inquiry[];
+        assignedTo_name: (item.profile as any)?.name || 'Unassigned'
+    })) as (Inquiry & { assignedTo_name?: string })[];
 }
 
 async function getSalesStaff(): Promise<User[]> {
@@ -83,7 +83,7 @@ export default async function AdminInquiriesPage() {
                             <TableCell>{inquiry.customerName}</TableCell>
                             <TableCell>{inquiry.customerPhone}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge></TableCell>
-                            <TableCell>{(inquiry as any).assignedTo_name || 'Unassigned'}</TableCell>
+                            <TableCell>{inquiry.assignedTo_name || 'Unassigned'}</TableCell>
                             <TableCell>{format(parseISO(inquiry.submittedAt), 'dd MMM, yyyy')}</TableCell>
                             <TableCell className="text-right">
                                 <InquiryActions inquiryId={inquiry.id} salesStaff={salesStaff} currentAssigneeId={inquiry.assignedTo} />
