@@ -1,8 +1,9 @@
+
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu, User as UserIcon, LogIn, ChevronRight, LayoutDashboard, Bookmark, Bell } from 'lucide-react';
+import { LogOut, Menu, User as UserIcon, LogIn, ChevronRight, LayoutDashboard, Bookmark, Bell, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,18 +11,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
@@ -59,6 +66,36 @@ export function Header() {
             <>
               {user ? (
                 <>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                       <Button variant="ghost" size="icon" className="relative h-10 w-10">
+                          <Bell />
+                          {unreadCount > 0 && <span className="absolute top-1 right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span></span>}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80" align="end">
+                       <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                       <DropdownMenuSeparator />
+                       {notifications.length > 0 ? (
+                           <>
+                           {notifications.slice(0, 5).map(notif => (
+                               <DropdownMenuItem key={notif.id} className="flex flex-col items-start gap-1 whitespace-normal">
+                                   <p className="text-sm">{notif.message}</p>
+                                   <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}</p>
+                               </DropdownMenuItem>
+                           ))}
+                           <DropdownMenuSeparator />
+                           <DropdownMenuItem onClick={markAllAsRead}>
+                             <Check className="mr-2 h-4 w-4" />
+                             <span>Mark all as seen</span>
+                           </DropdownMenuItem>
+                           </>
+                       ) : (
+                           <DropdownMenuItem disabled>No new notifications</DropdownMenuItem>
+                       )}
+                    </DropdownMenuContent>
+                 </DropdownMenu>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
@@ -68,7 +105,7 @@ export function Header() {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.user_metadata?.name || 'User'}</p>
+                        <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>
