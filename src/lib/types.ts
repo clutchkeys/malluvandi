@@ -29,6 +29,7 @@ export interface Car {
   brand: string;
   model: string;
   year?: number;
+  registrationYear?: number;
   price?: number;
   kmRun?: number;
   fuel?: 'Petrol' | 'Diesel' | 'Electric';

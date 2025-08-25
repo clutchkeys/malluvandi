@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InquiryModal } from '@/components/inquiry-modal';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench, Instagram } from 'lucide-react';
+import { Calendar, Gauge, PaintBucket, Users, ShieldCheck, FileWarning, Info, Sparkles, Phone, TrendingDown, Star, Cog, Wrench, Instagram, ClipboardCheck } from 'lucide-react';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import Link from 'next/link';
 
@@ -108,7 +108,8 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                   <CardTitle>Specifications</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
-                  <DetailItem icon={Calendar} label="Year" value={car.year} />
+                  <DetailItem icon={Calendar} label="Model Year" value={car.year} />
+                  <DetailItem icon={ClipboardCheck} label="Reg. Year" value={car.registrationYear} />
                   <DetailItem icon={Gauge} label="Kilometers" value={car.kmRun?.toLocaleString('en-IN')} />
                   <DetailItem icon={PaintBucket} label="Color" value={car.color} />
                   <DetailItem icon={Users} label="Ownership" value={car.ownership ? `${car.ownership} ${car.ownership > 1 ? 'Owners' : 'Owner'}`: null} />

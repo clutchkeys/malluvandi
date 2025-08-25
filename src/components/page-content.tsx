@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -88,7 +89,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
       const brandMatch = selectedBrands.length > 0 ? selectedBrands.includes(car.brand) : true;
       const modelMatch = selectedModel ? car.model === selectedModel : true;
       const yearMatch = selectedYear ? car.year?.toString() === selectedYear : true;
-      const regYearMatch = selectedRegYear ? car.year?.toString() === selectedRegYear : true;
+      const regYearMatch = selectedRegYear ? car.registrationYear?.toString() === selectedRegYear : true;
       const priceMatch = car.price ? car.price >= priceRange[0] && car.price <= priceRange[1] : true;
       
       const kmMatch = isKmRangeDefault

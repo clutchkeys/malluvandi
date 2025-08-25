@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -28,6 +29,7 @@ const carFormSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   model: z.string().min(1, 'Model is required'),
   year: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`),
+  registrationYear: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`).optional(),
   price: z.coerce.number().int().positive('Price must be a positive number'),
   kmRun: z.coerce.number().int().positive('KM driven must be a positive number'),
   fuel: z.enum(['Petrol', 'Diesel', 'Electric'], { required_error: 'Fuel type is required' }),
@@ -50,7 +52,7 @@ interface CarFormProps {
 }
 
 const steps = [
-  { id: 'Step 1', name: 'Basic Information', fields: ['brand', 'model', 'year', 'price'] },
+  { id: 'Step 1', name: 'Basic Information', fields: ['brand', 'model', 'year', 'registrationYear', 'price'] },
   { id: 'Step 2', name: 'Car Details', fields: ['kmRun', 'fuel', 'transmission', 'ownership', 'color', 'engineCC'] },
   { id: 'Step 3', name: 'Media & More', fields: ['images', 'badges', 'instagramReelUrl', 'additionalDetails'] },
   { id: 'Step 4', name: 'Review & Submit' },
@@ -81,6 +83,7 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     defaultValues: isEditMode ? {
       ...initialData,
       year: initialData.year || currentYear,
+      registrationYear: initialData.registrationYear || undefined,
       price: initialData.price || 0,
       kmRun: initialData.kmRun || 0,
       fuel: initialData.fuel || undefined,
@@ -184,11 +187,16 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
                     {errors.model && <p className="text-destructive text-xs mt-1">{errors.model?.message}</p>}
                 </div>
                 <div>
-                    <Label>Manufactured Year</Label>
+                    <Label>Manufacture Year</Label>
                     <Input type="number" {...register('year')} placeholder={`e.g. ${currentYear}`} />
                     {errors.year && <p className="text-destructive text-xs mt-1">{errors.year?.message}</p>}
                 </div>
                 <div>
+                    <Label>Registration Year</Label>
+                    <Input type="number" {...register('registrationYear')} placeholder={`e.g. ${currentYear}`} />
+                    {errors.registrationYear && <p className="text-destructive text-xs mt-1">{errors.registrationYear?.message}</p>}
+                </div>
+                <div className="md:col-span-2">
                     <Label>Price (₹)</Label>
                     <Input type="number" {...register('price')} placeholder="e.g. 500000" />
                     {errors.price && <p className="text-destructive text-xs mt-1">{errors.price?.message}</p>}
