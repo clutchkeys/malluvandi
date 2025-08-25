@@ -55,7 +55,7 @@ export interface Inquiry {
   customerName: string;
   customerPhone: string;
   submittedAt: string; // ISO 8601 date string
-  assignedTo: string; // EmployeeB ID
+  assignedTo: string | null; // EmployeeB ID
   status: 'new' | 'contacted' | 'closed';
   remarks: string; // Visible to admin
   privateNotes: string; // Visible only to EmployeeB

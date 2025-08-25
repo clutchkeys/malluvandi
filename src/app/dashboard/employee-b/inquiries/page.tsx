@@ -10,12 +10,24 @@ import type { Inquiry } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { updateInquiryStatus } from '@/app/dashboard/admin/inquiries/actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EmployeeBInquiriesPage() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const supabase = createClient();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchInquiries = async () => {
@@ -35,8 +47,22 @@ export default function EmployeeBInquiriesPage() {
       setLoading(false);
     };
 
-    fetchInquiries();
+    if(user) {
+        fetchInquiries();
+    }
   }, [user, supabase]);
+
+  const handleStatusChange = async (inquiryId: string, newStatus: 'new' | 'contacted' | 'closed') => {
+    setIsUpdating(inquiryId);
+    const { success, error } = await updateInquiryStatus(inquiryId, newStatus);
+    if (success) {
+      setInquiries(prev => prev.map(i => i.id === inquiryId ? { ...i, status: newStatus } : i));
+      toast({ title: "Status updated successfully" });
+    } else {
+      toast({ title: "Error updating status", description: error, variant: "destructive" });
+    }
+    setIsUpdating(null);
+  }
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -77,7 +103,26 @@ export default function EmployeeBInquiriesPage() {
                     <TableCell className="font-medium">{inquiry.carSummary}</TableCell>
                     <TableCell>{inquiry.customerName}</TableCell>
                     <TableCell>{inquiry.customerPhone}</TableCell>
-                    <TableCell><Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge></TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="capitalize" disabled={isUpdating === inquiry.id}>
+                            {isUpdating === inquiry.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             <Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuRadioGroup
+                            value={inquiry.status}
+                            onValueChange={(value) => handleStatusChange(inquiry.id, value as 'new' | 'contacted' | 'closed')}
+                          >
+                            <DropdownMenuRadioItem value="new">New</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="contacted">Contacted</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="closed">Closed</DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                     <TableCell>{format(parseISO(inquiry.submittedAt), 'dd MMM, yyyy')}</TableCell>
                   </TableRow>
                 ))
