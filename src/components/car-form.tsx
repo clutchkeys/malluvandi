@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Loader2, UploadCloud, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, PlusCircle, Trash, UploadCloud, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from './ui/checkbox';
 import Image from 'next/image';
@@ -36,7 +36,7 @@ const carFormSchema = z.object({
   color: z.string().min(1, 'Color is required'),
   engineCC: z.coerce.number().int().positive('Engine CC must be a positive number'),
   additionalDetails: z.string().optional(),
-  images: z.array(z.string().url()).min(1, 'At least one image is required'),
+  images: z.array(z.object({ url: z.string().url("Please enter a valid URL.") })).optional(),
   badges: z.array(z.string()).optional(),
   instagramReelUrl: z.string().url().optional().or(z.literal('')),
 });
@@ -65,8 +65,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
   
   const isEditMode = !!initialData;
 
@@ -76,7 +74,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     trigger,
     control,
     watch,
-    setValue,
     getValues,
     formState: { errors },
   } = useForm<CarFormData>({
@@ -91,7 +88,7 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
       ownership: initialData.ownership || 1,
       engineCC: initialData.engineCC || 0,
       badges: initialData.badges || [],
-      images: initialData.images || [],
+      images: initialData.images?.map(url => ({ url })) || [],
     } : {
       images: [],
       badges: [],
@@ -99,7 +96,10 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     },
   });
 
-  const existingImageUrls = watch('images');
+   const { fields, append, remove } = useFieldArray({
+    control,
+    name: "images"
+  });
 
   const handleNext = async () => {
     const fields = steps[currentStep].fields;
@@ -108,9 +108,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     if (!output) return;
 
     if (currentStep < steps.length - 1) {
-      if (currentStep === 2) { // Media step
-        await handleImageUpload();
-      }
       setCurrentStep(step => step + 1);
     }
   };
@@ -121,49 +118,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     }
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setImageFiles(prev => [...prev, ...files]);
-    }
-  }
-  
-  const removeNewImage = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-  }
-  
-  const removeExistingImage = (index: number) => {
-     setValue('images', existingImageUrls.filter((_, i) => i !== index));
-     // Here you might also want to delete the image from Supabase storage
-  }
-
-
-  const handleImageUpload = async () => {
-    if (imageFiles.length === 0) return;
-    setIsUploading(true);
-    
-    const uploadPromises = imageFiles.map(file => {
-        const fileName = `${user!.id}/${Date.now()}-${file.name}`;
-        return supabase.storage.from('car-images').upload(fileName, file);
-    });
-
-    try {
-        const results = await Promise.all(uploadPromises);
-        const newUrls: string[] = [];
-        for (const result of results) {
-            if (result.error) throw result.error;
-            const { data } = supabase.storage.from('car-images').getPublicUrl(result.data.path);
-            newUrls.push(data.publicUrl);
-        }
-        setValue('images', [...existingImageUrls, ...newUrls], { shouldValidate: true });
-        setImageFiles([]); // Clear the file input after upload
-    } catch (error: any) {
-        toast({ title: "Image Upload Failed", description: error.message, variant: "destructive" });
-    } finally {
-        setIsUploading(false);
-    }
-  };
-
   const onSubmit = async (data: CarFormData) => {
     if (!user) {
         toast({ title: 'Not authenticated', description: 'You must be logged in to submit a listing.', variant: 'destructive'});
@@ -171,9 +125,15 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     }
     setIsSubmitting(true);
     
+    // Transform images from {url: string}[] to string[]
+    const finalData = {
+        ...data,
+        images: data.images?.map(img => img.url).filter(Boolean) || [],
+    };
+    
     if (isEditMode) {
       // Update existing car
-      const result = await updateCar(initialData.id, data);
+      const result = await updateCar(initialData.id, finalData);
       if (result.success) {
         toast({ title: 'Listing Updated!', description: 'Your car details have been updated.'});
         router.push(user.role === 'admin' ? '/dashboard/admin/listings' : '/dashboard/employee-a/listings');
@@ -184,7 +144,7 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
       // Create new car
       try {
           const { error } = await supabase.from('cars').insert([{
-              ...data,
+              ...finalData,
               submittedBy: user.id,
               status: 'pending',
           }]);
@@ -284,29 +244,24 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
            {currentStep === 2 && (
              <div className="grid grid-cols-1 gap-6">
                 <div>
-                    <Label>Car Images</Label>
-                    <div className="mt-2 p-6 border-2 border-dashed rounded-lg text-center">
-                        <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-                        <p className="mt-2 text-sm text-muted-foreground">Drag and drop, or click to upload</p>
-                        <Input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageFileChange} className="sr-only"/>
-                        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => document.getElementById('image-upload')?.click()}>Select Files</Button>
+                    <Label>Car Image URLs (Optional)</Label>
+                    <div className="space-y-2">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-center gap-2">
+                          <Input
+                            {...register(`images.${index}.url`)}
+                            placeholder="https://example.com/image.png"
+                          />
+                          <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                            <Trash size={16} />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                     {errors.images && <p className="text-destructive text-xs mt-1">{errors.images?.message}</p>}
-                    <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                        {existingImageUrls.map((url, index) => (
-                           <div key={index} className="relative group">
-                                <Image src={url} alt={`existing-image-${index}`} width={128} height={128} className="rounded-md object-cover w-full aspect-square" />
-                                <button type="button" onClick={() => removeExistingImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
-                           </div>
-                        ))}
-                        {imageFiles.map((file, index) => (
-                           <div key={index} className="relative group">
-                                <Image src={URL.createObjectURL(file)} alt={`upload-preview-${index}`} width={128} height={128} className="rounded-md object-cover w-full aspect-square" />
-                                <button type="button" onClick={() => removeNewImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
-                           </div>
-                        ))}
-                         {isUploading && <div className="flex items-center justify-center aspect-square border rounded-md"><Loader2 className="animate-spin"/></div>}
-                    </div>
+                     <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ url: "" })}>
+                        <PlusCircle className="mr-2" size={16} /> Add Image URL
+                     </Button>
+                     {errors.images && <p className="text-destructive text-xs mt-1">{errors.images.root?.message}</p>}
                 </div>
                 <div>
                     <Label>Badges (Optional)</Label>
@@ -346,7 +301,9 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
                         <div key={key} className="flex justify-between items-start capitalize border-b pb-2">
                         <span className="font-medium text-sm">{formattedKey}:</span>
                         {key === 'images' ? 
-                            <div className="flex gap-2 flex-wrap justify-end max-w-xs">{value.map((img:string, i:number) => <Image key={i} src={img} alt="preview" width={50} height={50} className="rounded" />)}</div> :
+                            <div className="flex gap-2 flex-wrap justify-end max-w-xs">
+                                {(value as {url:string}[]).map((img, i) => img.url && <Image key={i} src={img.url} alt="preview" width={50} height={50} className="rounded" />)}
+                            </div> :
                             <span className="text-muted-foreground text-sm text-right max-w-xs truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
                         }
                         </div>
@@ -362,12 +319,11 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
             </Button>
 
             {currentStep < steps.length - 1 ? (
-                <Button type="button" onClick={handleNext} disabled={isUploading}>
-                    {isUploading ? <Loader2 className="animate-spin mr-2"/> : <ArrowRight className="ml-2"/>}
-                    Next
+                <Button type="button" onClick={handleNext}>
+                    Next<ArrowRight className="ml-2"/>
                 </Button>
             ) : (
-                <Button type="submit" disabled={isSubmitting || isUploading}>
+                <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="animate-spin mr-2"/>}
                     {isEditMode ? 'Update Listing' : 'Submit for Approval'}
                 </Button>
@@ -377,3 +333,5 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     </Card>
   );
 }
+
+    
