@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse } from 'lucide-react';
+import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse, Filter } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { Header } from '@/components/header';
@@ -19,6 +19,7 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/inquiries', icon: ShoppingCart, label: 'Inquiries' },
         { href: '/dashboard/admin/users', icon: Users, label: 'User Management' },
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
+        { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
       ];
     case 'employee-a':
       return [
@@ -87,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${pathname === href ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {label}
@@ -106,7 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
-              <h1 className="text-lg font-semibold">{navLinks.find(l => l.href === pathname)?.label || 'Dashboard'}</h1>
+              <h1 className="text-lg font-semibold">{navLinks.find(l => pathname.startsWith(l.href))?.label || 'Dashboard'}</h1>
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
