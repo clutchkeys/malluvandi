@@ -23,6 +23,8 @@ function GoogleIcon() {
     )
 }
 
+const SUPER_ADMIN_EMAIL = 'dukaanflow@gmail.com';
+
 export function RegisterForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,6 +41,8 @@ export function RegisterForm() {
     e.preventDefault();
     setIsLoading(true);
 
+    const userRole = email === SUPER_ADMIN_EMAIL ? 'admin' : 'customer';
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -46,11 +50,29 @@ export function RegisterForm() {
         data: {
           full_name: name,
           phone: phone,
-          role: 'customer',
+          role: userRole,
           subscribe_newsletter: subscribe
         }
       }
     });
+    
+    // The trigger will handle creating the profile.
+    // If the user's role is 'admin', we need to update it in the profiles table.
+    if (!error && userRole === 'admin' && data.user) {
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', data.user.id);
+        
+        if (updateError) {
+             toast({
+                title: 'Registration Succeeded, but...',
+                description: 'Could not set admin role. Please do it manually in Supabase.',
+                variant: 'destructive',
+            });
+        }
+    }
+
 
     if (error) {
       toast({

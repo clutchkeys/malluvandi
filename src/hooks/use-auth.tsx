@@ -3,8 +3,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
-import type { User as AppUser, Role } from '@/lib/types';
+import type { User as AppUser } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext<{
@@ -24,45 +23,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        const appUser: AppUser = {
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
-            phone: session.user.user_metadata?.phone,
-            role: (session.user.app_metadata?.role as Role) || 'customer',
-        };
-        setUser(appUser);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-             const appUser: AppUser = {
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
-                phone: session.user.user_metadata?.phone,
-                role: (session.user.app_metadata?.role as Role) || 'customer',
-            };
-            setUser(appUser);
-        } else {
+    const fetchUser = async (sessionUser: any) => {
+        if (!sessionUser) {
             setUser(null);
+            setLoading(false);
+            return;
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', sessionUser.id)
+            .single();
+
+        if (profile) {
+            setUser(profile as AppUser);
+        } else {
+             // This might happen if the trigger fails or there's a delay.
+             // We can create a basic user object and try fetching again later.
+             setUser({
+                 id: sessionUser.id,
+                 email: sessionUser.email!,
+                 name: sessionUser.user_metadata?.full_name || 'User',
+                 phone: sessionUser.user_metadata?.phone,
+                 role: 'customer' // default role
+             });
         }
         setLoading(false);
     };
+    
+    // Check for an initial session on load
+    const getInitialSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        fetchUser(session?.user);
+    };
+    
+    getInitialSession();
 
-    checkInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        fetchUser(session?.user);
+    });
+
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase.auth]);
+  }, [supabase, supabase.auth]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
