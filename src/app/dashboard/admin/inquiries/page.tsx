@@ -11,69 +11,57 @@ import { format, parseISO } from 'date-fns';
 import { InquiryActions } from '@/components/inquiry-actions';
 import { Loader2 } from 'lucide-react';
 
-type InquiryWithAssignee = Inquiry & {
-    profiles: { name: string } | null;
+type InquiryWithAssigneeName = Inquiry & {
+    assignedTo_name?: string;
 };
 
 export default function AdminInquiriesPage() {
-    const [inquiries, setInquiries] = useState<(Inquiry & { assignedTo_name?: string })[]>([]);
+    const [inquiries, setInquiries] = useState<InquiryWithAssigneeName[]>([]);
     const [salesStaff, setSalesStaff] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
 
-    const getInquiries = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('inquiries')
-            .select(`
-                *,
-                profiles ( name )
-            `)
-            .order('submittedAt', { ascending: false });
+    const fetchData = useCallback(async () => {
+        setLoading(true);
 
-        if (error) {
-            console.error('Error fetching inquiries:', error);
-            return [];
-        }
+        // Fetch inquiries and sales staff in parallel
+        const [inquiryRes, staffRes] = await Promise.all([
+            supabase.from('inquiries').select('*').order('submittedAt', { ascending: false }),
+            supabase.from('profiles').select('*').eq('role', 'employee-b')
+        ]);
         
-        const typedData = data as InquiryWithAssignee[];
-        return typedData.map(item => ({
-            ...item,
-            assignedTo_name: item.profiles?.name || 'Unassigned'
-        }));
-    }, [supabase]);
+        const { data: inquiryData, error: inquiryError } = inquiryRes;
+        const { data: staffData, error: staffError } = staffRes;
 
-    const getSalesStaff = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('role', 'employee-b');
-
-        if (error) {
-            console.error('Error fetching sales staff:', error);
-            return [];
+        if (inquiryError) {
+            console.error('Error fetching inquiries:', inquiryError);
         }
-        return data as User[];
+        if (staffError) {
+            console.error('Error fetching sales staff:', staffError);
+        }
+
+        const staff = (staffData as User[]) || [];
+        const staffMap = new Map(staff.map(s => [s.id, s.name]));
+        
+        const inquiriesWithNames = ((inquiryData as Inquiry[]) || []).map(inquiry => ({
+            ...inquiry,
+            assignedTo_name: inquiry.assignedTo ? staffMap.get(inquiry.assignedTo) || 'Unassigned' : 'Unassigned',
+        }));
+
+        setInquiries(inquiriesWithNames);
+        setSalesStaff(staff);
+        setLoading(false);
+
     }, [supabase]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            const [inquiriesData, salesStaffData] = await Promise.all([
-                getInquiries(),
-                getSalesStaff()
-            ]);
-            setInquiries(inquiriesData);
-            setSalesStaff(salesStaffData);
-            setLoading(false);
-        };
-
         fetchData();
 
         const channel = supabase.channel('realtime-inquiries-admin')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, 
             (payload) => {
-              // Refetch inquiries on any change
-              getInquiries().then(setInquiries);
+              // Refetch all data on any change
+              fetchData();
             }
           )
           .subscribe();
@@ -82,7 +70,7 @@ export default function AdminInquiriesPage() {
             supabase.removeChannel(channel);
         };
 
-    }, [getInquiries, getSalesStaff, supabase]);
+    }, [fetchData, supabase]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -128,7 +116,7 @@ export default function AdminInquiriesPage() {
                             <TableCell>{inquiry.customerName}</TableCell>
                             <TableCell>{inquiry.customerPhone}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge></TableCell>
-                            <TableCell>{inquiry.assignedTo_name || 'Unassigned'}</TableCell>
+                            <TableCell>{inquiry.assignedTo_name}</TableCell>
                             <TableCell>{format(parseISO(inquiry.submittedAt), 'dd MMM, yyyy')}</TableCell>
                             <TableCell className="text-right">
                                 <InquiryActions inquiryId={inquiry.id} salesStaff={salesStaff} currentAssigneeId={inquiry.assignedTo} />

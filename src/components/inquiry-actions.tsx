@@ -10,9 +10,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, User, UserPlus } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { assignInquiry } from '@/app/dashboard/admin/inquiries/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
@@ -30,6 +31,9 @@ export function InquiryActions({ inquiryId, salesStaff, currentAssigneeId }: Inq
 
   const handleAssignmentChange = (employeeId: string) => {
     startTransition(async () => {
+      // Don't do anything if the assignment hasn't changed
+      if (employeeId === assignedTo) return;
+      
       const { success, error } = await assignInquiry(inquiryId, employeeId);
       if (success) {
         setAssignedTo(employeeId);

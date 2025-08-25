@@ -32,6 +32,7 @@ export default function EmployeeBInquiriesPage() {
   const fetchInquiries = useCallback(async () => {
       if (!user) return;
       
+      setLoading(true);
       const { data, error } = await supabase
         .from('inquiries')
         .select('*')
@@ -44,14 +45,14 @@ export default function EmployeeBInquiriesPage() {
       } else {
         setInquiries(data as Inquiry[]);
       }
+      setLoading(false);
   }, [user, supabase]);
 
 
   useEffect(() => {
     if (!user) return;
 
-    setLoading(true);
-    fetchInquiries().finally(() => setLoading(false));
+    fetchInquiries();
 
     const channel = supabase.channel(`realtime-inquiries-employee-${user.id}`)
       .on('postgres_changes', 
@@ -62,6 +63,7 @@ export default function EmployeeBInquiriesPage() {
             filter: `assignedTo=eq.${user.id}`
           },
           (payload) => {
+             // Refetch when a change is detected for this user's assignments
              fetchInquiries();
           }
       ).subscribe();
@@ -75,7 +77,7 @@ export default function EmployeeBInquiriesPage() {
     setIsUpdating(inquiryId);
     const { success, error } = await updateInquiryStatus(inquiryId, newStatus);
     if (success) {
-      // The real-time subscription will handle the update, but we can also optimistically update the state
+      // The real-time subscription will handle the UI update, but we can also optimistically update the state
       setInquiries(prev => prev.map(i => i.id === inquiryId ? { ...i, status: newStatus } : i));
       toast({ title: "Status updated successfully" });
     } else {
@@ -103,7 +105,7 @@ export default function EmployeeBInquiriesPage() {
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4">Loading inquiries...</p>
+            <p className="ml-4">Loading your inquiries...</p>
           </div>
         ) : (
           <Table>
@@ -126,9 +128,9 @@ export default function EmployeeBInquiriesPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="capitalize" disabled={isUpdating === inquiry.id}>
-                            {isUpdating === inquiry.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             <Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge>
+                          <Button variant="outline" size="sm" className="capitalize w-28 justify-start" disabled={isUpdating === inquiry.id}>
+                            {isUpdating === inquiry.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Badge variant={getStatusVariant(inquiry.status)} className="capitalize mr-2">{inquiry.status}</Badge>}
+                             <span className="truncate">{inquiry.status}</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
