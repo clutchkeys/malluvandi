@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import type { Car, User } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { ListingActions } from '@/components/listing-actions';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 type CarWithSubmitterName = Car & {
     submittedBy_name?: string;
@@ -20,6 +22,7 @@ export default function AdminListingsPage() {
     const [cars, setCars] = useState<CarWithSubmitterName[]>([]);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
+    const router = useRouter();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -84,9 +87,14 @@ export default function AdminListingsPage() {
   return (
     <div className="w-full">
       <Card>
-        <CardHeader>
-          <CardTitle>Manage Car Listings</CardTitle>
-          <CardDescription>Review, approve, or reject car listings submitted by editors.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Manage Car Listings</CardTitle>
+            <CardDescription>Review, approve, or reject car listings submitted by editors.</CardDescription>
+          </div>
+          <Button onClick={() => router.push('/sell')}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Car
+          </Button>
         </CardHeader>
         <CardContent>
             <Table>

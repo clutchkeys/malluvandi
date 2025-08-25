@@ -101,27 +101,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
 
   const existingImageUrls = watch('images');
 
-  const selectedBrand = watch('brand');
-  const selectedModel = watch('model');
-
-  // Reset model if brand changes and selected model is not in new list
-  useEffect(() => {
-    if (selectedBrand) {
-      const available = models[selectedBrand] || [];
-      if (!available.includes(selectedModel)) {
-        setValue('model', '');
-      }
-    }
-  }, [selectedBrand, models, selectedModel, setValue]);
-
-
-  const availableModels = useMemo(() => {
-    if (selectedBrand) {
-      return models[selectedBrand] || [];
-    }
-    return [];
-  }, [selectedBrand, models]);
-
   const handleNext = async () => {
     const fields = steps[currentStep].fields;
     const output = await trigger(fields as (keyof CarFormData)[], { shouldFocus: true });
@@ -236,22 +215,12 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand</Label>
-                    <Controller name="brand" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
-                            <SelectContent>{brands.map(brand => (<SelectItem key={brand} value={brand}>{brand}</SelectItem>))}</SelectContent>
-                        </Select>
-                    )} />
+                    <Input {...register('brand')} placeholder="e.g. Maruti Suzuki" />
                     {errors.brand && <p className="text-destructive text-xs mt-1">{errors.brand?.message}</p>}
                 </div>
                 <div>
                     <Label>Model</Label>
-                    <Controller name="model" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedBrand}>
-                            <SelectTrigger><SelectValue placeholder="Select Model" /></SelectTrigger>
-                            <SelectContent>{availableModels.map(model => (<SelectItem key={model} value={model}>{model}</SelectItem>))}</SelectContent>
-                        </Select>
-                    )} />
+                    <Input {...register('model')} placeholder="e.g. Swift" />
                     {errors.model && <p className="text-destructive text-xs mt-1">{errors.model?.message}</p>}
                 </div>
                 <div>
