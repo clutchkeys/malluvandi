@@ -20,10 +20,14 @@ export async function createNotification(input: z.infer<typeof notificationSchem
   if (!validatedData.success) {
     return { success: false, error: 'Invalid data provided.' };
   }
+  
+  const { message, recipientGroup, createdBy } = validatedData.data;
 
   const { error } = await supabase.from('notifications').insert([
     {
-      ...validatedData.data,
+      message,
+      recipientGroup,
+      created_by: createdBy, // Map camelCase from code to snake_case for the database
     },
   ]);
 
