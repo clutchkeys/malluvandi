@@ -50,3 +50,23 @@ export async function updateInquiry(inquiryId: string, updates: { status?: 'new'
 
   return { success: true, data };
 }
+
+export async function updateInquiryNotes(inquiryId: string, privateNotes: string) {
+  const supabase = createClient();
+  
+  const { data, error } = await supabase
+    .from('inquiries')
+    .update({ privateNotes })
+    .eq('id', inquiryId)
+    .select('id, privateNotes')
+    .single();
+
+  if (error) {
+    console.error('Error updating inquiry notes:', error);
+    return { success: false, error: error.message };
+  }
+  
+  revalidatePath('/dashboard/employee-b/inquiries');
+
+  return { success: true, data };
+}

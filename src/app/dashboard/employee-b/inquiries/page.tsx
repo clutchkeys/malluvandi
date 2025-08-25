@@ -10,48 +10,41 @@ import type { Inquiry } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { updateInquiry } from '@/app/dashboard/admin/inquiries/actions';
-import { useToast } from '@/hooks/use-toast';
-import { CloseInquiryDialog } from '@/components/close-inquiry-dialog';
-
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { cn } from '@/lib/utils';
+import { InquiryDetailPanel } from '@/components/inquiry-detail-panel';
 
 export default function EmployeeBInquiriesPage() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
 
   const supabase = createClient();
-  const { toast } = useToast();
 
   const fetchInquiries = useCallback(async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('inquiries')
-        .select('*')
-        .eq('assignedTo', user.id)
-        .order('submittedAt', { ascending: false });
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('*')
+      .eq('assignedTo', user.id)
+      .order('submittedAt', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching inquiries:', error);
-        setInquiries([]);
-      } else {
-        setInquiries(data as Inquiry[]);
+    if (error) {
+      console.error('Error fetching inquiries:', error);
+      setInquiries([]);
+    } else {
+      const inquiriesData = data as Inquiry[];
+      setInquiries(inquiriesData);
+      if (inquiriesData.length > 0 && !selectedInquiryId) {
+        setSelectedInquiryId(inquiriesData[0].id);
+      } else if (inquiriesData.length === 0) {
+        setSelectedInquiryId(null);
       }
-      setLoading(false);
-  }, [user, supabase]);
+    }
+    setLoading(false);
+  }, [user, supabase, selectedInquiryId]);
 
 
   useEffect(() => {
@@ -77,27 +70,6 @@ export default function EmployeeBInquiriesPage() {
     }
   }, [user, supabase, fetchInquiries]);
 
-  const handleStatusChange = async (inquiryId: string, newStatus: 'new' | 'contacted' | 'closed') => {
-    setIsUpdating(inquiryId);
-    const inquiry = inquiries.find(i => i.id === inquiryId);
-
-    if (newStatus === 'closed' && inquiry) {
-        setSelectedInquiry(inquiry);
-        setIsCloseModalOpen(true);
-        setIsUpdating(null); 
-        return;
-    }
-
-    const { success, error } = await updateInquiry(inquiryId, { status: newStatus });
-
-    if (success) {
-      toast({ title: "Status updated successfully" });
-    } else {
-      toast({ title: "Error updating status", description: error, variant: "destructive" });
-    }
-    setIsUpdating(null);
-  }
-
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'new': return 'default';
@@ -106,83 +78,73 @@ export default function EmployeeBInquiriesPage() {
       default: return 'outline';
     }
   };
+  
+  const selectedInquiry = inquiries.find(i => i.id === selectedInquiryId);
+
+  if (loading) {
+      return (
+          <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      );
+  }
 
   return (
-    <>
-    <Card>
-      <CardHeader>
-        <CardTitle>My Inquiries</CardTitle>
-        <CardDescription>View and manage customer inquiries assigned to you.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4">Loading your inquiries...</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Car</TableHead>
-                <TableHead>Customer Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Received On</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inquiries.length > 0 ? (
-                inquiries.map((inquiry) => (
-                  <TableRow key={inquiry.id}>
-                    <TableCell className="font-medium">{inquiry.carSummary}</TableCell>
-                    <TableCell>{inquiry.customerName}</TableCell>
-                    <TableCell>{inquiry.customerPhone}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="capitalize w-32 justify-start" disabled={isUpdating === inquiry.id}>
-                            {isUpdating === inquiry.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Badge variant={getStatusVariant(inquiry.status)} className="capitalize mr-2">{inquiry.status}</Badge>}
-                             <span className="truncate">{inquiry.status}</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuRadioGroup
-                            value={inquiry.status}
-                            onValueChange={(value) => handleStatusChange(inquiry.id, value as 'new' | 'contacted' | 'closed')}
-                          >
-                            <DropdownMenuRadioItem value="new">New</DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="contacted">Contacted</DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="closed">Closed</DropdownMenuRadioItem>
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>{format(parseISO(inquiry.submittedAt), 'dd MMM, yyyy')}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    You have no inquiries assigned to you.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-    {selectedInquiry && (
-        <CloseInquiryDialog 
-            isOpen={isCloseModalOpen}
-            onClose={() => {
-              setIsCloseModalOpen(false);
-              setSelectedInquiry(null);
-            }}
-            inquiry={selectedInquiry}
-        />
-    )}
-    </>
+    <ResizablePanelGroup direction="horizontal" className="h-full max-h-[calc(100vh-8rem)] w-full rounded-lg border">
+        <ResizablePanel defaultSize={40} minSize={30}>
+            <div className="flex flex-col h-full">
+                <div className='p-4'>
+                    <h2 className="text-xl font-bold">My Inquiries ({inquiries.length})</h2>
+                    <p className="text-sm text-muted-foreground">Select an inquiry to view details.</p>
+                </div>
+                <div className="overflow-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Car</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {inquiries.map((inquiry) => (
+                        <TableRow 
+                            key={inquiry.id}
+                            onClick={() => setSelectedInquiryId(inquiry.id)}
+                            className={cn("cursor-pointer", selectedInquiryId === inquiry.id && "bg-muted hover:bg-muted")}
+                        >
+                            <TableCell>
+                                <div className="font-medium">{inquiry.customerName}</div>
+                                <div className="text-xs text-muted-foreground">{inquiry.customerPhone}</div>
+                            </TableCell>
+                            <TableCell className="text-xs">{inquiry.carSummary}</TableCell>
+                            <TableCell>
+                                <Badge variant={getStatusVariant(inquiry.status)} className="capitalize">{inquiry.status}</Badge>
+                            </TableCell>
+                        </TableRow>
+                        ))}
+                        {inquiries.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={3} className="h-24 text-center">
+                                    You have no inquiries assigned to you.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+                </div>
+            </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={60}>
+            {selectedInquiry ? (
+                <InquiryDetailPanel inquiry={selectedInquiry} key={selectedInquiry.id}/>
+            ) : (
+                <div className="flex h-full items-center justify-center bg-muted/50">
+                    <p className="text-muted-foreground">Select an inquiry to see the details.</p>
+                </div>
+            )}
+        </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
