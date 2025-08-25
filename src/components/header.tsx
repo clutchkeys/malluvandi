@@ -31,6 +31,11 @@ export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
@@ -66,7 +71,7 @@ export function Header() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          {loading ? (
+          {!isMounted || loading ? (
              <div className="flex items-center gap-2">
                 <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-10 w-10 rounded-full" />
