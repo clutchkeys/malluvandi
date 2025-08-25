@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse, Filter } from 'lucide-react';
+import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse, Filter, Star } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { Header } from '@/components/header';
@@ -20,6 +20,7 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/users', icon: Users, label: 'User Management' },
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
+        { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
       ];
     case 'employee-a':
       return [
