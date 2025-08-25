@@ -179,4 +179,9 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
       </div>
       <InquiryModal
         isOpen={isModalOpen}
-        
+        onClose={() => setIsModalOpen(false)}
+        car={car}
+      />
+    </>
+  );
+}
