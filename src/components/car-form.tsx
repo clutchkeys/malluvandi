@@ -2,12 +2,11 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -21,15 +20,17 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from './ui/checkbox';
 import Image from 'next/image';
 import type { Car } from '@/lib/types';
-import { updateCar } from '@/app/dashboard/admin/listings/actions';
+import { uploadImagesAndSubmitCar } from '@/app/sell/actions';
+
 
 const currentYear = new Date().getFullYear();
 
+// This schema is for client-side validation only. The server action has its own.
 const carFormSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   model: z.string().min(1, 'Model is required'),
   year: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`),
-  registrationYear: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`).optional(),
+  registrationYear: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`).optional().or(z.literal('')),
   price: z.coerce.number().int().positive('Price must be a positive number'),
   kmRun: z.coerce.number().int().positive('KM driven must be a positive number'),
   fuel: z.enum(['Petrol', 'Diesel', 'Electric'], { required_error: 'Fuel type is required' }),
@@ -38,7 +39,8 @@ const carFormSchema = z.object({
   color: z.string().min(1, 'Color is required'),
   engineCC: z.coerce.number().int().positive('Engine CC must be a positive number'),
   additionalDetails: z.string().optional(),
-  images: z.array(z.object({ url: z.string().url("Please enter a valid URL.") })).optional(),
+  images: z.array(z.instanceof(File)).optional(),
+  existingImageUrls: z.array(z.string().url()).optional(),
   badges: z.array(z.string()).optional(),
   instagramReelUrl: z.string().url().optional().or(z.literal('')),
 });
@@ -62,7 +64,6 @@ const badgeOptions = ['new', 'featured', 'price drop'];
 
 export function CarForm({ brands, models, initialData }: CarFormProps) {
   const router = useRouter();
-  const supabase = createClient();
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
@@ -77,6 +78,7 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     control,
     watch,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm<CarFormData>({
     resolver: zodResolver(carFormSchema),
@@ -91,22 +93,22 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
       ownership: initialData.ownership || 1,
       engineCC: initialData.engineCC || 0,
       badges: initialData.badges || [],
-      images: initialData.images?.map(url => ({ url })) || [],
+      existingImageUrls: initialData.images || [],
+      images: [],
     } : {
       images: [],
+      existingImageUrls: [],
       badges: [],
       year: currentYear,
     },
   });
 
-   const { fields, append, remove } = useFieldArray({
-    control,
-    name: "images"
-  });
+  const watchImages = watch('images', []);
+  const watchExistingImages = watch('existingImageUrls', []);
 
   const handleNext = async () => {
     const fields = steps[currentStep].fields;
-    const output = await trigger(fields as (keyof CarFormData)[], { shouldFocus: true });
+    const output = await trigger(fields as any, { shouldFocus: true });
 
     if (!output) return;
 
@@ -120,50 +122,69 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
       setCurrentStep(step => step - 1);
     }
   };
+  
+  const removeNewImage = (index: number) => {
+    const updatedFiles = [...(getValues('images') || [])];
+    updatedFiles.splice(index, 1);
+    setValue('images', updatedFiles);
+  };
 
-  const onSubmit = async (data: CarFormData) => {
+  const removeExistingImage = (index: number) => {
+    const updatedUrls = [...(getValues('existingImageUrls') || [])];
+    updatedUrls.splice(index, 1);
+    setValue('existingImageUrls', updatedUrls);
+  };
+
+  const onSubmit = async () => {
     if (!user) {
         toast({ title: 'Not authenticated', description: 'You must be logged in to submit a listing.', variant: 'destructive'});
         return;
     }
     setIsSubmitting(true);
     
-    // Transform images from {url: string}[] to string[]
-    const finalData = {
-        ...data,
-        images: data.images?.map(img => img.url).filter(Boolean) || [],
-    };
+    const formData = new FormData();
+    const allValues = getValues();
     
-    if (isEditMode) {
-      // Update existing car
-      const result = await updateCar(initialData.id, finalData);
-      if (result.success) {
-        toast({ title: 'Listing Updated!', description: 'Your car details have been updated.'});
+    // Append all form values to FormData
+    Object.entries(allValues).forEach(([key, value]) => {
+      if (key === 'images' && Array.isArray(value)) {
+        value.forEach(file => formData.append('images', file));
+      } else if (key === 'existingImageUrls' && Array.isArray(value)) {
+        formData.append('existingImageUrls', JSON.stringify(value));
+      } else if (key === 'badges' && Array.isArray(value)) {
+        value.forEach(badge => formData.append('badges', badge));
+      }
+      else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+
+    if (isEditMode && initialData.id) {
+        formData.append('carId', initialData.id);
+    }
+
+    const result = await uploadImagesAndSubmitCar(formData);
+    
+    if (result.success) {
+        toast({ title: isEditMode ? 'Listing Updated!' : 'Listing Submitted!', description: isEditMode ? 'Your car details have been updated.' : 'Your car has been submitted for approval.'});
         router.push(user.role === 'admin' ? '/dashboard/admin/listings' : '/dashboard/employee-a/listings');
-      } else {
-        toast({ title: "Update Failed", description: result.error, variant: "destructive" });
-      }
+        router.refresh();
     } else {
-      // Create new car
-      try {
-          const { error } = await supabase.from('cars').insert([{
-              ...finalData,
-              submittedBy: user.id,
-              status: 'pending',
-          }]);
-
-          if (error) throw error;
-          
-          toast({ title: 'Listing Submitted!', description: 'Your car has been submitted for approval.'});
-          router.push('/dashboard/employee-a/listings');
-
-      } catch (error: any) {
-          toast({ title: "Submission Failed", description: error.message, variant: "destructive" });
-      }
+        toast({ title: "Submission Failed", description: result.error, variant: "destructive" });
     }
 
     setIsSubmitting(false);
   };
+
+  const selectedBrand = watch('brand');
+
+  const availableModels = useMemo(() => {
+    if (selectedBrand) {
+      return models[selectedBrand] || [];
+    }
+    return [];
+  }, [selectedBrand, models]);
+
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -176,14 +197,24 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
         <CardContent>
           {currentStep === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                 <div>
                     <Label>Brand</Label>
-                    <Input {...register('brand')} placeholder="e.g. Maruti Suzuki" />
+                    <Controller name="brand" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
+                            <SelectContent>{brands.map(brand => (<SelectItem key={brand} value={brand}>{brand}</SelectItem>))}</SelectContent>
+                        </Select>
+                    )} />
                     {errors.brand && <p className="text-destructive text-xs mt-1">{errors.brand?.message}</p>}
                 </div>
                 <div>
                     <Label>Model</Label>
-                    <Input {...register('model')} placeholder="e.g. Swift" />
+                    <Controller name="model" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedBrand}>
+                            <SelectTrigger><SelectValue placeholder="Select Model" /></SelectTrigger>
+                            <SelectContent>{availableModels.map(model => (<SelectItem key={model} value={model}>{model}</SelectItem>))}</SelectContent>
+                        </Select>
+                    )} />
                     {errors.model && <p className="text-destructive text-xs mt-1">{errors.model?.message}</p>}
                 </div>
                 <div>
@@ -252,24 +283,49 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
            {currentStep === 2 && (
              <div className="grid grid-cols-1 gap-6">
                 <div>
-                    <Label>Car Image URLs (Optional)</Label>
-                    <div className="space-y-2">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center gap-2">
-                          <Input
-                            {...register(`images.${index}.url`)}
-                            placeholder="https://example.com/image.png"
-                          />
-                          <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      ))}
+                    <Label>Car Images (Optional)</Label>
+                    <div className="mt-2 p-6 border-2 border-dashed rounded-lg text-center">
+                        <Controller
+                            control={control}
+                            name="images"
+                            render={({ field: { onChange, onBlur, name, ref } }) => (
+                                <>
+                                 <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
+                                 <p className="mt-2 text-sm text-muted-foreground">Drag and drop, or click to upload</p>
+                                 <Input 
+                                    id="image-upload" 
+                                    type="file" 
+                                    multiple 
+                                    accept="image/*" 
+                                    className="sr-only"
+                                    name={name}
+                                    ref={ref}
+                                    onBlur={onBlur}
+                                    onChange={(e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        setValue('images', [...(getValues('images') || []), ...files]);
+                                    }}
+                                 />
+                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => document.getElementById('image-upload')?.click()}>Select Files</Button>
+                                </>
+                            )}
+                        />
                     </div>
-                     <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ url: "" })}>
-                        <PlusCircle className="mr-2" size={16} /> Add Image URL
-                     </Button>
-                     {errors.images && <p className="text-destructive text-xs mt-1">{errors.images.root?.message}</p>}
+                     <p className="text-destructive text-xs mt-1">{errors.images?.message}</p>
+                    <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                        {watchExistingImages.map((url, index) => (
+                           <div key={index} className="relative group">
+                                <Image src={url} alt={`existing-image-${index}`} width={128} height={128} className="rounded-md object-cover w-full aspect-square" />
+                                <button type="button" onClick={() => removeExistingImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+                           </div>
+                        ))}
+                        {watchImages.map((file, index) => (
+                           <div key={index} className="relative group">
+                                <Image src={URL.createObjectURL(file)} alt={`upload-preview-${index}`} width={128} height={128} className="rounded-md object-cover w-full aspect-square" />
+                                <button type="button" onClick={() => removeNewImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+                           </div>
+                        ))}
+                    </div>
                 </div>
                 <div>
                     <Label>Badges (Optional)</Label>
@@ -302,18 +358,24 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
               <h3 className="text-lg font-semibold mb-4">Review Your Listing</h3>
               <div className="space-y-4">
                 {Object.entries(getValues()).map(([key, value]) => {
-                    if (value === undefined || value === null || (Array.isArray(value) && value.length === 0) || value === '') return null;
                     const formattedKey = key.replace(/([A-Z])/g, ' $1');
+                    let displayValue = null;
+                    if (key === 'images' && Array.isArray(value) && value.length > 0) {
+                        displayValue = <div className="flex gap-2 flex-wrap justify-end max-w-xs">{value.map((file, i) => <Image key={i} src={URL.createObjectURL(file)} alt="preview" width={50} height={50} className="rounded" />)}</div>
+                    } else if (key === 'existingImageUrls' && Array.isArray(value) && value.length > 0) {
+                        displayValue = <div className="flex gap-2 flex-wrap justify-end max-w-xs">{value.map((url, i) => <Image key={i} src={url} alt="preview" width={50} height={50} className="rounded" />)}</div>
+                    } else if (Array.isArray(value)) {
+                         displayValue = value.length > 0 ? <span className="text-muted-foreground text-sm text-right max-w-xs truncate">{value.join(', ')}</span> : null;
+                    } else if (value) {
+                         displayValue = <span className="text-muted-foreground text-sm text-right max-w-xs truncate">{String(value)}</span>
+                    }
+
+                    if (!displayValue) return null;
 
                     return (
                         <div key={key} className="flex justify-between items-start capitalize border-b pb-2">
-                        <span className="font-medium text-sm">{formattedKey}:</span>
-                        {key === 'images' ? 
-                            <div className="flex gap-2 flex-wrap justify-end max-w-xs">
-                                {(value as {url:string}[]).map((img, i) => img.url && <Image key={i} src={img.url} alt="preview" width={50} height={50} className="rounded" />)}
-                            </div> :
-                            <span className="text-muted-foreground text-sm text-right max-w-xs truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
-                        }
+                            <span className="font-medium text-sm">{formattedKey}:</span>
+                            {displayValue}
                         </div>
                     )
                 })}
@@ -341,5 +403,3 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
     </Card>
   );
 }
-
-    
