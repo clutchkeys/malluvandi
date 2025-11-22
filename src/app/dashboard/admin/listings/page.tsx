@@ -10,7 +10,7 @@ import type { Car, User } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { Loader2, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
-import { ListingActions } from '@/components/listing-actions';
+import { FinalListingActions as ListingActions } from '@/components/listing-actions';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 

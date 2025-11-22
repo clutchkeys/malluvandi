@@ -72,16 +72,12 @@ export function ListingActions({ carId, currentStatus }: ListingActionsProps) {
             <DropdownMenuContent align="end">
               {currentStatus === 'pending' && (
                 <>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem className="text-green-600 focus:text-green-700">
-                      <CheckCircle className="mr-2 h-4 w-4" /> Approve
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogTrigger asChild>
-                     <DropdownMenuItem className="text-destructive focus:text-destructive">
-                      <XCircle className="mr-2 h-4 w-4" /> Reject
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
+                  <DropdownMenuItem onClick={() => handleStatusUpdate('approved')} className="text-green-600 focus:text-green-700">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => handleStatusUpdate('rejected')} className="text-destructive focus:text-destructive">
+                    <XCircle className="mr-2 h-4 w-4" /> Reject
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
@@ -96,21 +92,16 @@ export function ListingActions({ carId, currentStatus }: ListingActionsProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-            {/* This feels complex, maybe there's a better way to handle multiple triggers */}
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Action</AlertDialogTitle>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                       Are you sure you want to proceed? This action may not be reversible.
+                       This will permanently delete this listing. This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    {/* These actions are generic, which isn't ideal. Let's create specific dialogs for each action. */}
-                    {/* For now, this is a simplified example */}
-                    <AlertDialogAction onClick={() => handleStatusUpdate('approved')} className="bg-green-600 hover:bg-green-700">Approve</AlertDialogAction>
-                    <AlertDialogAction onClick={() => handleStatusUpdate('rejected')} className="bg-destructive hover:bg-destructive/90">Reject</AlertDialogAction>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete permanently</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -256,6 +247,36 @@ export function FinalListingActions({ carId, currentStatus }: ListingActionsProp
               <AlertDialogAction onClick={() => handleStatusUpdate('approved')} className="bg-green-600 hover:bg-green-700">Confirm</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" disabled={isPending}>
+                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => router.push(`/dashboard/edit-listing/${carId}`)}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit
+                    </DropdownMenuItem>
+                    <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this listing forever?</AlertDialogTitle>
+                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
         </AlertDialog>
       </div>
     );
