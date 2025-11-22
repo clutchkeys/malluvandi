@@ -12,7 +12,6 @@ import Link from 'next/link';
 
 // Revalidate this page every 60 seconds to keep data fresh
 export const revalidate = 60; 
-export const dynamic = 'force-dynamic';
 
 async function getPageData() {
   const supabase = createClient();
@@ -66,7 +65,7 @@ export default async function Home() {
                 <span className="text-sm font-semibold mr-2">Popular:</span>
                 {popularBrands.map(brand => (
                     <Button asChild key={brand} variant="secondary" size="sm" className="rounded-full backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white">
-                        <Link href={`/#listings-section?brand=${encodeURIComponent(brand)}`}>{brand}</Link>
+                        <Link href={`/?brand=${encodeURIComponent(brand)}#listings-section`}>{brand}</Link>
                     </Button>
                 ))}
             </div>
