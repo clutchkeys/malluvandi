@@ -11,6 +11,7 @@ const carSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   model: z.string().min(1, 'Model is required'),
   year: z.number().int().min(1980).max(currentYear),
+  registrationYear: z.coerce.number().int().min(1980, 'Year must be after 1980').max(currentYear, `Year cannot be in the future`).optional(),
   price: z.number().int().positive(),
   kmRun: z.number().int().positive(),
   fuel: z.enum(['Petrol', 'Diesel', 'Electric']),
@@ -77,9 +78,18 @@ export async function updateCar(carId: string, carData: z.infer<typeof carSchema
 export async function deleteCar(carId: string) {
     const supabase = createClient();
     
-    // First, you might want to delete associated images from storage if any
-    // This is a simplified version. For a real app, handle storage objects deletion.
+    // First, delete all inquiries associated with this car.
+    const { error: inquiryError } = await supabase
+        .from('inquiries')
+        .delete()
+        .eq('carId', carId);
 
+    if (inquiryError) {
+        console.error('Error deleting associated inquiries:', inquiryError);
+        return { success: false, error: inquiryError.message };
+    }
+
+    // Now, delete the car itself.
     const { error } = await supabase
         .from('cars')
         .delete()

@@ -70,3 +70,18 @@ export async function updateInquiryNotes(inquiryId: string, privateNotes: string
 
   return { success: true, data };
 }
+
+export async function deleteInquiry(inquiryId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from('inquiries').delete().eq('id', inquiryId);
+
+  if (error) {
+    console.error('Error deleting inquiry:', error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath('/dashboard/admin/inquiries');
+  revalidatePath('/dashboard/employee-b/inquiries');
+  revalidatePath('/dashboard/admin/serious-customers');
+  return { success: true };
+}
