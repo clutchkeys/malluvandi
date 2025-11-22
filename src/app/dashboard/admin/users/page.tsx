@@ -10,8 +10,8 @@ import { UserRoleUpdater } from '@/components/user-role-updater';
 import type { User } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from '@/components/ui/button';
-import { Loader2, Trash2, Edit } from 'lucide-react';
-import { deleteUser, updateUser } from './actions';
+import { Loader2, Trash2, Edit, PlusCircle } from 'lucide-react';
+import { deleteUser, updateUser, createNewUser } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -24,18 +24,25 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminUsersPage() {
     const [staff, setStaff] = useState<User[]>([]);
     const [customers, setCustomers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
+    
+    // For Edit Modal
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editedName, setEditedName] = useState('');
+    
+    // For Add Modal
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'customer' });
 
     const supabase = createClient();
     const { toast } = useToast();
@@ -62,15 +69,9 @@ export default function AdminUsersPage() {
     useEffect(() => {
         if(editingUser) {
             setEditedName(editingUser.name);
-            setIsModalOpen(true);
+            setIsEditModalOpen(true);
         }
     }, [editingUser]);
-    
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingUser(null);
-        setEditedName('');
-    }
 
     const getRoleVariant = (role: string) => {
         switch (role) {
@@ -86,12 +87,25 @@ export default function AdminUsersPage() {
             return 'outline';
         }
     };
+    
+    // --- Handlers for Modals and Actions ---
+
+    const handleModalClose = (modal: 'edit' | 'add') => {
+        if(modal === 'edit') {
+            setIsEditModalOpen(false);
+            setEditingUser(null);
+            setEditedName('');
+        } else {
+            setIsAddModalOpen(false);
+            setNewUser({ name: '', email: '', password: '', role: 'customer' });
+        }
+    }
 
     const handleDeleteUser = (userId: string) => {
         startTransition(async () => {
             const result = await deleteUser(userId);
             if(result.success) {
-                toast({ title: "User profile deleted." });
+                toast({ title: "User deleted successfully." });
                 fetchUsers();
             } else {
                 toast({ title: "Error", description: result.error, variant: 'destructive' });
@@ -107,12 +121,27 @@ export default function AdminUsersPage() {
              if(result.success) {
                 toast({ title: "User updated successfully" });
                 fetchUsers();
-                handleModalClose();
+                handleModalClose('edit');
              } else {
                 toast({ title: "Error", description: result.error, variant: 'destructive' });
              }
         });
     }
+
+     const handleAddUser = () => {
+        startTransition(async () => {
+             const result = await createNewUser(newUser as any);
+             if(result.success) {
+                toast({ title: "User created successfully" });
+                fetchUsers();
+                handleModalClose('add');
+             } else {
+                toast({ title: "Error creating user", description: result.error, variant: 'destructive' });
+             }
+        });
+    }
+
+    // --- Render Functions ---
     
     const renderUserTable = (users: User[], title: string) => (
         <Table>
@@ -154,8 +183,8 @@ export default function AdminUsersPage() {
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>This will delete the user's profile and they may lose access. This action cannot be undone.</AlertDialogDescription>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete this user and all their data. This action cannot be undone.</AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -174,9 +203,14 @@ export default function AdminUsersPage() {
   return (
     <div className="w-full">
       <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage all staff and customer accounts.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage all staff and customer accounts.</CardDescription>
+            </div>
+             <Button onClick={() => setIsAddModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+            </Button>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="staff">
@@ -194,7 +228,8 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
       
-       <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
+       {/* Edit User Dialog */}
+       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && handleModalClose('edit')}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit User: {editingUser?.name}</DialogTitle>
@@ -206,10 +241,54 @@ export default function AdminUsersPage() {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="ghost" onClick={handleModalClose}>Cancel</Button>
+                    <Button variant="ghost" onClick={() => handleModalClose('edit')}>Cancel</Button>
                     <Button onClick={handleUpdateUser} disabled={isPending}>
                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                        Save Changes
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        {/* Add User Dialog */}
+        <Dialog open={isAddModalOpen} onOpenChange={(isOpen) => !isOpen && handleModalClose('add')}>
+             <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>Create a new user account and assign a role.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="new-name">Full Name</Label>
+                        <Input id="new-name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-email">Email Address</Label>
+                        <Input id="new-email" type="email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="new-password">Password</Label>
+                        <Input id="new-password" type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-role">Role</Label>
+                        <Select value={newUser.role} onValueChange={(value) => setNewUser({...newUser, role: value})}>
+                           <SelectTrigger id="new-role">
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {['admin', 'manager', 'employee-a', 'employee-b', 'customer'].map(role => (
+                                    <SelectItem key={role} value={role} className="capitalize">{role}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                    <Button onClick={handleAddUser} disabled={isPending}>
+                       {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                       Create User
                     </Button>
                 </DialogFooter>
             </DialogContent>

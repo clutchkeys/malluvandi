@@ -3,6 +3,61 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const newUserSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['admin', 'manager', 'employee-a', 'employee-b', 'customer']),
+});
+
+
+export async function createNewUser(formData: z.infer<typeof newUserSchema>) {
+    const supabase = createClient();
+    
+    const validatedData = newUserSchema.safeParse(formData);
+    if (!validatedData.success) {
+        return { success: false, error: 'Invalid data provided.' };
+    }
+
+    const { name, email, password, role } = validatedData.data;
+
+    // Use the admin client to create a user without sending a confirmation email
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true, // Auto-confirm the email
+        user_metadata: {
+            full_name: name,
+            role: role,
+        }
+    });
+
+    if (authError) {
+        console.error('Error creating auth user:', authError);
+        return { success: false, error: authError.message };
+    }
+
+    // The on-user-created trigger should handle creating the profile,
+    // but we can update the role just in case.
+    if (authData.user) {
+         const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ role: role })
+            .eq('id', authData.user.id);
+        
+         if (profileError) {
+            console.error("Error updating profile role:", profileError);
+            // Non-critical error, so we don't return failure here
+         }
+    }
+
+
+    revalidatePath('/dashboard/admin/users');
+    return { success: true };
+}
+
 
 export async function updateUserRole(userId: string, newRole: string) {
   const supabase = createClient();
@@ -42,18 +97,24 @@ export async function updateUser(userId: string, updates: { name: string }) {
 export async function deleteUser(userId: string) {
   const supabase = createClient();
 
-  // This only deletes the user's profile, not the auth user.
-  // Full user deletion requires admin privileges not available in client-side/server action logic.
-  const { error } = await supabase
+  // Use the admin client to delete the user from auth
+  const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+  if (authError) {
+      console.error('Error deleting auth user:', authError);
+      return { success: false, error: authError.message };
+  }
+
+  // The on-user-deleted trigger should handle deleting the profile, but we can call it just in case.
+  const { error: profileError } = await supabase
     .from('profiles')
     .delete()
     .eq('id', userId);
+    
+   if (profileError) {
+    console.warn('Could not delete user profile, it might have been deleted by the trigger.', profileError.message);
+   }
 
-  if (error) {
-    console.error('Error deleting user profile:', error);
-    return { success: false, error: error.message };
-  }
   revalidatePath('/dashboard/admin/users');
   return { success: true };
 }
-
