@@ -23,13 +23,9 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { SavedCarsModal } from './saved-cars-modal';
 
-interface HeaderProps {
-    appearance?: {
-        logoUrl?: string;
-    }
-}
+interface HeaderProps {}
 
-export function Header({ appearance }: HeaderProps) {
+export function Header({}: HeaderProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSavedCarsModalOpen, setIsSavedCarsModalOpen] = useState(false);
   const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
@@ -40,7 +36,7 @@ export function Header({ appearance }: HeaderProps) {
     setIsMounted(true);
   }, []);
   
-  const logoUrl = appearance?.logoUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078";
+  const logoUrl = "https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078";
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},

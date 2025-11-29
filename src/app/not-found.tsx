@@ -8,16 +8,12 @@ import { Footer } from '@/components/footer';
 import { FileQuestion } from 'lucide-react';
 import Link from 'next/link';
 
-interface NotFoundProps {
-    appearance?: {
-        logoUrl?: string;
-    }
-}
+interface NotFoundProps {}
 
-export default function NotFound({ appearance }: NotFoundProps) {
+export default function NotFound({}: NotFoundProps) {
   return (
     <div className="flex flex-col min-h-screen">
-      <Header appearance={appearance} />
+      <Header />
       <main className="flex-grow flex items-center justify-center container mx-auto px-4 py-12">
         <Card className="max-w-md text-center">
           <CardHeader>
@@ -36,7 +32,7 @@ export default function NotFound({ appearance }: NotFoundProps) {
           </CardContent>
         </Card>
       </main>
-      <Footer appearance={appearance} />
+      <Footer />
     </div>
   );
 }

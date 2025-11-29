@@ -17,22 +17,18 @@ async function getFilterOptions() {
   };
 }
 
-interface SellCarPageProps {
-    appearance?: {
-        logoUrl?: string;
-    }
-}
+interface SellCarPageProps {}
 
-export default async function SellCarPage({ appearance }: SellCarPageProps) {
+export default async function SellCarPage({}: SellCarPageProps) {
   const { brands, models } = await getFilterOptions();
 
   return (
     <>
-      <Header appearance={appearance} />
+      <Header />
       <main className="flex-grow container mx-auto px-4 py-12">
         <CarForm brands={brands} models={models} />
       </main>
-      <Footer appearance={appearance} />
+      <Footer />
     </>
   );
 }

@@ -19,7 +19,6 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/serious-customers', icon: HeartHandshake, label: 'Serious Customers' },
         { href: '/dashboard/admin/users', icon: Users, label: 'User Management' },
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
-        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
       ];
@@ -30,7 +29,6 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/inquiries', icon: ShoppingCart, label: 'Inquiries' },
         { href: '/dashboard/admin/serious-customers', icon: HeartHandshake, label: 'Serious Customers' },
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
-        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
       ];
@@ -56,22 +54,18 @@ const getNavLinks = (role: string) => {
 
 interface AppLayoutProps {
     children: React.ReactNode;
-    appearance?: {
-        logoUrl?: string;
-    }
 }
 
-export default function AppLayout({ children, appearance }: AppLayoutProps) {
+export default function AppLayout({ children }: AppLayoutProps) {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
   const navLinks = getNavLinks(user?.role || 'customer');
-  const logoUrl = appearance?.logoUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078";
 
   // A different layout for customer vs staff
   if (user?.role === 'customer') {
       return (
           <div className="flex min-h-screen w-full flex-col">
-              <Header appearance={appearance} />
+              <Header />
               <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
                   <div className="mx-auto grid w-full max-w-6xl gap-2">
                       <h1 className="text-3xl font-semibold">My Account</h1>

@@ -6,13 +6,9 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface PrivacyPageProps {
-    appearance?: {
-        logoUrl?: string;
-    }
-}
+interface PrivacyPageProps {}
 
-export default function PrivacyPolicyPage({ appearance }: PrivacyPageProps) {
+export default function PrivacyPolicyPage({}: PrivacyPageProps) {
   const [date, setDate] = useState('...');
 
   useEffect(() => {
@@ -21,7 +17,7 @@ export default function PrivacyPolicyPage({ appearance }: PrivacyPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header appearance={appearance} />
+      <Header />
       <main className="flex-grow container mx-auto px-4 py-12">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
@@ -57,7 +53,7 @@ export default function PrivacyPolicyPage({ appearance }: PrivacyPageProps) {
           </CardContent>
         </Card>
       </main>
-      <Footer appearance={appearance} />
+      <Footer />
     </div>
   );
 }

@@ -1,22 +1,18 @@
 
+
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 
-interface AboutPageProps {
-    appearance?: {
-        logoUrl?: string;
-        aboutImageUrl?: string;
-    }
-}
+interface AboutPageProps {}
 
-export default function AboutPage({ appearance }: AboutPageProps) {
-  const aboutImageUrl = appearance?.aboutImageUrl || "https://placehold.co/800x400.png";
+export default function AboutPage({}: AboutPageProps) {
+  const aboutImageUrl = "https://placehold.co/800x400.png";
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header appearance={appearance} />
+      <Header />
       <main className="flex-grow container mx-auto px-4 py-12">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
@@ -44,7 +40,7 @@ export default function AboutPage({ appearance }: AboutPageProps) {
           </CardContent>
         </Card>
       </main>
-      <Footer appearance={appearance} />
+      <Footer />
     </div>
   );
 }
