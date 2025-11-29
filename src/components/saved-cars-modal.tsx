@@ -41,26 +41,26 @@ export function SavedCarsModal({ isOpen, onClose }: SavedCarsModalProps) {
   useEffect(() => {
     if (!isOpen || !isMounted) return;
 
-    if (savedCarIds.length === 0) {
-      setSavedCars([]);
-      setLoading(false);
-      return;
-    }
-
     const fetchSavedCars = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .in('id', savedCarIds);
-      
-      if (error) {
-        console.error("Error fetching saved cars", error);
-        setSavedCars([]);
+      // Only run the query if there are IDs to fetch
+      if (savedCarIds.length > 0) {
+          const { data, error } = await supabase
+            .from('cars')
+            .select('*')
+            .in('id', savedCarIds);
+          
+          if (error) {
+            console.error("Error fetching saved cars", error);
+            setSavedCars([]);
+          } else {
+            const carMap = new Map(data.map(car => [car.id, car]));
+            const orderedCars = savedCarIds.map(id => carMap.get(id)).filter(Boolean) as Car[];
+            setSavedCars(orderedCars);
+          }
       } else {
-        const carMap = new Map(data.map(car => [car.id, car]));
-        const orderedCars = savedCarIds.map(id => carMap.get(id)).filter(Boolean) as Car[];
-        setSavedCars(orderedCars);
+        // If there are no saved cars, just clear the list.
+        setSavedCars([]);
       }
       setLoading(false);
     };
