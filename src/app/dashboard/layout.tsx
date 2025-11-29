@@ -12,13 +12,22 @@ import { Header } from '@/components/header';
 const getNavLinks = (role: string) => {
   switch (role) {
     case 'admin':
-    case 'manager':
       return [
         { href: '/dashboard/admin', icon: Home, label: 'Dashboard' },
         { href: '/dashboard/admin/listings', icon: Car, label: 'Car Listings' },
         { href: '/dashboard/admin/inquiries', icon: ShoppingCart, label: 'Inquiries' },
         { href: '/dashboard/admin/serious-customers', icon: HeartHandshake, label: 'Serious Customers' },
         { href: '/dashboard/admin/users', icon: Users, label: 'User Management' },
+        { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
+        { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
+        { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
+      ];
+    case 'manager':
+       return [
+        { href: '/dashboard/admin', icon: Home, label: 'Dashboard' },
+        { href: '/dashboard/admin/listings', icon: Car, label: 'Car Listings' },
+        { href: '/dashboard/admin/inquiries', icon: ShoppingCart, label: 'Inquiries' },
+        { href: '/dashboard/admin/serious-customers', icon: HeartHandshake, label: 'Serious Customers' },
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
