@@ -113,7 +113,6 @@ export function CarDetailView({ car, sellerName }: { car: Car, sellerName: strin
                   <DetailItem icon={Gauge} label="Kilometers" value={car.kmRun?.toLocaleString('en-IN')} />
                   <DetailItem icon={PaintBucket} label="Color" value={car.color} />
                   <DetailItem icon={Users} label="Ownership" value={car.ownership ? `${car.ownership} ${car.ownership > 1 ? 'Owners' : 'Owner'}`: null} />
-                  <DetailItem icon={Cog} label="Engine" value={car.engineCC ? `${car.engineCC} CC` : null} />
                   <DetailItem icon={Wrench} label="Transmission" value={car.transmission} />
                   <DetailItem icon={Info} label="Fuel" value={car.fuel} />
               </CardContent>

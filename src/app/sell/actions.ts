@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Storage } from '@google-cloud/storage';
@@ -29,7 +30,6 @@ const carFormSchema = z.object({
     transmission: z.enum(['Automatic', 'Manual'], { required_error: 'Transmission is required' }),
     ownership: z.coerce.number().int().min(1, 'Ownership is required'),
     color: z.string().min(1, 'Color is required'),
-    engineCC: z.coerce.number().int().positive('Engine CC must be a positive number'),
     additionalDetails: z.string().optional(),
     images: z.array(z.string().url()).optional(),
     badges: z.array(z.string()).optional(),
@@ -83,7 +83,6 @@ export async function uploadImagesAndSubmitCar(formData: FormData) {
     transmission: formData.get('transmission') as 'Automatic' | 'Manual',
     ownership: Number(formData.get('ownership')),
     color: formData.get('color') as string,
-    engineCC: Number(formData.get('engineCC')),
     additionalDetails: formData.get('additionalDetails') as string | undefined,
     images: imageUrls,
     badges: formData.getAll('badges') as string[],

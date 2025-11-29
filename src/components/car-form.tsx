@@ -37,7 +37,6 @@ const carFormSchema = z.object({
   transmission: z.enum(['Automatic', 'Manual'], { required_error: 'Transmission is required' }),
   ownership: z.coerce.number().int().min(1, 'Ownership is required'),
   color: z.string().min(1, 'Color is required'),
-  engineCC: z.coerce.number().int().positive('Engine CC must be a positive number'),
   additionalDetails: z.string().optional(),
   images: z.array(z.instanceof(File)).optional(),
   existingImageUrls: z.array(z.string().url()).optional(),
@@ -55,7 +54,7 @@ interface CarFormProps {
 
 const steps = [
   { id: 'Step 1', name: 'Basic Information', fields: ['brand', 'model', 'year', 'registrationYear', 'price'] },
-  { id: 'Step 2', name: 'Car Details', fields: ['kmRun', 'fuel', 'transmission', 'ownership', 'color', 'engineCC'] },
+  { id: 'Step 2', name: 'Car Details', fields: ['kmRun', 'fuel', 'transmission', 'ownership', 'color'] },
   { id: 'Step 3', name: 'Media & More', fields: ['images', 'badges', 'instagramReelUrl', 'additionalDetails'] },
   { id: 'Step 4', name: 'Review & Submit' },
 ]
@@ -91,7 +90,6 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
       fuel: initialData.fuel || undefined,
       transmission: initialData.transmission || undefined,
       ownership: initialData.ownership || 1,
-      engineCC: initialData.engineCC || 0,
       badges: initialData.badges || [],
       existingImageUrls: initialData.images || [],
       images: [],
@@ -267,15 +265,10 @@ export function CarForm({ brands, models, initialData }: CarFormProps) {
                     <Input type="number" {...register('ownership')} placeholder="e.g. 1" />
                     {errors.ownership && <p className="text-destructive text-xs mt-1">{errors.ownership?.message}</p>}
                 </div>
-                <div>
+                <div className="md:col-span-2">
                     <Label>Color</Label>
                     <Input {...register('color')} placeholder="e.g. Red" />
                     {errors.color && <p className="text-destructive text-xs mt-1">{errors.color?.message}</p>}
-                </div>
-                <div>
-                    <Label>Engine (CC)</Label>
-                    <Input type="number" {...register('engineCC')} placeholder="e.g. 1197" />
-                    {errors.engineCC && <p className="text-destructive text-xs mt-1">{errors.engineCC?.message}</p>}
                 </div>
             </div>
           )}

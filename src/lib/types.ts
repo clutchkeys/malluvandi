@@ -36,7 +36,6 @@ export interface Car {
   transmission?: 'Automatic' | 'Manual';
   ownership?: number;
   color?: string;
-  engineCC?: number;
   additionalDetails?: string;
   images: string[];
   status: 'pending' | 'approved' | 'rejected';

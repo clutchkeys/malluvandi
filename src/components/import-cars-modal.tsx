@@ -35,7 +35,7 @@ export function ImportCarsModal({ isOpen, onClose, currentUser }: { isOpen: bool
                     <DialogTitle>Import Cars from CSV</DialogTitle>
                     <DialogDescription>
                         Upload a CSV file with car data. Required headers are `brand` and `model`. 
-                        Optional headers: `year,price,engineCC,fuel,transmission,kmRun,color,ownership,additionalDetails,images,badges,instagramReelUrl`.
+                        Optional headers: `year,price,fuel,transmission,kmRun,color,ownership,additionalDetails,images,badges,instagramReelUrl`.
                         The `images` and `badges` columns should be comma-separated values.
                     </DialogDescription>
                 </DialogHeader>

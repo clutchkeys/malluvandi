@@ -18,7 +18,6 @@ const carSchema = z.object({
   transmission: z.enum(['Automatic', 'Manual']),
   ownership: z.number().int().min(1),
   color: z.string().min(1, 'Color is required'),
-  engineCC: z.number().int().positive(),
   additionalDetails: z.string().optional(),
   images: z.array(z.string().url()).min(1, 'At least one image is required'),
   badges: z.array(z.string()).optional(),
