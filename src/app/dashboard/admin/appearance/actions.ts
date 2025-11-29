@@ -6,9 +6,9 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const appearanceSchema = z.object({
-  logoUrl: z.string().url('Must be a valid URL for the logo.'),
-  coverImageUrl: z.string().url('Must be a valid URL for the cover image.'),
-  aboutImageUrl: z.string().url('Must be a valid URL for the about page image.'),
+  logoUrl: z.string().url('Must be a valid URL for the logo.').or(z.literal('')),
+  coverImageUrl: z.string().url('Must be a valid URL for the cover image.').or(z.literal('')),
+  aboutImageUrl: z.string().url('Must be a valid URL for the about page image.').or(z.literal('')),
   googleAdsenseId: z.string().optional(),
 });
 

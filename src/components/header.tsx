@@ -11,10 +11,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Skeleton } from './ui/skeleton';
@@ -27,8 +23,13 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { SavedCarsModal } from './saved-cars-modal';
 
+interface HeaderProps {
+    appearance?: {
+        logoUrl?: string;
+    }
+}
 
-export function Header() {
+export function Header({ appearance }: HeaderProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSavedCarsModalOpen, setIsSavedCarsModalOpen] = useState(false);
   const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
@@ -38,6 +39,8 @@ export function Header() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  
+  const logoUrl = appearance?.logoUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078";
   
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
@@ -60,7 +63,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/">
           <Image
-            src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
+            src={logoUrl}
             alt="Mallu Vandi Logo"
             width={160}
             height={40}
@@ -176,7 +179,7 @@ export function Header() {
                         <SheetTitle>
                            <Link href="/" onClick={() => setIsSheetOpen(false)}>
                             <Image
-                                src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
+                                src={logoUrl}
                                 alt="Mallu Vandi Logo"
                                 width={140}
                                 height={35}
@@ -251,5 +254,3 @@ export function Header() {
     </>
   );
 }
-
-    

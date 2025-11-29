@@ -10,7 +10,13 @@ import { CarDetailView } from '@/components/car-detail-view';
 import { CarDetailSkeleton } from '@/components/car-detail-skeleton';
 import { createClient } from '@/lib/supabase/client';
 
-export default function CarDetailPage() {
+interface CarDetailPageProps {
+    appearance?: {
+        logoUrl?: string;
+    }
+}
+
+export default function CarDetailPage({ appearance }: CarDetailPageProps) {
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -59,7 +65,7 @@ export default function CarDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-secondary/30">
-      <Header />
+      <Header appearance={appearance} />
       <main className="flex-grow container mx-auto px-4 py-8">
         {loading ? (
             <CarDetailSkeleton />
@@ -69,7 +75,7 @@ export default function CarDetailPage() {
             notFound()
         )}
       </main>
-      <Footer />
+      <Footer appearance={appearance} />
     </div>
   );
 }

@@ -12,9 +12,11 @@ import Link from 'next/link';
 export default function Error({
   error,
   reset,
+  appearance
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+  appearance?: { logoUrl?: string };
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
@@ -23,7 +25,7 @@ export default function Error({
 
   return (
     <div className="flex flex-col min-h-screen">
-        <Header />
+        <Header appearance={appearance} />
         <main className="flex-grow flex items-center justify-center container mx-auto px-4 py-12">
             <Card className="max-w-md text-center">
                 <CardHeader>
@@ -43,7 +45,7 @@ export default function Error({
                 </CardContent>
             </Card>
         </main>
-        <Footer />
+        <Footer appearance={appearance} />
     </div>
   );
 }

@@ -6,7 +6,13 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function TermsOfServicePage() {
+interface TermsPageProps {
+    appearance?: {
+        logoUrl?: string;
+    }
+}
+
+export default function TermsOfServicePage({ appearance }: TermsPageProps) {
   const [date, setDate] = useState('...');
 
   useEffect(() => {
@@ -15,7 +21,7 @@ export default function TermsOfServicePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header appearance={appearance} />
       <main className="flex-grow container mx-auto px-4 py-12">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
@@ -50,7 +56,7 @@ export default function TermsOfServicePage() {
           </CardContent>
         </Card>
       </main>
-      <Footer />
+      <Footer appearance={appearance} />
     </div>
   );
 }

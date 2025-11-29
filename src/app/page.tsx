@@ -34,22 +34,30 @@ async function getPageData() {
   };
 }
 
+interface HomePageProps {
+    appearance?: {
+        logoUrl?: string;
+        coverImageUrl?: string;
+    }
+}
 
-export default async function Home() {
+export default async function Home({ appearance }: HomePageProps) {
     const { allCars, filters, brandLogos } = await getPageData();
     const { brands, models } = filters;
     const years = (filters.years || []).sort((a: number, b: number) => b - a);
     const popularBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota'];
+    
+    const coverImageUrl = appearance?.coverImageUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203";
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header />
+      <Header appearance={appearance} />
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative bg-card h-[50vh] flex items-center justify-center text-center text-white overflow-hidden">
           <div className="absolute inset-0 bg-black/60 z-10" />
           <Image
-            src="https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203"
+            src={coverImageUrl}
             alt="Mallu Vandi dealership storefront"
             fill
             className="z-0 object-cover"
@@ -89,7 +97,7 @@ export default async function Home() {
         </section>
 
       </main>
-      <Footer />
+      <Footer appearance={appearance} />
     </div>
   );
 }

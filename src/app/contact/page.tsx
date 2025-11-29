@@ -1,17 +1,24 @@
+
 'use client'
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, MapPin, Clock } from "lucide-react";
 
-export default function ContactPage() {
+interface ContactPageProps {
+    appearance?: {
+        logoUrl?: string;
+    }
+}
+
+export default function ContactPage({ appearance }: ContactPageProps) {
   const phoneNumbers = ['9847916352', '9544916352'];
   const address = "Pullikal, Malapuram, Kerala, 673637";
   const callingHours = "10:00 AM - 12:00 PM";
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header appearance={appearance} />
       <main className="flex-grow container mx-auto px-4 py-12">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
@@ -47,7 +54,7 @@ export default function ContactPage() {
           </CardContent>
         </Card>
       </main>
-      <Footer />
+      <Footer appearance={appearance} />
     </div>
   );
 }

@@ -41,8 +41,15 @@ async function getData(id: string) {
   };
 }
 
+interface EditListingPageProps {
+    params: { id: string };
+    appearance?: {
+        logoUrl?: string;
+    }
+}
 
-export default async function EditListingPage({ params }: { params: { id: string } }) {
+
+export default async function EditListingPage({ params, appearance }: EditListingPageProps) {
   const { car, brands, models } = await getData(params.id);
 
   if (!car) {
@@ -51,11 +58,11 @@ export default async function EditListingPage({ params }: { params: { id: string
 
   return (
     <div className="bg-muted/40 min-h-screen">
-      <Header />
+      <Header appearance={appearance} />
       <main className="flex-grow container mx-auto px-4 py-12">
          <CarForm brands={brands} models={models} initialData={car} />
       </main>
-      <Footer />
+      <Footer appearance={appearance} />
     </div>
   );
 }

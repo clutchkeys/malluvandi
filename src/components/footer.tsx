@@ -11,11 +11,19 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
-export function Footer() {
+interface FooterProps {
+    appearance?: {
+        logoUrl?: string;
+    }
+}
+
+export function Footer({ appearance }: FooterProps) {
   const [email, setEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  const logoUrl = appearance?.logoUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078";
 
   const handleSubscribe = async () => {
     if (!email) {
@@ -39,7 +47,7 @@ export function Footer() {
           <div className="lg:col-span-1 space-y-4">
             <Link href="/">
               <Image
-                src="https://ik.imagekit.io/qctc8ch4l/malluvandinew_tSKcC79Yr?updatedAt=1751042574078"
+                src={logoUrl}
                 alt="Mallu Vandi Logo"
                 width={160}
                 height={40}

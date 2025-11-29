@@ -8,7 +8,8 @@ import { CookieConsent } from '@/components/cookie-consent';
 import { SplashScreen } from '@/components/splash-screen';
 import { AiChatPopup } from '@/components/ai-chat-popup';
 import { AuthProvider } from '@/hooks/use-auth';
-
+import { createClient } from '@/lib/supabase/server';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: 'Mallu Vandi - Trusted Used Cars in Kerala',
@@ -16,19 +17,43 @@ export const metadata: Metadata = {
   keywords: ['used cars kerala', 'second hand cars kochi', 'pre-owned cars', 'mallu vandi', 'buy used car', 'sell used car', 'used car dealership'],
 };
 
-export default function RootLayout({
+async function getAppearanceSettings() {
+    const supabase = createClient();
+    const { data } = await supabase
+        .from('config')
+        .select('appearance')
+        .eq('id', 'singleton')
+        .single();
+    return data?.appearance as { logoUrl?: string; coverImageUrl?: string; aboutImageUrl?: string; googleAdsenseId?: string; } | null;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const appearance = await getAppearanceSettings();
+
+  const childrenWithProps = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      // @ts-ignore
+      return React.cloneElement(child, { appearance });
+    }
+    return child;
+  });
+
   return (
     <html lang="en" suppressHydrationWarning className={GeistSans.className}>
-      <head />
+      <head>
+         {appearance?.googleAdsenseId && (
+          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${appearance.googleAdsenseId}`} crossOrigin="anonymous"></script>
+        )}
+      </head>
       <body className="font-body antialiased min-h-screen bg-background flex flex-col">
         <Providers>
           <AuthProvider>
             <SplashScreen />
-            {children}
+            {childrenWithProps}
             <Toaster />
             <CookieConsent />
             <AiChatPopup />
