@@ -1,11 +1,9 @@
 
 'use server';
 
-import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import type { Car } from '@/lib/types';
 import { updateCar } from '@/app/dashboard/admin/listings/actions';
 
 
@@ -39,33 +37,8 @@ export async function uploadImagesAndSubmitCar(formData: FormData) {
     return { success: false, error: 'Not authenticated' };
   }
 
-  // Handle image uploads
-  const imageFiles = formData.getAll('images') as File[];
-  const imageUrls = JSON.parse(formData.get('existingImageUrls') as string || '[]') as string[];
-
-  for (const file of imageFiles) {
-    if (file.size > 0) {
-      const fileName = `${user.id}/${randomUUID()}-${file.name}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('car-images')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Error uploading to Supabase Storage:', uploadError);
-        return { success: false, error: 'Failed to upload image.' };
-      }
-      
-      const { data: publicUrlData } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(fileName);
-        
-      if (publicUrlData) {
-        imageUrls.push(publicUrlData.publicUrl);
-      }
-    }
-  }
-
+  const imageUrls = JSON.parse(formData.get('images') as string || '[]') as string[];
+  
   // Construct car data object from FormData
   const carData: CarFormData = {
     brand: formData.get('brand') as string,
