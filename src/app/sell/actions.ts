@@ -1,7 +1,6 @@
 
 'use server';
 
-import { Storage } from '@google-cloud/storage';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -9,13 +8,6 @@ import { revalidatePath } from 'next/cache';
 import type { Car } from '@/lib/types';
 import { updateCar } from '@/app/dashboard/admin/listings/actions';
 
-// Initialize Google Cloud Storage
-const storage = new Storage({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-  keyFilename: 'gcp-service-account.json',
-});
-
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME!);
 
 const currentYear = new Date().getFullYear();
 
@@ -53,20 +45,23 @@ export async function uploadImagesAndSubmitCar(formData: FormData) {
 
   for (const file of imageFiles) {
     if (file.size > 0) {
-      const buffer = Buffer.from(await file.arrayBuffer());
       const fileName = `${user.id}/${randomUUID()}-${file.name}`;
-      const gcsFile = bucket.file(fileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('car-images')
+        .upload(fileName, file);
 
-      try {
-        await gcsFile.save(buffer, {
-          metadata: {
-            contentType: file.type,
-          },
-        });
-        imageUrls.push(gcsFile.publicUrl());
-      } catch (error: any) {
-        console.error('Error uploading to GCS:', error);
+      if (uploadError) {
+        console.error('Error uploading to Supabase Storage:', uploadError);
         return { success: false, error: 'Failed to upload image.' };
+      }
+      
+      const { data: publicUrlData } = supabase.storage
+        .from('car-images')
+        .getPublicUrl(fileName);
+        
+      if (publicUrlData) {
+        imageUrls.push(publicUrlData.publicUrl);
       }
     }
   }

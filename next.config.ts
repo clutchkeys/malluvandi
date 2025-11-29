@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      // This is the new pattern for Supabase Storage
+      {
+        protocol: 'https',
+        hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost').hostname,
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
 };
