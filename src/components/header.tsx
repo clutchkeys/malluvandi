@@ -25,10 +25,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { SavedCarsModal } from './saved-cars-modal';
 
 
 export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSavedCarsModalOpen, setIsSavedCarsModalOpen] = useState(false);
   const { user, loading, signOut, notifications, unreadCount, markAllAsRead } = useAuth();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -40,7 +42,7 @@ export function Header() {
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
     { href: '/sell', label: 'Sell Your Car'},
-    { href: '/dashboard/my-account/saved-cars', label: 'Saved Cars'},
+    { isModalTrigger: true, label: 'Saved Cars'},
     { href: '/about', label: 'About Us'},
     { href: '/contact', label: 'Contact'},
   ]
@@ -53,6 +55,7 @@ export function Header() {
 
 
   return (
+    <>
     <header className="bg-background/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/">
@@ -65,11 +68,20 @@ export function Header() {
           />
         </Link>
         <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map(link => {
+            if (link.isModalTrigger) {
+              return (
+                 <button key={link.label} onClick={() => setIsSavedCarsModalOpen(true)} className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+                    {link.label}
+                 </button>
+              )
+            }
+            return (
+              <Link key={link.href} href={link.href!} className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+                {link.label}
+              </Link>
+            )
+          })}
         </nav>
         <div className="flex items-center gap-2">
           {!isMounted || loading ? (
@@ -174,17 +186,34 @@ export function Header() {
                     </SheetHeader>
                     <Separator />
                     <nav className="grid gap-2 p-6 text-lg font-medium">
-                       {navLinks.map(link => (
+                       {navLinks.map(link => {
+                         if (link.isModalTrigger) {
+                           return (
+                             <button 
+                                key={link.label} 
+                                onClick={() => {
+                                  setIsSavedCarsModalOpen(true);
+                                  setIsSheetOpen(false);
+                                }}
+                                className="flex items-center justify-between rounded-md p-3 text-base text-muted-foreground hover:bg-muted hover:text-foreground text-left"
+                             >
+                               <span>{link.label}</span>
+                               <ChevronRight className="h-5 w-5" />
+                             </button>
+                           )
+                         }
+                         return (
                           <Link 
                             key={link.href} 
-                            href={link.href}
+                            href={link.href!}
                             onClick={() => setIsSheetOpen(false)}
                             className="flex items-center justify-between rounded-md p-3 text-base text-muted-foreground hover:bg-muted hover:text-foreground"
                           >
                             <span>{link.label}</span>
                             <ChevronRight className="h-5 w-5" />
                           </Link>
-                        ))}
+                        )
+                       })}
                     </nav>
                      <div className="absolute bottom-0 left-0 right-0 p-6 border-t">
                         {!user ? (
@@ -218,5 +247,9 @@ export function Header() {
         </div>
       </div>
     </header>
+    <SavedCarsModal isOpen={isSavedCarsModalOpen} onClose={() => setIsSavedCarsModalOpen(false)} />
+    </>
   );
 }
+
+    
