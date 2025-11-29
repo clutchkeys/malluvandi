@@ -19,7 +19,7 @@ async function getPageData() {
   // Fetch all data in parallel
   const [carData, filtersData, brandData] = await Promise.all([
     supabase.from('cars').select('*').eq('status', 'approved'),
-    supabase.from('filters').select('*').limit(1), // Use limit(1) instead of single()
+    supabase.from('filters').select('*').limit(1),
     supabase.from('brands').select('*').limit(12),
   ]);
 
