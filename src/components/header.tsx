@@ -40,6 +40,7 @@ export function Header() {
   const navLinks = [
     { href: '/', label: 'Buy Cars'},
     { href: '/sell', label: 'Sell Your Car'},
+    { href: '/dashboard/my-account/saved-cars', label: 'Saved Cars'},
     { href: '/about', label: 'About Us'},
     { href: '/contact', label: 'Contact'},
   ]
