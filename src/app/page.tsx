@@ -17,31 +17,34 @@ async function getPageData() {
   const supabase = createClient();
 
   // Fetch all data in parallel
-  const [carData, filtersData, brandData] = await Promise.all([
+  const [carData, filtersData, brandData, configData] = await Promise.all([
     supabase.from('cars').select('*').eq('status', 'approved'),
     supabase.from('filters').select('*').limit(1),
     supabase.from('brands').select('*').limit(12),
+    supabase.from('config').select('appearance').eq('id', 'singleton').single(),
   ]);
 
   const allCars: Car[] = carData.data || [];
   const filters = filtersData.data?.[0] || { brands: [], models: {}, years: [] };
   const brandLogos: Brand[] = brandData.data || [];
+  const appearanceSettings = configData.data?.appearance || {};
 
   return {
     allCars,
     filters,
     brandLogos,
+    appearanceSettings,
   };
 }
 
 
 export default async function Home() {
-    const { allCars, filters, brandLogos } = await getPageData();
+    const { allCars, filters, brandLogos, appearanceSettings } = await getPageData();
     const { brands, models } = filters;
     const years = (filters.years || []).sort((a: number, b: number) => b - a);
     const popularBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota'];
     
-    const coverImageUrl = "https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203";
+    const coverImageUrl = appearanceSettings.coverImageUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203";
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -67,14 +70,14 @@ export default async function Home() {
                 <span className="text-sm font-semibold mr-2">Popular:</span>
                 {popularBrands.map(brand => (
                     <Button asChild key={brand} variant="secondary" size="sm" className="rounded-full backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white">
-                        <Link href={`/?brand=${encodeURIComponent(brand)}#listings-section`}>{brand}</Link>
+                        <Link href={`/?brand=${encodeURIComponent(brand)}#listings-section`} scroll={false}>{brand}</Link>
                     </Button>
                 ))}
             </div>
           </div>
         </section>
         
-        <div id="listings-section" className="container mx-auto px-4 py-12">
+        <div id="listings-section" className="container mx-auto px-4 py-12 scroll-mt-20">
             <PageContent 
                 initialCars={allCars} 
                 brands={brands || []} 

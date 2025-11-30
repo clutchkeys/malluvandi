@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { CarCard } from '@/components/car-card';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, MapPin, Edit2 } from 'lucide-react';
@@ -17,6 +17,7 @@ import type { Car } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdPlaceholder } from '@/components/ad-placeholder';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { X } from 'lucide-react';
 
 const keralaDistricts = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"
@@ -32,6 +33,7 @@ interface PageContentProps {
 const CARS_PER_PAGE = 18;
 
 export function PageContent({ initialCars, brands, models, years }: PageContentProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [userLocation, setUserLocation] = useState("Kochi, Kerala");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -39,12 +41,33 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   const [visibleCount, setVisibleCount] = useState(CARS_PER_PAGE);
 
   // Filters values
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(searchParams.get('brand')?.split(',').filter(Boolean) || []);
-  const [selectedModel, setSelectedModel] = useState(searchParams.get('model') || '');
-  const [selectedYear, setSelectedYear] = useState(searchParams.get('year') || '');
-  const [selectedRegYear, setSelectedRegYear] = useState(searchParams.get('regyear') || '');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedRegYear, setSelectedRegYear] = useState('');
   const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [kmRange, setKmRange] = useState([0, 200000]);
+
+  // Sync state with URL search params
+  useEffect(() => {
+    const brandFromUrl = searchParams.get('brand')?.split(',').filter(Boolean) || [];
+    setSelectedBrands(brandFromUrl);
+    
+    if (brandFromUrl.length > 0) {
+      document.getElementById('listings-section')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [searchParams]);
+
+  const updateUrlParams = (newFilters: { brand?: string }) => {
+    const params = new URLSearchParams(window.location.search);
+    if (newFilters.brand) {
+      params.set('brand', newFilters.brand);
+    } else {
+      params.delete('brand');
+    }
+    // Using router.replace to avoid adding to history
+    router.replace(`${window.location.pathname}?${params.toString()}#listings-section`, { scroll: false });
+  };
 
   const resetVisibleCount = () => setVisibleCount(CARS_PER_PAGE);
   
@@ -53,12 +76,16 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
   };
 
   const handleBrandChange = (brand: string, checked: boolean) => {
-    setSelectedBrands(prev => 
-      checked
-        ? [...prev, brand] 
-        : prev.filter(b => b !== brand)
-    );
-    setSelectedModel(''); // Reset model when brand changes
+    const newSelectedBrands = checked
+      ? [...selectedBrands, brand]
+      : selectedBrands.filter(b => b !== brand);
+    
+    setSelectedBrands(newSelectedBrands);
+    updateUrlParams({ brand: newSelectedBrands.join(',') });
+
+    if (newSelectedBrands.length !== 1) {
+      setSelectedModel(''); // Reset model if more/less than one brand is selected
+    }
   };
   
   const handleResetFilters = () => {
@@ -68,6 +95,7 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
     setSelectedRegYear('');
     setPriceRange([0, 5000000]);
     setKmRange([0, 200000]);
+    updateUrlParams({ brand: '' });
   };
   
   const handleLocationSave = () => {
@@ -199,6 +227,27 @@ export function PageContent({ initialCars, brands, models, years }: PageContentP
             </div>
             </div>
         </div>
+
+        {selectedBrands.length > 0 && (
+          <div className="mb-6 p-4 bg-muted/80 rounded-lg">
+            <div className="flex items-center gap-4">
+              <h3 className="font-semibold">Filtered by:</h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedBrands.map(brand => (
+                  <div key={brand} className="flex items-center gap-2 bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm">
+                    <span>{brand}</span>
+                    <button onClick={() => handleBrandChange(brand, false)} className="text-muted-foreground hover:text-foreground">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleResetFilters} className="ml-auto text-primary hover:text-primary">
+                Clear All
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
             <aside className="hidden lg:block lg:col-span-1 lg:sticky lg:top-24">
