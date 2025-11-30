@@ -1,6 +1,7 @@
 
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/header';
@@ -11,9 +12,15 @@ import Link from 'next/link';
 interface NotFoundProps {}
 
 export default function NotFound({}: NotFoundProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      {isClient && <Header />}
       <main className="flex-grow flex items-center justify-center container mx-auto px-4 py-12">
         <Card className="max-w-md text-center">
           <CardHeader>
@@ -32,7 +39,7 @@ export default function NotFound({}: NotFoundProps) {
           </CardContent>
         </Card>
       </main>
-      <Footer />
+      {isClient && <Footer />}
     </div>
   );
 }
