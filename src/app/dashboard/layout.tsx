@@ -22,7 +22,6 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
-        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
       ];
     case 'manager':
        return [
@@ -33,7 +32,6 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
-        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
       ];
     case 'employee-a':
       return [
