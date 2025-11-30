@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { User as AppUser, Notification } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const AuthContext = createContext<{
   user: AppUser | null;
@@ -24,13 +25,18 @@ const AuthContext = createContext<{
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    // Initialize Supabase client on the client-side
+    setSupabase(createClient());
+  }, []);
 
   const getSeenNotifications = (): string[] => {
     try {
@@ -47,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const fetchNotifications = useCallback(async (userRole: string) => {
-    if (!userRole) return;
+    if (!userRole || !supabase) return;
 
     const recipientGroups = ['all-customers', 'all-staff'];
     if (userRole === 'employee-a') recipientGroups.push('employee-a');
@@ -74,6 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [supabase]);
 
   useEffect(() => {
+    if (!supabase) return;
+
     const fetchUser = async (sessionUser: any) => {
         if (!sessionUser) {
             setUser(null);
@@ -147,9 +155,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       supabase.removeChannel(notificationChannel);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, supabase.auth]);
+  }, [supabase, fetchNotifications]);
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     setUser(null);
     router.push('/login');
