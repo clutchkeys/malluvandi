@@ -1,13 +1,14 @@
 
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse, Filter, Star, HeartHandshake, Palette } from 'lucide-react';
+import { Bell, Bookmark, Car, Home, LineChart, LogOut, Package, Settings, ShoppingCart, Truck, Users, Warehouse, Filter, Star, HeartHandshake, Palette, Menu } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { Header } from '@/components/header';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const getNavLinks = (role: string) => {
   switch (role) {
@@ -21,6 +22,7 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
+        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
       ];
     case 'manager':
        return [
@@ -31,6 +33,7 @@ const getNavLinks = (role: string) => {
         { href: '/dashboard/admin/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/admin/settings', icon: Filter, label: 'Filter Settings' },
         { href: '/dashboard/admin/marquee-brands', icon: Star, label: 'Marquee Brands' },
+        { href: '/dashboard/admin/appearance', icon: Palette, label: 'Appearance' },
       ];
     case 'employee-a':
       return [
@@ -60,6 +63,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
   const navLinks = getNavLinks(user?.role || 'customer');
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // A different layout for customer vs staff
   if (user?.role === 'customer') {
@@ -121,6 +125,47 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col">
+              <nav className="grid gap-2 text-lg font-medium">
+                <Link
+                  href="#"
+                  className="flex items-center gap-2 text-lg font-semibold mb-4"
+                  onClick={() => setIsSheetOpen(false)}
+                >
+                  <Truck className="h-6 w-6" />
+                  <span>Mallu Vandi</span>
+                </Link>
+                {navLinks.map(({ href, icon: Icon, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setIsSheetOpen(false)}
+                    className={`flex items-center gap-4 rounded-xl px-3 py-2 transition-all hover:text-primary ${pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="mt-auto">
+                <Button size="sm" className="w-full" onClick={signOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
           <div className="w-full flex-1">
               <h1 className="text-lg font-semibold">{navLinks.find(l => pathname.startsWith(l.href))?.label || 'Dashboard'}</h1>
           </div>
@@ -132,3 +177,5 @@ export default function AppLayout({ children }: AppLayoutProps) {
     </div>
   );
 }
+
+    

@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { updateAppearanceSettings } from './actions';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Palette } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 interface AppearanceSettings {
     logoUrl?: string;
@@ -19,10 +21,18 @@ interface AppearanceSettings {
 }
 
 export default function AdminAppearancePage() {
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [settings, setSettings] = useState<AppearanceSettings>({});
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
+
+     useEffect(() => {
+        if (!authLoading && user?.role !== 'admin' && user?.role !== 'manager') {
+           router.push('/dashboard');
+        }
+    }, [user, authLoading, router]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -64,7 +74,7 @@ export default function AdminAppearancePage() {
         setSettings(prev => ({ ...prev, [name]: value }));
     };
 
-    if (loading) {
+    if (loading || authLoading) {
         return (
             <div className="flex h-64 w-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -73,11 +83,15 @@ export default function AdminAppearancePage() {
         );
     }
 
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+        return null; // or a permission denied component
+    }
+
     return (
         <Card className="w-full max-w-2xl mx-auto">
             <form onSubmit={handleFormSubmit}>
                 <CardHeader>
-                    <CardTitle>Site Appearance</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Palette/> Site Appearance</CardTitle>
                     <CardDescription>Manage your website's logo, cover images, and advertisement settings.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -136,3 +150,5 @@ export default function AdminAppearancePage() {
         </Card>
     );
 }
+
+    
