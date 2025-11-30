@@ -17,34 +17,31 @@ async function getPageData() {
   const supabase = createClient();
 
   // Fetch all data in parallel
-  const [carData, filtersData, brandData, configData] = await Promise.all([
+  const [carData, filtersData, brandData] = await Promise.all([
     supabase.from('cars').select('*').eq('status', 'approved'),
     supabase.from('filters').select('*').limit(1),
     supabase.from('brands').select('*').limit(12),
-    supabase.from('config').select('appearance').eq('id', 'singleton').single(),
   ]);
 
   const allCars: Car[] = carData.data || [];
   const filters = filtersData.data?.[0] || { brands: [], models: {}, years: [] };
   const brandLogos: Brand[] = brandData.data || [];
-  const appearanceSettings = configData.data?.appearance || {};
-
+  
   return {
     allCars,
     filters,
     brandLogos,
-    appearanceSettings,
   };
 }
 
 
 export default async function Home() {
-    const { allCars, filters, brandLogos, appearanceSettings } = await getPageData();
+    const { allCars, filters, brandLogos } = await getPageData();
     const { brands, models } = filters;
     const years = (filters.years || []).sort((a: number, b: number) => b - a);
     const popularBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota'];
     
-    const coverImageUrl = appearanceSettings.coverImageUrl || "https://ik.imagekit.io/qctc8ch4l/malluvandi_P301G3N4U?updatedAt=1753468925203";
+    const coverImageUrl = "https://ik.imagekit.io/qctc8ch4l/homepage.jpg";
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

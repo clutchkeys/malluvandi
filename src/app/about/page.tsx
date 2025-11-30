@@ -8,7 +8,7 @@ import Image from "next/image";
 interface AboutPageProps {}
 
 export default function AboutPage({}: AboutPageProps) {
-  const aboutImageUrl = "https://placehold.co/800x400.png";
+  const aboutImageUrl = "https://ik.imagekit.io/qctc8ch4l/aboutimg.jpg";
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -19,7 +19,7 @@ export default function AboutPage({}: AboutPageProps) {
             <CardTitle className="text-3xl font-bold text-center">About Mallu Vandi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="relative w-full h-64">
+            <div className="relative w-full h-64 md:h-96">
               <Image 
                 src={aboutImageUrl}
                 alt="Our team" 
